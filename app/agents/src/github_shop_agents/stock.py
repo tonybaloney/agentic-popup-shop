@@ -13,15 +13,7 @@ from agent_framework import (
 from agent_framework.azure import AzureOpenAIChatClient
 from azure.identity import DefaultAzureCredential
 from pydantic import BaseModel
-
-finance_mcp_tools = MCPStreamableHTTPTool(
-    name="FinanceMCP",
-    url=os.getenv("FINANCE_MCP_HTTP", "http://localhost:8002/mcp"),
-    headers=None,
-    load_tools=True,
-    load_prompts=False,
-    request_timeout=30,
-)
+from opentelemetry.trace import get_current_span
 
 GPT_DEPLOYMENT = os.getenv("GPT_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
 if os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5") is None:
@@ -60,21 +52,32 @@ class StockExtractor(Executor):
 
     agent: ChatAgent
 
-    def __init__(self, responses_client: AzureOpenAIChatClient, id: str = "Stock Analyzer"):
-        # Create a domain specific agent using your configured AzureOpenAIChatClient.
-        self.agent = responses_client.create_agent(
-            instructions=(
-                "You determine strategies for restocking items. Consult the tools for stock levels and prioritise which items to restock first."
-            ),
-            tools=finance_mcp_tools,
-        )
-        # Associate the agent with this executor node. The base Executor stores it on self.agent.
+    def __init__(self, openai_client: AzureOpenAIChatClient, id: str = "Stock Analyzer"):
+        self.openai_client = openai_client
         super().__init__(id=id)
 
     @handler
     async def handle(self, message: ChatMessage, ctx: WorkflowContext[StockExtractorResult]) -> None:
         """Extract department data"""
-        response = await self.agent.run(message, response_format=StockItemCollection)
+        # Get OTEL trace ID opentelemetry span
+        span_ctx = get_current_span().get_span_context()
+        # TODO: Add authentication headers to MCP call
+        agent = self.openai_client.create_agent(
+                instructions=(
+                    "You determine strategies for restocking items. Consult the tools for stock levels and prioritise which items to restock first."
+                ),
+                tools=MCPStreamableHTTPTool(
+                    name="FinanceMCP",
+                    url=os.getenv("FINANCE_MCP_HTTP", "http://localhost:8002/mcp"),
+                    headers={
+                        "traceparent": f"00-{span_ctx.trace_id:032x}-{span_ctx.span_id:016x}-01",
+                    },
+                    load_tools=True,
+                    load_prompts=False,
+                    request_timeout=30,
+                ),
+                )
+        response = await agent.run(message, response_format=StockItemCollection)
 
         result = StockExtractorResult(context=message.text, messages=[message.text for message in response.messages if message.text.strip()], collection=response.value)
         await ctx.send_message(result)
