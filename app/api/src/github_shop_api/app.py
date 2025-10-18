@@ -1495,20 +1495,66 @@ async def websocket_ai_agent_inventory(websocket: WebSocket):
     """
     WebSocket endpoint for AI Inventory Agent.
     Streams workflow events back to the frontend in real-time.
+    Requires authentication via token in the initial message.
+    Store managers automatically use their assigned store_id.
     """
     await websocket.accept()
+    current_user: Optional[TokenData] = None
 
     try:
         # Receive the initial request from the client
         data = await websocket.receive_text()
         request_data = json.loads(data)
 
+        # Extract and validate authentication token
+        token = request_data.get('token')
+        if not token:
+            await websocket.send_json({
+                "type": "error",
+                "message": "Authentication token required",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            await websocket.close(code=1008, reason="Authentication required")
+            return
+
+        # Validate token
+        if token not in active_tokens:
+            await websocket.send_json({
+                "type": "error",
+                "message": "Invalid or expired token",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            await websocket.close(code=1008, reason="Invalid token")
+            return
+
+        current_user = active_tokens[token]
+        logger.info(
+            f"🔐 WebSocket authenticated: user={current_user.username}, "
+            f"role={current_user.user_role}, store={current_user.store_id}"
+        )
+
         input_message = request_data.get(
             'message', 'Analyze inventory and recommend restocking priorities')
-        store_id = request_data.get('store_id')
+        
+        # Store managers use their assigned store_id, admins can specify or use all stores
+        if current_user.store_id is not None:
+            # Store manager - use their store_id
+            store_id = current_user.store_id
+            logger.info(
+                f"📍 Store manager detected - using store_id: {store_id}"
+            )
+        else:
+            # Admin - can optionally specify store_id
+            store_id = request_data.get('store_id')
+            if store_id:
+                logger.info(f"📍 Admin specified store_id: {store_id}")
+            else:
+                logger.info("📍 Admin analyzing all stores")
 
         logger.info(
-            f"🤖 AI Agent request: {input_message} (store_id: {store_id})")
+            f"🤖 AI Agent request from {current_user.username}: "
+            f"{input_message} (store_id: {store_id})"
+        )
 
         # Send initial acknowledgment
         await websocket.send_json({

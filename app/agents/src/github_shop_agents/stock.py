@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 finance_mcp_tools = MCPStreamableHTTPTool(
     name="FinanceMCP",
-    url="http://localhost:8002/mcp",
+    url=os.getenv("FINANCE_MCP_HTTP", "http://localhost:8002/mcp"),
     headers=None,
     load_tools=True,
     load_prompts=False,

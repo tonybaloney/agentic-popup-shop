@@ -643,10 +643,22 @@ const startAnalysis = () => {
     clearTimeout(connectionTimeout)
     
     addEvent('Connected to AI Agent')
-    // Send the user instructions and store_id
+    
+    // Get authentication token
+    const token = authStore.getToken()
+    if (!token) {
+      error.value = 'Authentication required. Please log in again.'
+      isRunning.value = false
+      ws?.close()
+      return
+    }
+    
+    // Send the user instructions with authentication token
+    // Store managers' store_id will be automatically used by the backend
     ws.send(JSON.stringify({
+      token: token,
       message: userInstructions.value,
-      store_id: selectedStoreId.value
+      store_id: selectedStoreId.value  // Only used by admin, ignored for store managers
     }))
   }
 
