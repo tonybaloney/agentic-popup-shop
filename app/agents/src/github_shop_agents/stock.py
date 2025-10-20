@@ -1,5 +1,7 @@
 # Copyright (c) Microsoft. All rights reserved.
+from contextlib import _AsyncGeneratorContextManager
 import os
+from typing import Any
 
 from agent_framework import (
     ChatAgent,
@@ -24,6 +26,14 @@ else:
                                         deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
                                         api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
 
+
+class MCPStreamableHTTPToolOTEL(MCPStreamableHTTPTool):
+    def get_mcp_client(self) -> _AsyncGeneratorContextManager[Any, None]:
+        span_ctx = get_current_span().get_span_context()
+        self.headers["traceparent"] = f"00-{span_ctx.trace_id:032x}-{span_ctx.span_id:016x}-01"
+        return super().get_mcp_client()
+
+
 class StockItem(BaseModel):
     sku: str
     product_name: str
@@ -47,6 +57,14 @@ class RestockResult(BaseModel):
     summary: str
 
 
+finance_mcp = MCPStreamableHTTPToolOTEL(
+    name="FinanceMCP",
+    url=os.getenv("FINANCE_MCP_HTTP", "http://localhost:8002") + "/mcp",
+    load_tools=True,
+    load_prompts=False,
+    request_timeout=30,
+)
+
 class StockExtractor(Executor):
     """Custom executor that extracts stock information from messages."""
 
@@ -59,23 +77,12 @@ class StockExtractor(Executor):
     @handler
     async def handle(self, message: ChatMessage, ctx: WorkflowContext[StockExtractorResult]) -> None:
         """Extract department data"""
-        # Get OTEL trace ID opentelemetry span
-        span_ctx = get_current_span().get_span_context()
         # TODO: Add authentication headers to MCP call
         agent = self.openai_client.create_agent(
                 instructions=(
                     "You determine strategies for restocking items. Consult the tools for stock levels and prioritise which items to restock first."
                 ),
-                tools=MCPStreamableHTTPTool(
-                    name="FinanceMCP",
-                    url=os.getenv("FINANCE_MCP_HTTP", "http://localhost:8002/mcp"),
-                    headers={
-                        "traceparent": f"00-{span_ctx.trace_id:032x}-{span_ctx.span_id:016x}-01",
-                    },
-                    load_tools=True,
-                    load_prompts=False,
-                    request_timeout=30,
-                ),
+                tools=finance_mcp,
                 )
         response = await agent.run(message, response_format=StockItemCollection)
 

@@ -429,12 +429,14 @@ source = { editable = "../agents" }
 dependencies = [
     { name = "agent-framework-core" },
     { name = "azure-identity" },
+    { name = "opentelemetry-instrumentation-openai" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "agent-framework-core", specifier = ">=1.0.0b251016" },
     { name = "azure-identity", specifier = ">=1.23.0,<2.0.0" },
+    { name = "opentelemetry-instrumentation-openai" },
 ]
 
 [[package]]
@@ -1055,6 +1057,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/81/42/afccc8414f85108d41bb73155d0e828bf07102068ef03396bd1ef4296544/opentelemetry_instrumentation_flask-0.59b0.tar.gz", hash = "sha256:8b379d331b61f40a7c72c9ae8e0fca72c72ffeb6db75908811217196c9544b9b", size = 19587, upload-time = "2025-10-16T08:39:46.97Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/5e/99db8cedd745d989f860a8c9544c6d5c47c79117251088927e98c7167f85/opentelemetry_instrumentation_flask-0.59b0-py3-none-any.whl", hash = "sha256:5e97fde228f66d7bf9512a86383c0d30a869e2d3b424b51a2781ca40d0287cdc", size = 14741, upload-time = "2025-10-16T08:38:53.211Z" },
+]
+
+[[package]]
+name = "opentelemetry-instrumentation-openai"
+version = "0.47.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-instrumentation" },
+    { name = "opentelemetry-semantic-conventions" },
+    { name = "opentelemetry-semantic-conventions-ai" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3a/6b/4f92bb43a4be136203c72a690ed293fdae1d33492e1e96a224b6bbd020d6/opentelemetry_instrumentation_openai-0.47.3.tar.gz", hash = "sha256:e9b4c5a3b119cdf6a023eaf2ebff3feaaf0f3a1fc1616c3ce802b8644d3eab62", size = 25413, upload-time = "2025-09-21T12:12:56.868Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/62/10/59ecc2bde0915911ec4a39f2af06e7fc0c8c0356d822d263e975578a087c/opentelemetry_instrumentation_openai-0.47.3-py3-none-any.whl", hash = "sha256:c16f8ae05cd583b373f1fe3d34a724d020c18310ce431ac4ad51fd23d8279293", size = 35271, upload-time = "2025-09-21T12:12:25.439Z" },
 ]
 
 [[package]]
