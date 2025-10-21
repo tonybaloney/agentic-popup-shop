@@ -1,6 +1,6 @@
-#:sdk Aspire.AppHost.Sdk@13.0.0-preview.1.25517.6
-#:package Aspire.Hosting.NodeJs@13.0.0-preview.1.25517.6
-#:package Aspire.Hosting.Python@13.0.0-preview.1.25517.6
+﻿#:sdk Aspire.AppHost.Sdk@13.0.0-preview.1.25520.1
+#:package Aspire.Hosting.NodeJs@13.0.0-preview.1.25520.1
+#:package Aspire.Hosting.Python@13.0.0-preview.1.25520.1
 #:package CommunityToolkit.Aspire.Hosting.NodeJS.Extensions@9.8.0
 #:package dotenv.net@4.0.0
 
