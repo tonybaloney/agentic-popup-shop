@@ -12,6 +12,7 @@ from agent_framework import (
     WorkflowContext,
     handler,
 )
+from agent_framework.observability import setup_observability
 from agent_framework.azure import AzureOpenAIChatClient
 from azure.identity import DefaultAzureCredential
 from pydantic import BaseModel
@@ -155,3 +156,5 @@ summarizer = Summarizer(chat_client)
 # Build the workflow using the fluent builder.
 # Set the start node and connect an edge from stock to summarizer.
 workflow = WorkflowBuilder().set_start_executor(stock).add_edge(stock, context).add_edge(context, summarizer).build()
+
+setup_observability()

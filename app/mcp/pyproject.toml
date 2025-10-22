@@ -8,6 +8,8 @@ dependencies = [
     "opentelemetry-instrumentation-starlette",
     "opentelemetry-instrumentation-sqlalchemy",
     "opentelemetry-exporter-otlp",
+    "azure-monitor-opentelemetry",
+    "azure-monitor-opentelemetry-exporter",
     "opentelemetry-distro",
     # local editable packages
     "github-shop-shared",

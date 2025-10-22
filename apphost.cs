@@ -14,16 +14,28 @@ var builder = DistributedApplication.CreateBuilder(args);
 var financeMcp = builder.AddPythonModule("finance-mcp", "./app/mcp/", "github_shop_mcp.finance_server")
     .WithUvEnvironment()
     .WithHttpEndpoint(env: "PORT")
-    .WithEnvironment("OTEL_PYTHON_CONFIGURATOR", "configurator")
-    .WithEnvironment("OTEL_PYTHON_DISTRO", "not_azure")
     .WithExternalHttpEndpoints();
+
+if (envVars.TryGetValue("APPLICATIONINSIGHTS_CONNECTION_STRING", out var appInsightsConnectionString))
+{
+    financeMcp = financeMcp.WithEnvironment("APPLICATIONINSIGHTS_CONNECTION_STRING", appInsightsConnectionString);
+} else {
+    financeMcp = financeMcp.WithEnvironment("OTEL_PYTHON_CONFIGURATOR", "configurator")
+                           .WithEnvironment("OTEL_PYTHON_DISTRO", "not_azure");
+}
 
 var supplierMcp = builder.AddPythonModule("supplier-mcp", "./app/mcp/", "github_shop_mcp.supplier_server")
     .WithUvEnvironment()
     .WithHttpEndpoint(env: "PORT")
-    .WithEnvironment("OTEL_PYTHON_CONFIGURATOR", "configurator")
-    .WithEnvironment("OTEL_PYTHON_DISTRO", "not_azure")
     .WithExternalHttpEndpoints();
+
+if (! string.IsNullOrEmpty(appInsightsConnectionString))
+{
+    supplierMcp = supplierMcp.WithEnvironment("APPLICATIONINSIGHTS_CONNECTION_STRING", appInsightsConnectionString);
+} else {
+    supplierMcp = supplierMcp.WithEnvironment("OTEL_PYTHON_CONFIGURATOR", "configurator")
+                             .WithEnvironment("OTEL_PYTHON_DISTRO", "not_azure");
+}
 
 var apiService = builder.AddPythonModule("api", "./app/api/", "uvicorn")
     .WithArgs("github_shop_api.app:app", "--reload")
@@ -37,11 +49,15 @@ var apiService = builder.AddPythonModule("api", "./app/api/", "uvicorn")
     .WithEnvironment("AZURE_OPENAI_API_KEY_GPT5", envVars["AZURE_OPENAI_API_KEY_GPT5"])
     .WithEnvironment("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5", envVars["AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"])
     .WithEnvironment("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", envVars["AZURE_OPENAI_ENDPOINT_VERSION_GPT5"])
-    // TODO: turn this off in production
-    .WithEnvironment("OTEL_PYTHON_CONFIGURATOR", "configurator")
-    .WithEnvironment("OTEL_PYTHON_DISTRO", "not_azure")
     .WithExternalHttpEndpoints();
 
+if (! string.IsNullOrEmpty(appInsightsConnectionString))
+{
+    apiService = apiService.WithEnvironment("APPLICATIONINSIGHTS_CONNECTION_STRING", appInsightsConnectionString);
+} else {
+    apiService = apiService.WithEnvironment("OTEL_PYTHON_CONFIGURATOR", "configurator")
+                           .WithEnvironment("OTEL_PYTHON_DISTRO", "not_azure");
+}
 
 builder.AddViteApp("frontend", "./frontend")
     .WithNpmPackageInstallation()
