@@ -1,3 +1,6 @@
+from opentelemetry.instrumentation.auto_instrumentation import initialize
+initialize()
+
 from agent_framework.devui import serve
 import os
 

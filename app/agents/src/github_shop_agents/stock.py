@@ -14,18 +14,13 @@ from agent_framework import (
 )
 from agent_framework.observability import setup_observability
 from agent_framework.azure import AzureOpenAIChatClient
-from azure.identity import DefaultAzureCredential
 from pydantic import BaseModel
 from opentelemetry.trace import get_current_span
 
-GPT_DEPLOYMENT = os.getenv("GPT_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
-if os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5") is None:
-    chat_client = AzureOpenAIChatClient(credential=DefaultAzureCredential(), deployment_name=GPT_DEPLOYMENT)
-else:
-    chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
-                                        endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
-                                        deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
-                                        api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
+chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
+                                    endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
+                                    deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
+                                    api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
 
 
 class MCPStreamableHTTPToolOTEL(MCPStreamableHTTPTool):

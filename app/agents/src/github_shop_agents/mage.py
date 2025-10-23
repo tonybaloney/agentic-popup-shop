@@ -7,7 +7,6 @@ from agent_framework import (
     MagenticBuilder,
 )
 from agent_framework.azure import AzureOpenAIChatClient
-from azure.identity import DefaultAzureCredential
 
 from agent_framework import (
     MagenticCallbackEvent,
@@ -19,19 +18,12 @@ from agent_framework import (
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-GPT_DEPLOYMENT = os.getenv("GPT_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
 
-chat_client = AzureOpenAIChatClient(credential=DefaultAzureCredential(), deployment_name=GPT_DEPLOYMENT)
+chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
+                                    endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
+                                    deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
+                                    api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
 
-
-sales_mcp_tools = MCPStreamableHTTPTool(
-    name="SalesMCP",
-    url="http://localhost:8000/mcp",
-    headers=None,
-    load_tools=True,
-    load_prompts=False,
-    request_timeout=30,
-)
 
 async def get_tool_list(tool: MCPStreamableHTTPTool) -> str:
     tool_suffix = ""
@@ -41,19 +33,9 @@ async def get_tool_list(tool: MCPStreamableHTTPTool) -> str:
              tool_suffix += f"\n### {func.name}\n{func.description}\n------------------------\n"
     return tool_suffix
 
-sales_tools = asyncio.run(get_tool_list(sales_mcp_tools))
-sales_agent = ChatAgent(
-    name="SalesAgent",
-    description=f"A helpful assistant that integrates with the backend sales data. \n\nYou have the following capabilities: \n{sales_tools}",
-    instructions="You solve questions using sales data and the tools provided.",
-    chat_client=chat_client,
-    tools=sales_mcp_tools,
-)
-
-
 supplier_mcp_tools = MCPStreamableHTTPTool(
     name="SupplierMCP",
-    url="http://localhost:8001/mcp",
+    url=os.getenv("SUPPLIER_MCP_HTTP", "http://localhost:8001") + "/mcp",
     headers=None,
     load_tools=True,
     load_prompts=False,
@@ -67,25 +49,6 @@ supplier_agent = ChatAgent(
     instructions="You solve questions using supplier data and the tools provided.",
     chat_client=chat_client,
     tools=supplier_mcp_tools,
-)
-
-
-finance_mcp_tools = MCPStreamableHTTPTool(
-    name="FinanceMCP",
-    url="http://localhost:8002/mcp",
-    headers=None,
-    load_tools=True,
-    load_prompts=False,
-    request_timeout=30,
-)
-finance_tools = asyncio.run(get_tool_list(finance_mcp_tools))
-
-finance_agent = ChatAgent(
-    name="FinanceAgent",
-    description=f"A helpful assistant that integrates with the backend finance data. \n\nYou have the following capabilities: \n{finance_tools}",
-    instructions="You solve questions using financial data and the tools provided.",
-    chat_client=chat_client,
-    tools=finance_mcp_tools,
 )
 
 
@@ -106,7 +69,7 @@ async def on_event(event: MagenticCallbackEvent) -> None:
 
 workflow = (
     MagenticBuilder()
-    .participants(sales=sales_agent, supplier=supplier_agent, financier=finance_agent)
+    .participants(supplier=supplier_agent)
     # .with_plan_review()
     .on_event(on_event, mode=MagenticCallbackMode.STREAMING)
     .with_standard_manager(

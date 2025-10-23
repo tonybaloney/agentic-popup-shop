@@ -9,7 +9,7 @@ resolution-markers = [
 [[package]]
 name = "agent-framework-core"
 version = "1.0.0b251016"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&rev=main#0fc1b8837b2482d704f81f5867e8b0f088255911" }
 dependencies = [
     { name = "aiofiles" },
     { name = "azure-identity" },
@@ -25,9 +25,16 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c1/96/af67b9ece8273834cd23fa6c497e346e12055d05674a8baca1b36341dd1a/agent_framework_core-1.0.0b251016.tar.gz", hash = "sha256:67378bb8017b16ddf843a30d45380e3387102b93d92474296d2bc5f67a8a0e5f", size = 394296, upload-time = "2025-10-16T22:47:40.387Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/da/de/72d60f3db12dd84bf6a77fd6ce6cefdea4cfef9f2411335edf465ec3e02d/agent_framework_core-1.0.0b251016-py3-none-any.whl", hash = "sha256:033f36055bd154bd6b526ad9c260924877f37c978cee47d3a3a0b2c97ed72168", size = 268395, upload-time = "2025-10-16T22:47:38.975Z" },
+
+[[package]]
+name = "agent-framework-devui"
+version = "1.0.0b251016"
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=main#0fc1b8837b2482d704f81f5867e8b0f088255911" }
+dependencies = [
+    { name = "agent-framework-core" },
+    { name = "fastapi" },
+    { name = "python-dotenv" },
+    { name = "uvicorn", extra = ["standard"] },
 ]
 
 [[package]]
@@ -428,16 +435,28 @@ version = "0.1.0"
 source = { editable = "../agents" }
 dependencies = [
     { name = "agent-framework-core" },
+    { name = "agent-framework-devui" },
     { name = "azure-identity" },
+    { name = "azure-monitor-opentelemetry" },
+    { name = "azure-monitor-opentelemetry-exporter" },
+    { name = "opentelemetry-distro" },
+    { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-instrumentation-openai" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-framework-core", specifier = ">=1.0.0b251016" },
+    { name = "agent-framework-core", git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&rev=main" },
+    { name = "agent-framework-devui", git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=main" },
+    { name = "agent-framework-devui", marker = "extra == 'ui'", git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=main" },
     { name = "azure-identity", specifier = ">=1.23.0,<2.0.0" },
+    { name = "azure-monitor-opentelemetry" },
+    { name = "azure-monitor-opentelemetry-exporter" },
+    { name = "opentelemetry-distro" },
+    { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-instrumentation-openai" },
 ]
+provides-extras = ["ui"]
 
 [[package]]
 name = "github-shop-api"
