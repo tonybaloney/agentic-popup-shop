@@ -10,7 +10,7 @@ This MCP server provides tools to support a Supplier Agent with the following ca
 
 Uses pre-written SQL queries from supplier_sqlite.py for all database operations.
 """
-from dataclasses import dataclass
+
 from opentelemetry.instrumentation.auto_instrumentation import initialize
 initialize()
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
@@ -40,13 +40,13 @@ verifier = StaticTokenVerifier(
 config = Config()
 logger = logging.getLogger(__name__)
 
-db: SupplierSQLiteProvider
+db: SupplierSQLiteProvider | None = None
 
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator:
     global db
+    db = SupplierSQLiteProvider()
     try:
-        db = SupplierSQLiteProvider()
         await db.create_pool()
         yield
     finally:
@@ -56,7 +56,6 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator:
 
 # Create MCP server with lifespan support
 mcp = FastMCP("mcp-zava-supplier", auth=verifier, lifespan=app_lifespan)
-
 
 @mcp.tool()
 async def find_suppliers_for_request(

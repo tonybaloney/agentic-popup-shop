@@ -44,7 +44,7 @@ logger.setLevel(logging.DEBUG)
 
 McpInstrumentor().instrument()
 
-db: FinanceSQLiteProvider
+db: FinanceSQLiteProvider | None = None
 
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator:
