@@ -7,18 +7,20 @@ finance agents with order policies, contracts, sales analysis, and inventory.
 
 The server uses pre-written SQL queries (not dynamically generated SQL) with SQLite ORM.
 """
+from opentelemetry.instrumentation.auto_instrumentation import initialize
+initialize()
+
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 from fastmcp import FastMCP
-from typing import Optional
+from typing import AsyncIterator, Optional
 from datetime import datetime, UTC
 import logging
 import json
 from github_shop_shared.config import Config
 from github_shop_shared.finance_sqlite import FinanceSQLiteProvider
 import os
-from opentelemetry.instrumentation.auto_instrumentation import initialize
-initialize()
-
+from contextlib import asynccontextmanager
+from opentelemetry.instrumentation.mcp import McpInstrumentor
 
 verifier = StaticTokenVerifier(
     tokens={
@@ -40,19 +42,28 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+McpInstrumentor().instrument()
+
+db: FinanceSQLiteProvider
+
+@asynccontextmanager
+async def app_lifespan(server: FastMCP) -> AsyncIterator:
+    global db
+    try:
+        db = FinanceSQLiteProvider()
+        await db.create_pool()
+        yield
+    finally:
+        # Cleanup on shutdown
+        if db:
+            await db.close_engine()
+
+
 # Initialize FastMCP server
 mcp = FastMCP("Zava Finance Agent MCP Server", auth=verifier)
 
 # Initialize configuration
 config = Config()
-
-# Create database provider
-finance_provider = FinanceSQLiteProvider()
-
-
-async def get_finance_provider() -> FinanceSQLiteProvider:
-    """Get or create finance provider instance."""
-    return finance_provider
 
 
 @mcp.tool()
@@ -80,8 +91,7 @@ async def get_company_order_policy(
     try:
         logger.info(
             f"Retrieving company order policy for department: {department}")
-        provider = await get_finance_provider()
-        result = await provider.get_company_order_policy(
+        result = await db.get_company_order_policy(
             department=department
         )
         return result
@@ -126,8 +136,7 @@ async def get_supplier_contract(
     try:
         logger.info(
             f"Retrieving supplier contract for supplier_id: {supplier_id}")
-        provider = await get_finance_provider()
-        result = await provider.get_supplier_contract(
+        result = await db.get_supplier_contract(
             supplier_id=supplier_id
         )
         return result
@@ -177,8 +186,7 @@ async def get_historical_sales_data(
         logger.info(
             f"Retrieving historical sales data for store_id: {store_id}, "
             f"category_name: {category_name}, days_back: {days_back}")
-        provider = await get_finance_provider()
-        result = await provider.get_historical_sales_data(
+        result = await db.get_historical_sales_data(
             days_back=days_back,
             store_id=store_id,
             category_name=category_name
@@ -235,8 +243,7 @@ async def get_current_inventory_status(
             f"Retrieving current inventory status for store_id: {store_id},"
             f" category_name: {category_name}, "
             f" low_stock_threshold: {low_stock_threshold}")
-        provider = await get_finance_provider()
-        result = await provider.get_current_inventory_status(
+        result = await db.get_current_inventory_status(
             store_id=store_id,
             category_name=category_name,
             low_stock_threshold=low_stock_threshold
@@ -285,8 +292,7 @@ async def get_stores(
         >>> result = await get_stores(store_name="Online")
     """
     try:
-        provider = await get_finance_provider()
-        result = await provider.get_stores(
+        result = await db.get_stores(
             store_name=store_name
         )
         return result
@@ -339,4 +345,4 @@ if __name__ == "__main__":
         port,
     )
 
-    mcp.run(transport="http", host=host, port=port, path="/mcp")
+    mcp.run(transport="http", host=host, port=port, path="/mcp", stateless_http=True)

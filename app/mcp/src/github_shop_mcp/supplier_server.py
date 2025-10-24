@@ -10,18 +10,22 @@ This MCP server provides tools to support a Supplier Agent with the following ca
 
 Uses pre-written SQL queries from supplier_sqlite.py for all database operations.
 """
+from dataclasses import dataclass
+from opentelemetry.instrumentation.auto_instrumentation import initialize
+initialize()
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 from fastmcp import FastMCP
 from github_shop_shared.supplier_sqlite import SupplierSQLiteProvider
 from github_shop_shared.config import Config
 from pydantic import Field
-from typing import Annotated, Optional
+from typing import Annotated, AsyncIterator, Optional
 import os
 from datetime import datetime, timezone
 import logging
-from opentelemetry.instrumentation.auto_instrumentation import initialize
-initialize()
+from contextlib import asynccontextmanager
 
+from opentelemetry.instrumentation.mcp import McpInstrumentor
+McpInstrumentor().instrument()
 
 verifier = StaticTokenVerifier(
     tokens={
@@ -36,11 +40,22 @@ verifier = StaticTokenVerifier(
 config = Config()
 logger = logging.getLogger(__name__)
 
-# Create database provider
-supplier_provider = SupplierSQLiteProvider()
+db: SupplierSQLiteProvider
+
+@asynccontextmanager
+async def app_lifespan(server: FastMCP) -> AsyncIterator:
+    global db
+    try:
+        db = SupplierSQLiteProvider()
+        await db.create_pool()
+        yield
+    finally:
+        # Cleanup on shutdown
+        if db:
+            await db.close_engine()
 
 # Create MCP server with lifespan support
-mcp = FastMCP("mcp-zava-supplier", auth=verifier)
+mcp = FastMCP("mcp-zava-supplier", auth=verifier, lifespan=app_lifespan)
 
 
 @mcp.tool()
@@ -103,7 +118,7 @@ async def find_suppliers_for_request(
                 product_category, esg_required, min_rating)
 
     try:
-        result = await supplier_provider.find_suppliers_for_request(
+        result = await db.find_suppliers_for_request(
             product_category=product_category,
             esg_required=esg_required,
             min_rating=min_rating,
@@ -149,7 +164,7 @@ async def get_supplier_history_and_performance(
                 supplier_id, months_back)
 
     try:
-        result = await supplier_provider.get_supplier_history_and_performance(
+        result = await db.get_supplier_history_and_performance(
             supplier_id=supplier_id,
             months_back=months_back
         )
@@ -183,7 +198,7 @@ async def get_supplier_contract(
     logger.info("Getting supplier contract - ID: %d", supplier_id)
 
     try:
-        result = await supplier_provider.get_supplier_contract(supplier_id=supplier_id)
+        result = await db.get_supplier_contract(supplier_id=supplier_id)
         return result
 
     except Exception as e:
@@ -221,7 +236,7 @@ async def get_company_supplier_policy(
                 policy_type, department)
 
     try:
-        result = await supplier_provider.get_company_supplier_policy(
+        result = await db.get_company_supplier_policy(
             policy_type=policy_type,
             department=department
         )
@@ -254,4 +269,4 @@ if __name__ == "__main__":
         port,
     )
 
-    mcp.run(transport="http", host=host, port=port, path="/mcp")
+    mcp.run(transport="http", host=host, port=port, path="/mcp", stateless_http=True)

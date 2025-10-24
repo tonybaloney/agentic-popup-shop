@@ -1,7 +1,6 @@
-﻿#:sdk Aspire.AppHost.Sdk@13.0.0-preview.1.25522.6
-#:package Aspire.Hosting.NodeJs@13.0.0-preview.1.25522.6
-#:package Aspire.Hosting.Python@13.0.0-preview.1.25522.6
-#:package CommunityToolkit.Aspire.Hosting.NodeJS.Extensions@9.8.0
+﻿#:sdk Aspire.AppHost.Sdk@13.0.0-preview.1.25523.9
+#:package Aspire.Hosting.NodeJs@13.0.0-preview.1.25523.9
+#:package Aspire.Hosting.Python@13.0.0-preview.1.25523.9
 #:package dotenv.net@4.0.0
 
 using dotenv.net;
@@ -59,7 +58,7 @@ var apiService = builder.AddPythonModule("api", "./app/api/", "uvicorn")
     .WithExternalHttpEndpoints();
 
 builder.AddViteApp("frontend", "./frontend")
-    .WithNpmPackageInstallation()
+    .WithNpmPackageManager()
     .WithReference(apiService)
     .WaitFor(apiService);
 

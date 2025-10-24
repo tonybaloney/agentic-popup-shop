@@ -5,7 +5,7 @@ description = "MCP server for the shop application"
 requires-python = ">=3.12"
 dependencies = [
     "fastmcp>=2.11.0,<3.0.0",
-    "opentelemetry-instrumentation-starlette",
+    "opentelemetry-instrumentation-mcp",
     "opentelemetry-instrumentation-sqlalchemy",
     "opentelemetry-exporter-otlp",
     "azure-monitor-opentelemetry",

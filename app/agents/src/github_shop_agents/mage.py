@@ -47,7 +47,7 @@ supplier_tools = asyncio.run(get_tool_list(supplier_mcp_tools))
 
 supplier_agent = ChatAgent(
     name="SupplierAgent",
-    description=f"A helpful assistant that integrates with the backend supplier data. \n\nYou have the following capabilities: \n{supplier_tools}",
+    description=f" Use Defaults. Do not stop to clarify. You are a helpful assistant that integrates with the backend supplier data. \n\nYou have the following capabilities: \n{supplier_tools}",
     instructions="You solve questions using supplier data and the tools provided.",
     chat_client=chat_client,
     tools=supplier_mcp_tools,
@@ -76,7 +76,7 @@ workflow = (
     .on_event(on_event, mode=MagenticCallbackMode.STREAMING)
     .with_standard_manager(
         chat_client=chat_client,
-        max_round_count=3,
+        max_round_count=5,
         max_stall_count=3,
         max_reset_count=1,
     )
