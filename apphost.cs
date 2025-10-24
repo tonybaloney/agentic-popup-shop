@@ -6,8 +6,6 @@
 
 using dotenv.net;
 
-
-
 var envVars = DotEnv.Read();
 
 var builder = DistributedApplication.CreateBuilder(args);
@@ -19,12 +17,14 @@ var financeMcp = builder.AddPythonModule("finance-mcp", "./app/mcp/", "github_sh
     .WithUvEnvironment()
     .WithHttpEndpoint(env: "PORT")
     .WithTracing(appInsightsConnectionString)
+    .WithEnvironment("DEV_GUEST_TOKEN", envVars["DEV_GUEST_TOKEN"])
     .WithExternalHttpEndpoints();
 
 var supplierMcp = builder.AddPythonModule("supplier-mcp", "./app/mcp/", "github_shop_mcp.supplier_server")
     .WithUvEnvironment()
     .WithHttpEndpoint(env: "PORT")
     .WithTracing(appInsightsConnectionString)
+    .WithEnvironment("DEV_GUEST_TOKEN", envVars["DEV_GUEST_TOKEN"])
     .WithExternalHttpEndpoints();
 
 var agentDev = builder.AddPythonModule("agent-dev", "./app/agents/", "github_shop_agents")
@@ -38,6 +38,7 @@ var agentDev = builder.AddPythonModule("agent-dev", "./app/agents/", "github_sho
     .WithEnvironment("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5", envVars["AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"])
     .WithEnvironment("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", envVars["AZURE_OPENAI_ENDPOINT_VERSION_GPT5"])
     .WithTracing(appInsightsConnectionString)
+    .WithEnvironment("DEV_GUEST_TOKEN", envVars["DEV_GUEST_TOKEN"])
     .WithExternalHttpEndpoints();
 
 
@@ -54,6 +55,7 @@ var apiService = builder.AddPythonModule("api", "./app/api/", "uvicorn")
     .WithEnvironment("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5", envVars["AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"])
     .WithEnvironment("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", envVars["AZURE_OPENAI_ENDPOINT_VERSION_GPT5"])
     .WithTracing(appInsightsConnectionString)
+    .WithEnvironment("DEV_GUEST_TOKEN", envVars["DEV_GUEST_TOKEN"])
     .WithExternalHttpEndpoints();
 
 builder.AddViteApp("frontend", "./frontend")

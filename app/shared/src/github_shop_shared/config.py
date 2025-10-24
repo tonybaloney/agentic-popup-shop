@@ -43,7 +43,7 @@ class Config:
 
         # SQLite database URL
         self._sqlite_database_url: str = self._clean_env_value(
-            os.getenv("SQLITE_DATABASE_URL", "sqlite+aiosqlite:////workspace/data/retail.db")
+            os.getenv("SQLITE_DATABASE_URL", "sqlite+aiosqlite:////workspace/app/data/retail.db")
         )
 
         # Load and clean Application Insights connection string

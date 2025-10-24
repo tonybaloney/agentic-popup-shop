@@ -471,7 +471,7 @@ dependencies = [
 requires-dist = [
     { name = "azure-monitor-opentelemetry" },
     { name = "azure-monitor-opentelemetry-exporter" },
-    { name = "fastmcp" },
+    { name = "fastmcp", specifier = ">=2.11.0,<3.0.0" },
     { name = "github-shop-shared", editable = "../shared" },
     { name = "opentelemetry-distro" },
     { name = "opentelemetry-exporter-otlp" },

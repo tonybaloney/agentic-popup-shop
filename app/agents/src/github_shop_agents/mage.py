@@ -36,7 +36,9 @@ async def get_tool_list(tool: MCPStreamableHTTPTool) -> str:
 supplier_mcp_tools = MCPStreamableHTTPTool(
     name="SupplierMCP",
     url=os.getenv("SUPPLIER_MCP_HTTP", "http://localhost:8001") + "/mcp",
-    headers=None,
+    headers={
+         "Authorization": f"Bearer {os.getenv('DEV_GUEST_TOKEN','dev-guest-token')}"
+    },
     load_tools=True,
     load_prompts=False,
     request_timeout=30,

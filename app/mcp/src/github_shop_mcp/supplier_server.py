@@ -10,20 +10,28 @@ This MCP server provides tools to support a Supplier Agent with the following ca
 
 Uses pre-written SQL queries from supplier_sqlite.py for all database operations.
 """
+from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
+from fastmcp import FastMCP
+from github_shop_shared.supplier_sqlite import SupplierSQLiteProvider
+from github_shop_shared.config import Config
+from pydantic import Field
+from typing import Annotated, Optional
+import os
+from datetime import datetime, timezone
+import logging
 from opentelemetry.instrumentation.auto_instrumentation import initialize
 initialize()
 
-import asyncio
-import logging
-from datetime import datetime, timezone
-import os
-from typing import Annotated, Optional
-from mcp.server.fastmcp import Context, FastMCP
-from opentelemetry.instrumentation.starlette import StarletteInstrumentor
-from pydantic import Field
 
-from github_shop_shared.config import Config
-from github_shop_shared.supplier_sqlite import SupplierSQLiteProvider
+verifier = StaticTokenVerifier(
+    tokens={
+        os.getenv("DEV_GUEST_TOKEN", "dev-guest-token"): {
+            "client_id": "guest-user",
+            "scopes": ["read:data"]
+        }
+    },
+    required_scopes=["read:data"]
+)
 
 config = Config()
 logger = logging.getLogger(__name__)
@@ -32,22 +40,11 @@ logger = logging.getLogger(__name__)
 supplier_provider = SupplierSQLiteProvider()
 
 # Create MCP server with lifespan support
-mcp = FastMCP("mcp-zava-supplier", stateless_http=True)
-
-
-def get_header(ctx: Context, header_name: str) -> Optional[str]:
-    """Extract a specific header from the request context."""
-    request = ctx.request_context.request
-    if request is not None and hasattr(request, "headers"):
-        headers = request.headers
-        if headers:
-            return headers.get(header_name)
-    return None
+mcp = FastMCP("mcp-zava-supplier", auth=verifier)
 
 
 @mcp.tool()
 async def find_suppliers_for_request(
-    ctx: Context,
     product_category: Annotated[
         Optional[str],
         Field(
@@ -93,16 +90,16 @@ async def find_suppliers_for_request(
 ) -> str:
     """
     Find suppliers that match procurement request requirements.
-    
+
     This tool searches for suppliers based on product category, ESG compliance,
     rating requirements, lead time constraints, and budget considerations.
     Returns suppliers ranked by preference and performance.
-    
+
     Returns:
         JSON with supplier details including ratings, contact info, terms, and contract status.
     """
 
-    logger.info("Finding suppliers - Category: %s, ESG: %s, Min Rating: %.1f", 
+    logger.info("Finding suppliers - Category: %s, ESG: %s, Min Rating: %.1f",
                 product_category, esg_required, min_rating)
 
     try:
@@ -124,7 +121,6 @@ async def find_suppliers_for_request(
 
 @mcp.tool()
 async def get_supplier_history_and_performance(
-    ctx: Context,
     supplier_id: Annotated[
         int,
         Field(
@@ -140,16 +136,17 @@ async def get_supplier_history_and_performance(
 ) -> str:
     """
     Get detailed supplier performance history and metrics.
-    
+
     This tool retrieves historical performance evaluations, procurement activity,
     and performance trends for a specific supplier. Includes cost, quality,
     delivery, and compliance scores over time.
-    
+
     Returns:
         JSON with performance scores, evaluation dates, procurement history, and trend data.
     """
 
-    logger.info("Getting supplier history - ID: %d, Months: %d", supplier_id, months_back)
+    logger.info("Getting supplier history - ID: %d, Months: %d",
+                supplier_id, months_back)
 
     try:
         result = await supplier_provider.get_supplier_history_and_performance(
@@ -165,7 +162,6 @@ async def get_supplier_history_and_performance(
 
 @mcp.tool()
 async def get_supplier_contract(
-    ctx: Context,
     supplier_id: Annotated[
         int,
         Field(
@@ -175,11 +171,11 @@ async def get_supplier_contract(
 ) -> str:
     """
     Get supplier contract details and terms.
-    
+
     This tool retrieves active contract information including contract numbers,
     terms and conditions, payment terms, contract values, expiration dates,
     and renewal information for a specific supplier.
-    
+
     Returns:
         JSON with contract details, terms, values, dates, and renewal status.
     """
@@ -197,7 +193,6 @@ async def get_supplier_contract(
 
 @mcp.tool()
 async def get_company_supplier_policy(
-    ctx: Context,
     policy_type: Annotated[
         Optional[str],
         Field(
@@ -213,16 +208,17 @@ async def get_company_supplier_policy(
 ) -> str:
     """
     Get company policies related to supplier management.
-    
+
     This tool retrieves company policies and procedures for supplier selection,
     procurement processes, vendor approval requirements, and budget authorization
     limits. Helps ensure compliance with company guidelines.
-    
+
     Returns:
         JSON with policy documents, procedures, requirements, and approval thresholds.
     """
 
-    logger.info("Getting company policies - Type: %s, Department: %s", policy_type, department)
+    logger.info("Getting company policies - Type: %s, Department: %s",
+                policy_type, department)
 
     try:
         result = await supplier_provider.get_company_supplier_policy(
@@ -247,51 +243,15 @@ async def get_current_utc_date() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-async def run_http_server() -> None:
-    """Run the MCP server in HTTP mode."""
-
-    # Ensure a single connection pool is created once for the process.
-    try:
-        await supplier_provider.create_pool()
-
-        # Instrument Starlette after pool creation
-        StarletteInstrumentor().instrument()
-        
-        logger.info("🚀 Starting Supplier Agent MCP Server")
-        logger.info("Available tools:")
-        logger.info("  - find_suppliers_for_request: Find suppliers matching requirements")
-        logger.info("  - get_supplier_history_and_performance: Get supplier performance data")
-        logger.info("  - get_supplier_contract: Get contract details")
-        logger.info("  - get_company_supplier_policy: Get company policies")
-        logger.info("  - get_current_utc_date: Get current date/time")
-        
-        # Configure server settings
-        mcp.settings.port = int(os.getenv("PORT", 8092))
-        mcp.settings.host = os.getenv("HOST", "0.0.0.0")
-        StarletteInstrumentor().instrument_app(mcp.sse_app())
-        StarletteInstrumentor().instrument_app(mcp.streamable_http_app())
-        logger.info(
-            "❤️ 📡 Supplier MCP endpoint available at: http://%s:%d/mcp",
-            mcp.settings.host,
-            mcp.settings.port,
-        )
-
-        # Run the FastMCP server as HTTP endpoint
-        await mcp.run_streamable_http_async()
-        
-    finally:
-        # Close the engine on shutdown
-        try:
-            await supplier_provider.close_engine()
-        except Exception as e:
-            logger.error("⚠️  Error closing supplier database engine: %s", e)
-
-
-def main() -> None:
-    """Main entry point for the Supplier MCP server."""
-    # Run the HTTP server
-    asyncio.run(run_http_server())
-
-
 if __name__ == "__main__":
-    main()
+    logger.info("🚀 Starting Supplier Agent MCP Server")
+    # Configure server settings
+    port = int(os.getenv("PORT", 8092))
+    host = os.getenv("HOST", "0.0.0.0")  # noqa: S104
+    logger.info(
+        "❤️ 📡 Supplier MCP endpoint starting at: http://%s:%d/mcp",
+        host,
+        port,
+    )
+
+    mcp.run(transport="http", host=host, port=port, path="/mcp")

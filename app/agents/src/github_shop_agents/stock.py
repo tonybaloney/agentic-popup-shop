@@ -56,6 +56,9 @@ class RestockResult(BaseModel):
 finance_mcp = MCPStreamableHTTPToolOTEL(
     name="FinanceMCP",
     url=os.getenv("FINANCE_MCP_HTTP", "http://localhost:8002") + "/mcp",
+    headers={
+         "Authorization": f"Bearer {os.getenv('DEV_GUEST_TOKEN','dev-guest-token')}"
+    },
     load_tools=True,
     load_prompts=False,
     request_timeout=30,
@@ -66,7 +69,7 @@ class StockExtractor(Executor):
 
     agent: ChatAgent
 
-    def __init__(self, openai_client: AzureOpenAIChatClient, id: str = "Stock Analyzer"):
+    def __init__(self, openai_client: AzureOpenAIChatClient, id: str = "Stock Agent"):
         self.openai_client = openai_client
         super().__init__(id=id)
 
@@ -91,7 +94,7 @@ class ContextExecutor(Executor):
 
     agent: ChatAgent
 
-    def __init__(self, responses_client: AzureOpenAIChatClient, id: str = "Context Analyzer"):
+    def __init__(self, responses_client: AzureOpenAIChatClient, id: str = "Prioritization Agent"):
         # Create a domain specific agent using your configured AzureOpenAIChatClient.
         self.agent = responses_client.create_agent(
             instructions=(
@@ -120,7 +123,7 @@ class Summarizer(Executor):
 
     agent: ChatAgent
 
-    def __init__(self, chat_client: AzureOpenAIChatClient, id: str = "Summarizer"):
+    def __init__(self, chat_client: AzureOpenAIChatClient, id: str = "Summarizer Agent"):
         # Create a domain specific agent that summarizes content.
         self.agent = chat_client.create_agent(
             instructions=(
