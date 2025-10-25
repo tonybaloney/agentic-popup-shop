@@ -15,14 +15,16 @@ from fastmcp import FastMCP
 from typing import AsyncIterator, Optional
 from datetime import datetime, UTC
 import logging
-import json
+
 from github_shop_shared.config import Config
 from github_shop_shared.finance_sqlite import FinanceSQLiteProvider
 import os
 from contextlib import asynccontextmanager
-from opentelemetry.instrumentation.mcp import McpInstrumentor
 from starlette.requests import Request
 from starlette.responses import Response, JSONResponse
+
+from opentelemetry.instrumentation.mcp import McpInstrumentor
+McpInstrumentor().instrument()
 
 verifier = StaticTokenVerifier(
     tokens={
@@ -43,8 +45,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-McpInstrumentor().instrument()
 
 db: FinanceSQLiteProvider | None = None
 

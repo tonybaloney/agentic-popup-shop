@@ -39,7 +39,6 @@ verifier = StaticTokenVerifier(
     required_scopes=["read:data"]
 )
 
-config = Config()
 logger = logging.getLogger(__name__)
 
 db: SupplierSQLiteProvider | None = None
