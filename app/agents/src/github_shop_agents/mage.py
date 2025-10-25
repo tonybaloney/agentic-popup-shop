@@ -44,8 +44,11 @@ supplier_mcp_tools = MCPStreamableHTTPToolOTEL(
     request_timeout=30,
 )
 
-loop = get_or_create_eventloop()
-supplier_tools = loop.run_until_complete(get_tool_list(supplier_mcp_tools))
+# Skip for now.
+# loop = get_or_create_eventloop()
+# supplier_tools = loop.run_until_complete(get_tool_list(supplier_mcp_tools))
+
+supplier_tools = ""
 
 supplier_agent = ChatAgent(
     name="SupplierAgent",

@@ -59,9 +59,9 @@ async def get_tool_list(tool: MCPStreamableHTTPTool) -> None:
     async with tool as tools:
         await tools.load_tools()
 
-
-loop = get_or_create_eventloop()
-loop.run_until_complete(get_tool_list(finance_mcp))
+# Skip for now.
+# loop = get_or_create_eventloop()
+# loop.run_until_complete(get_tool_list(finance_mcp))
 
 class StockExtractor(Executor):
     """Custom executor that extracts stock information from messages."""
