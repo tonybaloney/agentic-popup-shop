@@ -23,6 +23,8 @@ import os
 from datetime import datetime, timezone
 import logging
 from contextlib import asynccontextmanager
+from starlette.requests import Request
+from starlette.responses import Response, JSONResponse
 
 from opentelemetry.instrumentation.mcp import McpInstrumentor
 McpInstrumentor().instrument()
@@ -56,6 +58,11 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator:
 
 # Create MCP server with lifespan support
 mcp = FastMCP("mcp-zava-supplier", auth=verifier, lifespan=app_lifespan)
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> Response:
+    assert db, "Server not initialized"  # noqa: S101
+    return JSONResponse({"status": "ok"})
 
 @mcp.tool()
 async def find_suppliers_for_request(
@@ -117,6 +124,7 @@ async def find_suppliers_for_request(
                 product_category, esg_required, min_rating)
 
     try:
+        assert db, "Server not initialized"  # noqa: S101
         result = await db.find_suppliers_for_request(
             product_category=product_category,
             esg_required=esg_required,
@@ -130,7 +138,7 @@ async def find_suppliers_for_request(
 
     except Exception as e:
         logger.error("Find suppliers failed: %s", e)
-        return f'{{"err":"Find suppliers failed: {e!s}","c":[],"r":[],"n":0}}'
+        raise e
 
 
 @mcp.tool()
@@ -163,6 +171,7 @@ async def get_supplier_history_and_performance(
                 supplier_id, months_back)
 
     try:
+        assert db, "Server not initialized"  # noqa: S101
         result = await db.get_supplier_history_and_performance(
             supplier_id=supplier_id,
             months_back=months_back
@@ -171,8 +180,7 @@ async def get_supplier_history_and_performance(
 
     except Exception as e:
         logger.error("Get supplier history failed: %s", e)
-        return f'{{"err":"Get supplier history failed: {e!s}","c":[],"r":[],"n":0}}'
-
+        raise e
 
 @mcp.tool()
 async def get_supplier_contract(
@@ -197,12 +205,13 @@ async def get_supplier_contract(
     logger.info("Getting supplier contract - ID: %d", supplier_id)
 
     try:
+        assert db, "Server not initialized"  # noqa: S101
         result = await db.get_supplier_contract(supplier_id=supplier_id)
         return result
 
     except Exception as e:
         logger.error("Get supplier contract failed: %s", e)
-        return f'{{"err":"Get supplier contract failed: {e!s}","c":[],"r":[],"n":0}}'
+        raise e
 
 
 @mcp.tool()
@@ -235,6 +244,7 @@ async def get_company_supplier_policy(
                 policy_type, department)
 
     try:
+        assert db, "Server not initialized"  # noqa: S101
         result = await db.get_company_supplier_policy(
             policy_type=policy_type,
             department=department
@@ -243,7 +253,7 @@ async def get_company_supplier_policy(
 
     except Exception as e:
         logger.error("Get company policy failed: %s", e)
-        return f'{{"err":"Get company policy failed: {e!s}","c":[],"r":[],"n":0}}'
+        raise e
 
 
 @mcp.tool()

@@ -15,6 +15,8 @@ envVars.TryGetValue("APPLICATIONINSIGHTS_CONNECTION_STRING", out string? appInsi
 var financeMcp = builder.AddPythonModule("finance-mcp", "./app/mcp/", "github_shop_mcp.finance_server")
     .WithUvEnvironment()
     .WithHttpEndpoint(env: "PORT")
+    .WithHttpHealthCheck("/health")
+    .WithEnvironment("OTEL_PYTHON_EXCLUDED_URLS", "/health")
     .WithTracing(appInsightsConnectionString)
     .WithEnvironment("DEV_GUEST_TOKEN", envVars["DEV_GUEST_TOKEN"])
     .WithExternalHttpEndpoints();
@@ -22,6 +24,8 @@ var financeMcp = builder.AddPythonModule("finance-mcp", "./app/mcp/", "github_sh
 var supplierMcp = builder.AddPythonModule("supplier-mcp", "./app/mcp/", "github_shop_mcp.supplier_server")
     .WithUvEnvironment()
     .WithHttpEndpoint(env: "PORT")
+    .WithHttpHealthCheck("/health")
+    .WithEnvironment("OTEL_PYTHON_EXCLUDED_URLS", "/health")
     .WithTracing(appInsightsConnectionString)
     .WithEnvironment("DEV_GUEST_TOKEN", envVars["DEV_GUEST_TOKEN"])
     .WithExternalHttpEndpoints();
@@ -29,6 +33,8 @@ var supplierMcp = builder.AddPythonModule("supplier-mcp", "./app/mcp/", "github_
 var agentDev = builder.AddPythonModule("agent-dev", "./app/agents/", "github_shop_agents")
     .WithUvEnvironment()
     .WithHttpEndpoint(env: "PORT")
+    .WithHttpHealthCheck("/health")
+    .WithEnvironment("OTEL_PYTHON_EXCLUDED_URLS", "/health")
     .WithEnvironment("FINANCE_MCP_HTTP", financeMcp.GetEndpoint("http"))
     .WithEnvironment("SUPPLIER_MCP_HTTP", supplierMcp.GetEndpoint("http"))
     // OpenAI settings
@@ -46,6 +52,7 @@ var apiService = builder.AddPythonModule("api", "./app/api/", "uvicorn")
     .WithUvEnvironment()
     .WithHttpEndpoint(env: "UVICORN_PORT")
     .WithHttpHealthCheck("/health")
+    .WithEnvironment("OTEL_PYTHON_EXCLUDED_URLS", "/health")
     .WithEnvironment("FINANCE_MCP_HTTP", financeMcp.GetEndpoint("http"))
     .WithEnvironment("SUPPLIER_MCP_HTTP", supplierMcp.GetEndpoint("http"))
     // OpenAI settings

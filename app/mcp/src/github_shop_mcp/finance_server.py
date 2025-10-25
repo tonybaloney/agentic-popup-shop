@@ -21,6 +21,8 @@ from github_shop_shared.finance_sqlite import FinanceSQLiteProvider
 import os
 from contextlib import asynccontextmanager
 from opentelemetry.instrumentation.mcp import McpInstrumentor
+from starlette.requests import Request
+from starlette.responses import Response, JSONResponse
 
 verifier = StaticTokenVerifier(
     tokens={
@@ -60,11 +62,15 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator:
 
 
 # Initialize FastMCP server
-mcp = FastMCP("Zava Finance Agent MCP Server", auth=verifier)
+mcp = FastMCP("Zava Finance Agent MCP Server", auth=verifier, lifespan=app_lifespan)
 
 # Initialize configuration
 config = Config()
 
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> Response:
+    assert db, "Server not initialized"  # noqa: S101
+    return JSONResponse({"status": "ok"})
 
 @mcp.tool()
 async def get_company_order_policy(
@@ -91,6 +97,7 @@ async def get_company_order_policy(
     try:
         logger.info(
             f"Retrieving company order policy for department: {department}")
+        assert db, "Server not initialized"  # noqa: S101
         result = await db.get_company_order_policy(
             department=department
         )
@@ -136,6 +143,7 @@ async def get_supplier_contract(
     try:
         logger.info(
             f"Retrieving supplier contract for supplier_id: {supplier_id}")
+        assert db, "Server not initialized"  # noqa: S101
         result = await db.get_supplier_contract(
             supplier_id=supplier_id
         )
@@ -186,6 +194,7 @@ async def get_historical_sales_data(
         logger.info(
             f"Retrieving historical sales data for store_id: {store_id}, "
             f"category_name: {category_name}, days_back: {days_back}")
+        assert db, "Server not initialized"  # noqa: S101
         result = await db.get_historical_sales_data(
             days_back=days_back,
             store_id=store_id,
@@ -243,6 +252,7 @@ async def get_current_inventory_status(
             f"Retrieving current inventory status for store_id: {store_id},"
             f" category_name: {category_name}, "
             f" low_stock_threshold: {low_stock_threshold}")
+        assert db, "Server not initialized"  # noqa: S101
         result = await db.get_current_inventory_status(
             store_id=store_id,
             category_name=category_name,
@@ -292,6 +302,7 @@ async def get_stores(
         >>> result = await get_stores(store_name="Online")
     """
     try:
+        assert db, "Server not initialized"  # noqa: S101
         result = await db.get_stores(
             store_name=store_name
         )
