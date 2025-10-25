@@ -77,19 +77,19 @@ active_tokens: dict[str, TokenData] = {}
 # Static user database (in production, this would be in a database with hashed passwords)
 USERS = {
     "admin": {
-        "password": "admin123",  # In production, use hashed passwords
+        "password": "admin123",
         "role": "admin",
         "store_id": None
     },
     "manager1": {
         "password": "manager123",
         "role": "store_manager",
-        "store_id": 1  # Zava Pop-Up Bellevue Square
+        "store_id": 1  # NYC Times Square
     },
     "manager2": {
         "password": "manager123",
         "role": "store_manager",
-        "store_id": 2  # Zava Pop-Up University Village
+        "store_id": 2  # SF Union Square
     },
 }
 
