@@ -43,7 +43,12 @@ supplier_mcp_tools = MCPStreamableHTTPTool(
     load_prompts=False,
     request_timeout=30,
 )
-supplier_tools = asyncio.run(get_tool_list(supplier_mcp_tools))
+
+# if there is a current event loop, use it otherwise use asyncio.run
+if asyncio.get_event_loop().is_running():
+    supplier_tools = asyncio.create_task(get_tool_list(supplier_mcp_tools))
+else:
+    supplier_tools = asyncio.run(get_tool_list(supplier_mcp_tools))
 
 supplier_agent = ChatAgent(
     name="SupplierAgent",

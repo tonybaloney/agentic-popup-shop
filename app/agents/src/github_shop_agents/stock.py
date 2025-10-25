@@ -70,8 +70,13 @@ async def get_tool_list(tool: MCPStreamableHTTPTool) -> None:
     async with tool as tools:
         await tools.load_tools()
 
-supplier_tools = asyncio.run(get_tool_list(finance_mcp))
 
+
+# if there is a current event loop, use it otherwise use asyncio.run
+if asyncio.get_event_loop().is_running():
+    _ = asyncio.create_task(get_tool_list(finance_mcp))
+else:
+    _ = asyncio.run(get_tool_list(finance_mcp))
 
 class StockExtractor(Executor):
     """Custom executor that extracts stock information from messages."""
