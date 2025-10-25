@@ -51,8 +51,8 @@ db: FinanceSQLiteProvider | None = None
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator:
     global db
+    db = FinanceSQLiteProvider()
     try:
-        db = FinanceSQLiteProvider()
         await db.create_pool()
         yield
     finally:
@@ -104,16 +104,7 @@ async def get_company_order_policy(
         return result
     except Exception as e:
         logger.error(f"Error in get_company_order_policy: {e}")
-        return json.dumps(
-            {
-                "err": f"Failed to retrieve company order policy: {e!s}",
-                "c": [],
-                "r": [],
-                "n": 0,
-            },
-            separators=(",", ":"),
-            default=str,
-        )
+        raise e
 
 
 @mcp.tool()
@@ -150,16 +141,7 @@ async def get_supplier_contract(
         return result
     except Exception as e:
         logger.error(f"Error in get_supplier_contract: {e}")
-        return json.dumps(
-            {
-                "err": f"Failed to retrieve supplier contract: {e!s}",
-                "c": [],
-                "r": [],
-                "n": 0,
-            },
-            separators=(",", ":"),
-            default=str,
-        )
+        raise e
 
 
 @mcp.tool()
@@ -203,16 +185,7 @@ async def get_historical_sales_data(
         return result
     except Exception as e:
         logger.error(f"Error in get_historical_sales_data: {e}")
-        return json.dumps(
-            {
-                "err": f"Failed to retrieve historical sales data: {e!s}",
-                "c": [],
-                "r": [],
-                "n": 0,
-            },
-            separators=(",", ":"),
-            default=str,
-        )
+        raise e
 
 
 @mcp.tool()
@@ -261,16 +234,7 @@ async def get_current_inventory_status(
         return result
     except Exception as e:
         logger.error(f"Error in get_current_inventory_status: {e}")
-        return json.dumps(
-            {
-                "err": f"Failed to retrieve inventory status: {e!s}",
-                "c": [],
-                "r": [],
-                "n": 0,
-            },
-            separators=(",", ":"),
-            default=str,
-        )
+        raise e
 
 
 @mcp.tool()
@@ -309,16 +273,7 @@ async def get_stores(
         return result
     except Exception as e:
         logger.error(f"Error in get_stores: {e}")
-        return json.dumps(
-            {
-                "err": f"Failed to retrieve stores: {e!s}",
-                "c": [],
-                "r": [],
-                "n": 0,
-            },
-            separators=(",", ":"),
-            default=str,
-        )
+        raise e
 
 
 @mcp.tool()
@@ -340,10 +295,7 @@ async def get_current_utc_date() -> str:
         return datetime.now(UTC).isoformat()
     except Exception as e:
         logger.error(f"Error getting current UTC date: {e}")
-        return json.dumps(
-            {"err": f"Failed to get current date: {e!s}"},
-            separators=(",", ":"),
-        )
+        raise e
 
 if __name__ == "__main__":
     logger.info("🚀 Starting Supplier Agent MCP Server")
