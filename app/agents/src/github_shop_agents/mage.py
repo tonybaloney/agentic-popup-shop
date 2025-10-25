@@ -72,7 +72,7 @@ async def on_event(event: MagenticCallbackEvent) -> None:
             print("=" * 50)
 
 workflow = (
-    MagenticBuilder(name="Supplier Review Workflow")
+    MagenticBuilder()
     .participants(supplier=supplier_agent)
     # .with_plan_review()
     .on_event(on_event, mode=MagenticCallbackMode.STREAMING)
