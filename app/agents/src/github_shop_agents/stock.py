@@ -1,8 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
-import asyncio
-from contextlib import _AsyncGeneratorContextManager
 import os
-from typing import Any
 
 from agent_framework import (
     ChatAgent,
@@ -16,19 +13,11 @@ from agent_framework import (
 from agent_framework.observability import setup_observability
 from agent_framework.azure import AzureOpenAIChatClient
 from pydantic import BaseModel
-from opentelemetry.trace import get_current_span
-
+from github_shop_agents import MCPStreamableHTTPToolOTEL, get_or_create_eventloop
 chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
                                     endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
                                     deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
                                     api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
-
-
-class MCPStreamableHTTPToolOTEL(MCPStreamableHTTPTool):
-    def get_mcp_client(self) -> _AsyncGeneratorContextManager[Any, None]:
-        span_ctx = get_current_span().get_span_context()
-        self.headers["traceparent"] = f"00-{span_ctx.trace_id:032x}-{span_ctx.span_id:016x}-01"
-        return super().get_mcp_client()
 
 
 class StockItem(BaseModel):
@@ -71,12 +60,8 @@ async def get_tool_list(tool: MCPStreamableHTTPTool) -> None:
         await tools.load_tools()
 
 
-
-# if there is a current event loop, use it otherwise use asyncio.run
-if asyncio.get_event_loop().is_running():
-    _ = asyncio.create_task(get_tool_list(finance_mcp))
-else:
-    _ = asyncio.run(get_tool_list(finance_mcp))
+loop = get_or_create_eventloop()
+loop.run_until_complete(get_tool_list(finance_mcp))
 
 class StockExtractor(Executor):
     """Custom executor that extracts stock information from messages."""
@@ -166,6 +151,6 @@ summarizer = Summarizer(chat_client)
 
 # Build the workflow using the fluent builder.
 # Set the start node and connect an edge from stock to summarizer.
-workflow = WorkflowBuilder().set_start_executor(stock).add_edge(stock, context).add_edge(context, summarizer).build()
+workflow = WorkflowBuilder(name="Restocking Workflow").set_start_executor(stock).add_edge(stock, context).add_edge(context, summarizer).build()
 
 setup_observability()

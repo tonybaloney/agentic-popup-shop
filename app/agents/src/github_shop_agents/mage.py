@@ -1,19 +1,19 @@
 import logging
-import asyncio
 import os
 from agent_framework import (
     ChatAgent,
     MCPStreamableHTTPTool,
     MagenticBuilder,
-)
-from agent_framework.azure import AzureOpenAIChatClient
-
-from agent_framework import (
     MagenticCallbackEvent,
     MagenticFinalResultEvent,
     MagenticOrchestratorMessageEvent,
     MagenticCallbackMode,
 )
+from agent_framework.azure import AzureOpenAIChatClient
+
+
+from github_shop_agents import MCPStreamableHTTPToolOTEL, get_or_create_eventloop
+
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -33,7 +33,7 @@ async def get_tool_list(tool: MCPStreamableHTTPTool) -> str:
              tool_suffix += f"\n### {func.name}\n{func.description}\n------------------------\n"
     return tool_suffix
 
-supplier_mcp_tools = MCPStreamableHTTPTool(
+supplier_mcp_tools = MCPStreamableHTTPToolOTEL(
     name="SupplierMCP",
     url=os.getenv("SUPPLIER_MCP_HTTP", "http://localhost:8001") + "/mcp",
     headers={
@@ -44,11 +44,8 @@ supplier_mcp_tools = MCPStreamableHTTPTool(
     request_timeout=30,
 )
 
-# if there is a current event loop, use it otherwise use asyncio.run
-if asyncio.get_event_loop().is_running():
-    supplier_tools = asyncio.create_task(get_tool_list(supplier_mcp_tools))
-else:
-    supplier_tools = asyncio.run(get_tool_list(supplier_mcp_tools))
+loop = get_or_create_eventloop()
+supplier_tools = loop.run_until_complete(get_tool_list(supplier_mcp_tools))
 
 supplier_agent = ChatAgent(
     name="SupplierAgent",
@@ -75,7 +72,7 @@ async def on_event(event: MagenticCallbackEvent) -> None:
             print("=" * 50)
 
 workflow = (
-    MagenticBuilder()
+    MagenticBuilder(name="Supplier Review Workflow")
     .participants(supplier=supplier_agent)
     # .with_plan_review()
     .on_event(on_event, mode=MagenticCallbackMode.STREAMING)
