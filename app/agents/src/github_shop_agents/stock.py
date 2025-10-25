@@ -1,4 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
+import asyncio
 from contextlib import _AsyncGeneratorContextManager
 import os
 from typing import Any
@@ -64,6 +65,14 @@ finance_mcp = MCPStreamableHTTPToolOTEL(
     request_timeout=30,
 )
 
+# Preload tools to get better startup performance.
+async def get_tool_list(tool: MCPStreamableHTTPTool) -> None:
+    async with tool as tools:
+        await tools.load_tools()
+
+supplier_tools = asyncio.run(get_tool_list(finance_mcp))
+
+
 class StockExtractor(Executor):
     """Custom executor that extracts stock information from messages."""
 
@@ -76,7 +85,6 @@ class StockExtractor(Executor):
     @handler
     async def handle(self, message: ChatMessage, ctx: WorkflowContext[StockExtractorResult]) -> None:
         """Extract department data"""
-        # TODO: Add authentication headers to MCP call
         agent = self.openai_client.create_agent(
                 instructions=(
                     "You determine strategies for restocking items. Consult the tools for stock levels and prioritise which items to restock first."

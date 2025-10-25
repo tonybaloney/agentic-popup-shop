@@ -16,7 +16,6 @@ from typing import AsyncIterator, Optional
 from datetime import datetime, UTC
 import logging
 
-from github_shop_shared.config import Config
 from github_shop_shared.finance_sqlite import FinanceSQLiteProvider
 import os
 from contextlib import asynccontextmanager
@@ -64,12 +63,11 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator:
 # Initialize FastMCP server
 mcp = FastMCP("Zava Finance Agent MCP Server", auth=verifier, lifespan=app_lifespan)
 
-# Initialize configuration
-config = Config()
 
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(request: Request) -> Response:
-    assert db, "Server not initialized"  # noqa: S101
+    if not db:
+        return JSONResponse({"status": "error", "message": "Server not initialized"}, status_code=500)
     return JSONResponse({"status": "ok"})
 
 @mcp.tool()

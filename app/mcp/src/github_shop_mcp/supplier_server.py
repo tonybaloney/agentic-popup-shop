@@ -16,7 +16,6 @@ initialize()
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 from fastmcp import FastMCP
 from github_shop_shared.supplier_sqlite import SupplierSQLiteProvider
-from github_shop_shared.config import Config
 from pydantic import Field
 from typing import Annotated, AsyncIterator, Optional
 import os
@@ -60,7 +59,8 @@ mcp = FastMCP("mcp-zava-supplier", auth=verifier, lifespan=app_lifespan)
 
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(request: Request) -> Response:
-    assert db, "Server not initialized"  # noqa: S101
+    if not db:
+        return JSONResponse({"status": "error", "message": "Server not initialized"}, status_code=500)
     return JSONResponse({"status": "ok"})
 
 @mcp.tool()
