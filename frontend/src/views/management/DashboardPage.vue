@@ -83,7 +83,7 @@
             <div class="stat-content">
               <div class="stat-value">{{ stats.totalStores }}</div>
               <div class="stat-label">Popup Stores</div>
-              <div class="stat-info">Across Washington State</div>
+              <div class="stat-info">Across the US</div>
             </div>
           </div>
         </div>

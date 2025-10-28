@@ -28,60 +28,6 @@
               
               <div 
                 class="nav-dropdown"
-                @mouseenter="openDropdown('accessories')"
-                @mouseleave="closeDropdown"
-              >
-                <router-link to="/category/accessories" class="nav-link">
-                  Accessories
-                  <span class="dropdown-arrow">▾</span>
-                </router-link>
-                <div v-if="activeDropdown === 'accessories'" class="dropdown-menu">
-                  <router-link to="/category/accessories/backpacks-bags" class="dropdown-item" @click="closeMobileMenu">Backpacks & Bags</router-link>
-                  <router-link to="/category/accessories/belts" class="dropdown-item" @click="closeMobileMenu">Belts</router-link>
-                  <router-link to="/category/accessories/caps-hats" class="dropdown-item" @click="closeMobileMenu">Caps & Hats</router-link>
-                  <router-link to="/category/accessories/gloves" class="dropdown-item" @click="closeMobileMenu">Gloves</router-link>
-                  <router-link to="/category/accessories/scarves" class="dropdown-item" @click="closeMobileMenu">Scarves</router-link>
-                  <router-link to="/category/accessories/socks" class="dropdown-item" @click="closeMobileMenu">Socks</router-link>
-                  <router-link to="/category/accessories/sunglasses" class="dropdown-item" @click="closeMobileMenu">Sunglasses</router-link>
-                </div>
-              </div>
-
-              <div 
-                class="nav-dropdown"
-                @mouseenter="openDropdown('bottoms')"
-                @mouseleave="closeDropdown"
-              >
-                <router-link to="/category/apparel-bottoms" class="nav-link">
-                  Bottoms
-                  <span class="dropdown-arrow">▾</span>
-                </router-link>
-                <div v-if="activeDropdown === 'bottoms'" class="dropdown-menu">
-                  <router-link to="/category/apparel-bottoms/jeans" class="dropdown-item" @click="closeMobileMenu">Jeans</router-link>
-                  <router-link to="/category/apparel-bottoms/pants" class="dropdown-item" @click="closeMobileMenu">Pants</router-link>
-                  <router-link to="/category/apparel-bottoms/shorts" class="dropdown-item" @click="closeMobileMenu">Shorts</router-link>
-                </div>
-              </div>
-
-              <div 
-                class="nav-dropdown"
-                @mouseenter="openDropdown('tops')"
-                @mouseleave="closeDropdown"
-              >
-                <router-link to="/category/apparel-tops" class="nav-link">
-                  Tops
-                  <span class="dropdown-arrow">▾</span>
-                </router-link>
-                <div v-if="activeDropdown === 'tops'" class="dropdown-menu">
-                  <router-link to="/category/apparel-tops/flannel-shirts" class="dropdown-item" @click="closeMobileMenu">Flannel Shirts</router-link>
-                  <router-link to="/category/apparel-tops/formal-shirts" class="dropdown-item" @click="closeMobileMenu">Formal Shirts</router-link>
-                  <router-link to="/category/apparel-tops/hoodies" class="dropdown-item" @click="closeMobileMenu">Hoodies</router-link>
-                  <router-link to="/category/apparel-tops/sweatshirts" class="dropdown-item" @click="closeMobileMenu">Sweatshirts</router-link>
-                  <router-link to="/category/apparel-tops/t-shirts" class="dropdown-item" @click="closeMobileMenu">T-Shirts</router-link>
-                </div>
-              </div>
-
-              <div 
-                class="nav-dropdown"
                 @mouseenter="openDropdown('footwear')"
                 @mouseleave="closeDropdown"
               >
@@ -99,6 +45,40 @@
 
               <div 
                 class="nav-dropdown"
+                @mouseenter="openDropdown('tops')"
+                @mouseleave="closeDropdown"
+              >
+                <router-link to="/category/apparel-tops" class="nav-link">
+                  Apparel - Tops
+                  <span class="dropdown-arrow">▾</span>
+                </router-link>
+                <div v-if="activeDropdown === 'tops'" class="dropdown-menu">
+                  <router-link to="/category/apparel-tops/flannel-shirts" class="dropdown-item" @click="closeMobileMenu">Flannel Shirts</router-link>
+                  <router-link to="/category/apparel-tops/formal-shirts" class="dropdown-item" @click="closeMobileMenu">Formal Shirts</router-link>
+                  <router-link to="/category/apparel-tops/hoodies" class="dropdown-item" @click="closeMobileMenu">Hoodies</router-link>
+                  <router-link to="/category/apparel-tops/sweatshirts" class="dropdown-item" @click="closeMobileMenu">Sweatshirts</router-link>
+                  <router-link to="/category/apparel-tops/t-shirts" class="dropdown-item" @click="closeMobileMenu">T-Shirts</router-link>
+                </div>
+              </div>
+
+              <div 
+                class="nav-dropdown"
+                @mouseenter="openDropdown('bottoms')"
+                @mouseleave="closeDropdown"
+              >
+                <router-link to="/category/apparel-bottoms" class="nav-link">
+                  Apparel - Bottoms
+                  <span class="dropdown-arrow">▾</span>
+                </router-link>
+                <div v-if="activeDropdown === 'bottoms'" class="dropdown-menu">
+                  <router-link to="/category/apparel-bottoms/jeans" class="dropdown-item" @click="closeMobileMenu">Jeans</router-link>
+                  <router-link to="/category/apparel-bottoms/pants" class="dropdown-item" @click="closeMobileMenu">Pants</router-link>
+                  <router-link to="/category/apparel-bottoms/shorts" class="dropdown-item" @click="closeMobileMenu">Shorts</router-link>
+                </div>
+              </div>
+
+              <div 
+                class="nav-dropdown"
                 @mouseenter="openDropdown('outerwear')"
                 @mouseleave="closeDropdown"
               >
@@ -109,6 +89,26 @@
                 <div v-if="activeDropdown === 'outerwear'" class="dropdown-menu">
                   <router-link to="/category/outerwear/coats" class="dropdown-item" @click="closeMobileMenu">Coats</router-link>
                   <router-link to="/category/outerwear/jackets" class="dropdown-item" @click="closeMobileMenu">Jackets</router-link>
+                </div>
+              </div>
+
+              <div 
+                class="nav-dropdown"
+                @mouseenter="openDropdown('accessories')"
+                @mouseleave="closeDropdown"
+              >
+                <router-link to="/category/accessories" class="nav-link">
+                  Accessories
+                  <span class="dropdown-arrow">▾</span>
+                </router-link>
+                <div v-if="activeDropdown === 'accessories'" class="dropdown-menu">
+                  <router-link to="/category/accessories/backpacks-bags" class="dropdown-item" @click="closeMobileMenu">Backpacks & Bags</router-link>
+                  <router-link to="/category/accessories/belts" class="dropdown-item" @click="closeMobileMenu">Belts</router-link>
+                  <router-link to="/category/accessories/caps-hats" class="dropdown-item" @click="closeMobileMenu">Caps & Hats</router-link>
+                  <router-link to="/category/accessories/gloves" class="dropdown-item" @click="closeMobileMenu">Gloves</router-link>
+                  <router-link to="/category/accessories/scarves" class="dropdown-item" @click="closeMobileMenu">Scarves</router-link>
+                  <router-link to="/category/accessories/socks" class="dropdown-item" @click="closeMobileMenu">Socks</router-link>
+                  <router-link to="/category/accessories/sunglasses" class="dropdown-item" @click="closeMobileMenu">Sunglasses</router-link>
                 </div>
               </div>
 

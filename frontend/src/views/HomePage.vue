@@ -11,27 +11,6 @@
       </div>
     </section>
 
-    <!-- Featured Categories -->
-    <section class="categories-section">
-      <div class="container">
-        <h2 class="section-title">Shop by Category</h2>
-        <div class="categories-grid">
-          <router-link 
-            v-for="category in categories" 
-            :key="category.id"
-            :to="category.link"
-            class="category-card"
-          >
-            <div class="category-image">
-              <span class="category-icon">{{ category.icon }}</span>
-            </div>
-            <h3 class="category-name">{{ category.name }}</h3>
-            <p class="category-count">{{ category.count }} items</p>
-          </router-link>
-        </div>
-      </div>
-    </section>
-
     <!-- Featured Products -->
     <section class="featured-products">
       <div class="container">
@@ -237,8 +216,8 @@ export default {
 /* Hero Section */
 .hero {
   position: relative;
-  height: 600px;
-  background-image: url('../assets/images/store.png');
+  height: 300px;
+  background-image: url('../assets/images/store.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -261,7 +240,7 @@ export default {
   background: linear-gradient(135deg, 
     rgba(13, 17, 23, 0.85) 0%, 
     rgba(36, 41, 47, 0.75) 50%, 
-    rgba(45, 164, 78, 0.65) 100%
+    rgba(155, 90, 90, 0.69) 100%
   );
   z-index: 1;
 }
