@@ -1,7 +1,6 @@
 {
     "name": "MCP Agent Workshop",
     "dockerComposeFile": [
-        "../docker-compose.yml",
         "docker-compose.devcontainer.yml"
     ],
     "service": "devcontainer",
@@ -26,14 +25,6 @@
             ]
         }
     },
-    "containerEnv": {
-        "ENVIRONMENT": "container",
-        "postgres_host": "postgres",
-        "postgres_port": "5432",
-        "postgres_user": "postgres",
-        "postgres_password": "postgres",
-        "postgres_db": "zava"
-    },
     "forwardPorts": [8005, 3000, 8091],
     "portsAttributes": {
         "8005": {
@@ -50,5 +41,4 @@
         }
     },
     "postCreateCommand": "bash .devcontainer/postCreateCommand.sh"
-    // "postAttachCommand": "/bin/bash .devcontainer/make-port-public.sh 8005"
 }
