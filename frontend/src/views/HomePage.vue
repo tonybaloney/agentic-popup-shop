@@ -3,8 +3,8 @@
     <!-- Hero Section -->
     <section class="hero">
       <div class="hero-content">
-        <h1 class="hero-title">GitHub Popup Shop</h1>
-        <p class="hero-subtitle">Premium Merchandise & Developer Apparel at Popup Locations</p>
+        <h1 class="hero-title">Zava Popup Shop</h1>
+        <p class="hero-subtitle">Premium Merchandise & Apparel at Popup Locations</p>
         <router-link to="/category/accessories" class="btn btn-primary hero-btn">
           Shop Now
         </router-link>
@@ -67,7 +67,7 @@
     <section class="locations-banner">
       <div class="container">
         <div class="banner-content">
-          <h2>Find a GitHub Popup Shop Near You</h2>
+          <h2>Find a Popup Shop Near You</h2>
           <p>10+ locations across the country</p>
           <router-link to="/stores" class="btn btn-outline">
             View Locations

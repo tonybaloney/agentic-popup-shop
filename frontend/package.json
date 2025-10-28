@@ -1,7 +1,7 @@
 {
-  "name": "gitub-popup-store",
+  "name": "zava-popup-store",
   "version": "1.0.0",
-  "description": "GitHub Popup Clothing Store Frontend",
+  "description": "Popup Clothing Store Frontend",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

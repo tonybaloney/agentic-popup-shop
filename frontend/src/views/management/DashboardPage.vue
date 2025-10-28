@@ -321,12 +321,12 @@ export default {
       
       // Convert store name to image filename
       const imageMap = {
-        'GitHub Popup NYC Times Square': '/images/store_nyc_times_square.png',
-        'GitHub Popup SF Union Square': '/images/store.png', // Use default for SF
-        'GitHub Popup Pike Place': '/images/store_pike_place.png',
-        'GitHub Popup Kirkland Waterfront': '/images/store_kirkland_waterfront.png',
-        'GitHub Popup Spokane Pavilion': '/images/store_spokane_pavilion.png',
-        'GitHub Popup Everett Station': '/images/store_everett_station.png'
+        'Popup NYC Times Square': '/images/store_nyc_times_square.png',
+        'Popup SF Union Square': '/images/store.png', // Use default for SF
+        'Popup Pike Place': '/images/store_pike_place.png',
+        'Popup Kirkland Waterfront': '/images/store_kirkland_waterfront.png',
+        'Popup Spokane Pavilion': '/images/store_spokane_pavilion.png',
+        'Popup Everett Station': '/images/store_everett_station.png'
       };
       
       return imageMap[storeName] || '/images/store.png';
