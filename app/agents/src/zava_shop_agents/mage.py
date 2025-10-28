@@ -12,7 +12,7 @@ from agent_framework import (
 from agent_framework.azure import AzureOpenAIChatClient
 
 
-from github_shop_agents import MCPStreamableHTTPToolOTEL, get_or_create_eventloop
+from zava_shop_agents import MCPStreamableHTTPToolOTEL
 
 
 

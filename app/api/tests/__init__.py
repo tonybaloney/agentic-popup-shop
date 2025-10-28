@@ -1,3 +1,3 @@
 """
-Test suite for the GitHub Popup Store API.
+Test suite for the Popup Store API.
 """

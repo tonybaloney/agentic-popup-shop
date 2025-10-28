@@ -1,5 +1,5 @@
 [project]
-name = "github-shop-agents"
+name = "zava-shop-agents"
 version = "0.1.0"
 description = "Agent implementations for the shop application"
 requires-python = ">=3.12"

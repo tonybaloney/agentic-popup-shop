@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FastAPI Backend for GitHub Popup Store
+FastAPI Backend for Popup Store
 Provides REST API endpoints for the frontend application.
 """
 from opentelemetry.instrumentation.auto_instrumentation import initialize
@@ -28,8 +28,8 @@ from pydantic import BaseModel
 import json
 import secrets
 from datetime import datetime, timezone
-from github_shop_shared.config import Config
-from github_shop_agents.stock import workflow
+from zava_shop_shared.config import Config
+from zava_shop_agents.stock import workflow
 
 # SQLAlchemy imports for SQLite
 from sqlalchemy import select, func, case
@@ -39,12 +39,12 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from github_shop_shared.models.sqlite.stores import Store as StoreModel
-from github_shop_shared.models.sqlite.inventory import Inventory as InventoryModel
-from github_shop_shared.models.sqlite.products import Product as ProductModel
-from github_shop_shared.models.sqlite.categories import Category as CategoryModel
-from github_shop_shared.models.sqlite.product_types import ProductType as ProductTypeModel
-from github_shop_shared.models.sqlite.suppliers import Supplier as SupplierModel
+from zava_shop_shared.models.sqlite.stores import Store as StoreModel
+from zava_shop_shared.models.sqlite.inventory import Inventory as InventoryModel
+from zava_shop_shared.models.sqlite.products import Product as ProductModel
+from zava_shop_shared.models.sqlite.categories import Category as CategoryModel
+from zava_shop_shared.models.sqlite.product_types import ProductType as ProductTypeModel
+from zava_shop_shared.models.sqlite.suppliers import Supplier as SupplierModel
 from .models import (
     Product, ProductList, Store, StoreList, Category, CategoryList, 
     TopCategory, TopCategoryList, Supplier, SupplierList, 
@@ -143,7 +143,7 @@ async def lifespan(app: FastAPI):
     global sqlalchemy_engine, async_session_factory
 
     # Startup
-    logger.info("🚀 Starting GitHub API Server...")
+    logger.info("🚀 Starting API Server...")
 
     # Initialize SQLAlchemy async engine for SQLite
     try:
@@ -178,7 +178,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
-    logger.info("🛑 Shutting down GitHub API Server...")
+    logger.info("🛑 Shutting down API Server...")
 
     # Dispose SQLAlchemy engine
     if sqlalchemy_engine:
@@ -188,8 +188,8 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="GitHub Popup Store API",
-    description="REST API for GitHub popup merchandise store",
+    title="Popup Store API",
+    description="REST API for Popup merchandise store",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -1666,7 +1666,7 @@ async def websocket_ai_agent_inventory(websocket: WebSocket):
 async def root():
     """Root endpoint"""
     return {
-        "service": "GitHub Popup Store API",
+        "service": "Popup Store API",
         "version": "1.0.0",
         "status": "running",
         "endpoints": {

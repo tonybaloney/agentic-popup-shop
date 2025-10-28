@@ -43,13 +43,13 @@ ENV PYTHONPATH=/app/mcp:/app/shared/src
 ENV PYTHONUNBUFFERED=1
 
 # Use the startup script as the entrypoint
-ENTRYPOINT ["uv", "run", "python", "-m", "github_shop_mcp.supplier_server"]
+ENTRYPOINT ["uv", "run", "python", "-m", "zava_shop_mcp.supplier_server"]
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import sys; sys.exit(0)" || exit 1
 
 # Labels
-LABEL maintainer="GitHub Shop Team"
-LABEL description="MCP Server for GitHub Shop Supplier Management"
+LABEL maintainer="Zava Shop Team"
+LABEL description="MCP Server for Zava Shop Supplier Management"
 LABEL version="0.1.0"

@@ -1,4 +1,4 @@
-# Test Suite for GitHub Popup Store API
+# Test Suite for Popup Store API
 
 This directory contains the test suite for the FastAPI backend.
 

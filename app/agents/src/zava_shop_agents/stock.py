@@ -13,7 +13,7 @@ from agent_framework import (
 from agent_framework.observability import setup_observability
 from agent_framework.azure import AzureOpenAIChatClient
 from pydantic import BaseModel
-from github_shop_agents import MCPStreamableHTTPToolOTEL, get_or_create_eventloop
+from zava_shop_agents import MCPStreamableHTTPToolOTEL
 chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
                                     endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
                                     deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),

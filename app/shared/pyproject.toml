@@ -1,5 +1,5 @@
 [project]
-name = "github-shop-shared"
+name = "zava-shop-shared"
 version = "0.1.0"
 description = "Shared utilities and configurations for the shop application"
 

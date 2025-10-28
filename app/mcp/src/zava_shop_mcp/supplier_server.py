@@ -15,7 +15,7 @@ from opentelemetry.instrumentation.auto_instrumentation import initialize
 initialize()
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 from fastmcp import FastMCP
-from github_shop_shared.supplier_sqlite import SupplierSQLiteProvider
+from zava_shop_shared.supplier_sqlite import SupplierSQLiteProvider
 from pydantic import Field
 from typing import Annotated, AsyncIterator, Optional
 import os

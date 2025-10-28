@@ -12,7 +12,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 envVars.TryGetValue("APPLICATIONINSIGHTS_CONNECTION_STRING", out string? appInsightsConnectionString);
 
-var financeMcp = builder.AddPythonModule("finance-mcp", "./app/mcp/", "github_shop_mcp.finance_server")
+var financeMcp = builder.AddPythonModule("finance-mcp", "./app/mcp/", "zava_shop_mcp.finance_server")
     .WithUvEnvironment()
     .WithHttpEndpoint(env: "PORT")
     .WithHttpHealthCheck("/health")
@@ -21,7 +21,7 @@ var financeMcp = builder.AddPythonModule("finance-mcp", "./app/mcp/", "github_sh
     .WithEnvironment("DEV_GUEST_TOKEN", envVars["DEV_GUEST_TOKEN"])
     .WithExternalHttpEndpoints();
 
-var supplierMcp = builder.AddPythonModule("supplier-mcp", "./app/mcp/", "github_shop_mcp.supplier_server")
+var supplierMcp = builder.AddPythonModule("supplier-mcp", "./app/mcp/", "zava_shop_mcp.supplier_server")
     .WithUvEnvironment()
     .WithHttpEndpoint(env: "PORT")
     .WithHttpHealthCheck("/health")
@@ -30,7 +30,7 @@ var supplierMcp = builder.AddPythonModule("supplier-mcp", "./app/mcp/", "github_
     .WithEnvironment("DEV_GUEST_TOKEN", envVars["DEV_GUEST_TOKEN"])
     .WithExternalHttpEndpoints();
 
-var agentDev = builder.AddPythonModule("agent-dev", "./app/agents/", "github_shop_agents")
+var agentDev = builder.AddPythonModule("agent-dev", "./app/agents/", "zava_shop_agents")
     .WithUvEnvironment()
     .WithHttpEndpoint(env: "PORT")
     .WithHttpHealthCheck("/health")
@@ -48,7 +48,7 @@ var agentDev = builder.AddPythonModule("agent-dev", "./app/agents/", "github_sho
 
 
 var apiService = builder.AddPythonModule("api", "./app/api/", "uvicorn")
-    .WithArgs("github_shop_api.app:app", "--reload")
+    .WithArgs("zava_shop_api.app:app", "--reload")
     .WithUvEnvironment()
     .WithHttpEndpoint(env: "UVICORN_PORT")
     .WithHttpHealthCheck("/health")

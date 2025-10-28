@@ -1,5 +1,5 @@
 [project]
-name = "github-shop-mcp"
+name = "zava-shop-mcp"
 version = "0.1.0"
 description = "MCP server for the shop application"
 requires-python = ">=3.12"
@@ -12,11 +12,11 @@ dependencies = [
     "azure-monitor-opentelemetry-exporter",
     "opentelemetry-distro",
     # local editable packages
-    "github-shop-shared",
+    "zava-shop-shared",
 ]
 
 [tool.uv.sources]
-github-shop-shared = { path = "../shared", editable = true }
+zava-shop-shared = { path = "../shared", editable = true }
 
 [build-system]
 requires = ["uv_build>=0.9.3,<0.10.0"]

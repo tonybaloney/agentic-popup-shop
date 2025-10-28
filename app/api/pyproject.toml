@@ -1,5 +1,5 @@
 [project]
-name = "github-shop-api"
+name = "zava-shop-api"
 version = "0.1.0"
 description = "A FastAPI-based API for the shop application"
 requires-python = ">=3.12"
@@ -18,16 +18,16 @@ dependencies = [
     "opentelemetry-distro",
 
     # local editable packages
-    "github-shop-shared",
-    "github-shop-agents",
+    "zava-shop-shared",
+    "zava-shop-agents",
 ]
 
 [tool.uv.sources]
-github-shop-shared = { path = "../shared", editable = true }
-github-shop-agents = { path = "../agents", editable = true }
+zava-shop-shared = { path = "../shared", editable = true }
+zava-shop-agents = { path = "../agents", editable = true }
 
 [build-system]
 requires = ["uv_build>=0.9.3,<0.10.0"]
 build-backend = "uv_build"
 
-# uv run uvicorn github_shop_api.app:app --reload
+# uv run uvicorn zava_shop_api.app:app --reload

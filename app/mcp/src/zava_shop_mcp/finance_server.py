@@ -16,7 +16,7 @@ from typing import AsyncIterator, Optional
 from datetime import datetime, UTC
 import logging
 
-from github_shop_shared.finance_sqlite import FinanceSQLiteProvider
+from zava_shop_shared.finance_sqlite import FinanceSQLiteProvider
 import os
 from contextlib import asynccontextmanager
 from starlette.requests import Request

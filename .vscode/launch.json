@@ -71,7 +71,7 @@
             "cwd": "${workspaceFolder}",
             "python": "${workspaceFolder}/app/api/.venv/bin/python",
             "args": [
-                "github_shop_api.app:app",
+                "zava_shop_api.app:app",
                 "--reload",
                 "--host",
                 "0.0.0.0",
