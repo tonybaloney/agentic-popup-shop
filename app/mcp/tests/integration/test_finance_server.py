@@ -63,6 +63,6 @@ async def test_get_stores(
     main_mcp_client: Client[FastMCPTransport],
 ):
     result = await main_mcp_client.call_tool(
-        name="get_stores", arguments={"store_id": store_id}
+        name="get_stores", arguments={"store_name": store_id}
     )
     assert result.data is not None

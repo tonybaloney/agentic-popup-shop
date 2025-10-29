@@ -109,13 +109,14 @@ async def get_company_order_policy(
         department: Optional department name to filter policies (e.g., "Procurement", "Finance")
 
     Returns:
-        JSON string with format: {"c": [columns], "r": [[row data]], "n": count}
-        Includes policy names, types, content, thresholds, and approval requirements.
+        List of CompanyPolicyResult objects containing policy details including
+        policy names, types, content, thresholds, and approval requirements.
 
     Example:
-        >>> result = await get_company_order_policy(department="Finance")
-        >>> data = json.loads(result)
-        >>> print(f"Found {data['n']} policies")
+        >>> policies = await get_company_order_policy(department="Finance")
+        >>> print(f"Found {len(policies)} policies")
+        >>> for policy in policies:
+        >>>     print(f"Policy: {policy.policy_name} - Type: {policy.policy_type}")
     """
     try:
         logger.info(
