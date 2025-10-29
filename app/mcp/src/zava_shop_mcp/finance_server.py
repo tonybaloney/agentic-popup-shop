@@ -24,7 +24,8 @@ from starlette.responses import Response, JSONResponse
 
 from opentelemetry.instrumentation.mcp import McpInstrumentor
 McpInstrumentor().instrument()
-
+from pydantic import Field
+from typing import Annotated
 from sqlalchemy import select, func, case, and_
 
 from zava_shop_shared.models.sqlite import (
@@ -97,7 +98,7 @@ async def health_check(request: Request) -> Response:
 
 @mcp.tool()
 async def get_company_order_policy(
-    department: Optional[str] = None
+    department: Annotated[Optional[str], Field(description="Department name to filter policies")] = None
 ) -> list[CompanyPolicyResult]:
     """
     Get company order processing policies and budget authorization rules.
@@ -188,7 +189,7 @@ async def get_company_order_policy(
 
 @mcp.tool()
 async def get_supplier_contract(
-    supplier_id: int
+    supplier_id: Annotated[int, Field(description="The unique identifier for the supplier")]
 ) -> list[SupplierContractResult]:
     """
     Get supplier contract information including terms and conditions.
@@ -277,9 +278,9 @@ async def get_supplier_contract(
 
 @mcp.tool()
 async def get_historical_sales_data(
-    days_back: int = 30,
-    store_id: Optional[int] = None,
-    category_name: Optional[str] = None
+    days_back: Annotated[int, Field(description="Number of days to look back")] = 30,
+    store_id: Annotated[Optional[int], Field(description="Store ID to filter results")] = None,
+    category_name: Annotated[Optional[str], Field(description="Category name to filter results")] = None
 ) -> list[SalesDataResult]:
     """
     Get historical sales data with revenue, order counts, and customer metrics.
@@ -365,9 +366,9 @@ async def get_historical_sales_data(
 
 @mcp.tool()
 async def get_current_inventory_status(
-    store_id: Optional[int] = None,
-    category_name: Optional[str] = None,
-    low_stock_threshold: int = 10
+    store_id: Annotated[Optional[int], Field(description="Store ID to filter results")] = None,
+    category_name: Annotated[Optional[str], Field(description="Category name to filter results")] = None,
+    low_stock_threshold: Annotated[int, Field(description="Low stock threshold")] = 10
 ) -> list[InventoryStatusResult]:
     """
     Get current inventory status across stores with values and low stock alerts.
@@ -466,7 +467,7 @@ async def get_current_inventory_status(
 
 @mcp.tool()
 async def get_stores(
-    store_name: Optional[str] = None
+    store_name: Annotated[Optional[str], Field(description="Store name to filter results")] = None
 ) -> list[StoreResult]:
     """
     Get store information with optional filtering by name.
