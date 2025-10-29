@@ -2,9 +2,9 @@ services:
   devcontainer:
     build:
       context: .
-      dockerfile: .devcontainer/Dockerfile
+      dockerfile: Dockerfile
     volumes:
-      - .:/workspace:cached
+      - ..:/workspace:cached
     command: sleep infinity
     working_dir: /workspace
     environment:

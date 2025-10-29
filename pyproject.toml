@@ -1,0 +1,2 @@
+[tools.ruff]
+line-length = 120

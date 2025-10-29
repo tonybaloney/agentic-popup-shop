@@ -60,6 +60,31 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
             }
+        },
+        {
+            "name": "🔧 Backend API Server (Port 8091)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "console": "integratedTerminal",
+            "consoleName": "Backend API",
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/app/api/.venv/bin/python",
+            "args": [
+                "zava_shop_api.app:app",
+                "--reload",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8091"
+            ]
+        },
+        {
+            "name": "🎨 Frontend Dev Server (Port 3000)",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm run dev",
+            "cwd": "${workspaceFolder}/frontend"
         }
     ],
     "compounds": [
@@ -73,6 +98,19 @@
                 "hidden": false,
                 "group": "MCP Servers",
                 "order": 1
+            },
+            "stopAll": true
+        },
+        {
+            "name": "🌐 Full Stack Web App (Frontend + Backend)",
+            "configurations": [
+                "🔧 Backend API Server (Port 8091)",
+                "🎨 Frontend Dev Server (Port 3000)"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "Web App",
+                "order": 2
             },
             "stopAll": true
         }

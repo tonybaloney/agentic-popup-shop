@@ -1,0 +1,35 @@
+[project]
+name = "zava-shop-mcp"
+version = "0.1.0"
+description = "MCP server for the shop application"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp>=2.11.0,<3.0.0",
+    "opentelemetry-instrumentation-mcp",
+    "opentelemetry-instrumentation-sqlalchemy",
+    "opentelemetry-exporter-otlp",
+    "azure-monitor-opentelemetry",
+    "azure-monitor-opentelemetry-exporter",
+    "opentelemetry-distro",
+    # local editable packages
+    "zava-shop-shared",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4.0,<8.0.0",
+    "pytest-asyncio>=0.23.0,<0.24.0",
+    "pytest-cov>=4.1.0,<5.0.0",
+]
+dev = [
+    "pytest>=7.4.0,<8.0.0",
+    "pytest-asyncio>=0.23.0,<0.24.0",
+    "pytest-cov>=4.1.0,<5.0.0",
+]
+
+[tool.uv.sources]
+zava-shop-shared = { path = "../shared", editable = true }
+
+[build-system]
+requires = ["uv_build>=0.9.3,<0.10.0"]
+build-backend = "uv_build"

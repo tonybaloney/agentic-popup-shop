@@ -346,3 +346,4 @@ MigrationBackup/
 FodyWeavers.xsd
 .env.bak
 resources.txt
+*.egg-info/

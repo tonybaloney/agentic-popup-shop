@@ -1,0 +1,25 @@
+[project]
+name = "zava-shop-agents"
+version = "0.1.0"
+description = "Agent implementations for the shop application"
+requires-python = ">=3.12"
+dependencies = [
+    "agent-framework-core@git+https://github.com/microsoft/agent-framework.git@main#egg=agent-framework-core&subdirectory=python/packages/core",
+    "azure-identity>=1.23.0,<2.0.0",
+    "opentelemetry-instrumentation-openai",
+    "agent-framework-devui@git+https://github.com/microsoft/agent-framework.git@main#egg=agent-framework-devui&subdirectory=python/packages/devui",
+    "opentelemetry-exporter-otlp",
+    "azure-monitor-opentelemetry",
+    "azure-monitor-opentelemetry-exporter",
+    "opentelemetry-distro",
+
+]
+
+[project.optional-dependencies]
+ui = [
+"agent-framework-devui@git+https://github.com/microsoft/agent-framework.git@main#egg=agent-framework-devui&subdirectory=python/packages/devui",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.3,<0.10.0"]
+build-backend = "uv_build"

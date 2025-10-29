@@ -1,7 +1,6 @@
 {
     "name": "MCP Agent Workshop",
     "dockerComposeFile": [
-        "../docker-compose.yml",
         "docker-compose.devcontainer.yml"
     ],
     "service": "devcontainer",
@@ -21,24 +20,25 @@
                 "charliermarsh.ruff",
                 "ms-azuretools.vscode-bicep",
                 "ms-python.debugpy",
-                "GitHub.copilot-chat"
+                "GitHub.copilot-chat",
+                "Vue.volar"
             ]
         }
     },
-    "containerEnv": {
-        "ENVIRONMENT": "container",
-        "postgres_host": "postgres",
-        "postgres_port": "5432",
-        "postgres_user": "postgres",
-        "postgres_password": "postgres",
-        "postgres_db": "zava"
-    },
-    "forwardPorts": [8005],
+    "forwardPorts": [8005, 3000, 8091],
     "portsAttributes": {
         "8005": {
             "label": "Web Chat App",
             "onAutoForward": "openBrowserOnce"
+        },
+        "3000": {
+            "label": "Frontend (Vue)",
+            "onAutoForward": "notify"
+        },
+        "8091": {
+            "label": "Backend API",
+            "onAutoForward": "notify"
         }
-    }
-    // "postAttachCommand": "/bin/bash .devcontainer/make-port-public.sh 8005"
+    },
+    "postCreateCommand": "bash .devcontainer/postCreateCommand.sh"
 }

@@ -1,0 +1,33 @@
+[project]
+name = "zava-shop-api"
+version = "0.1.0"
+description = "A FastAPI-based API for the shop application"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "fastapi-cache2",
+    "uvicorn[standard]",
+    "pydantic",
+    "aiosqlite>=0.20.0,<0.21.0",
+    "sqlalchemy[asyncio]>=2.0.0,<3.0.0",
+    "agent-framework-core>=1.0.0b251016",
+    
+    "opentelemetry-instrumentation-fastapi",
+    "opentelemetry-instrumentation-sqlalchemy",
+    "opentelemetry-exporter-otlp",
+    "opentelemetry-distro",
+
+    # local editable packages
+    "zava-shop-shared",
+    "zava-shop-agents",
+]
+
+[tool.uv.sources]
+zava-shop-shared = { path = "../shared", editable = true }
+zava-shop-agents = { path = "../agents", editable = true }
+
+[build-system]
+requires = ["uv_build>=0.9.3,<0.10.0"]
+build-backend = "uv_build"
+
+# uv run uvicorn zava_shop_api.app:app --reload

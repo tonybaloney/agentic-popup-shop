@@ -1,0 +1,20 @@
+{
+  "name": "zava-popup-store",
+  "version": "1.0.0",
+  "description": "Popup Clothing Store Frontend",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "marked": "^16.4.0",
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "vite": "^5.0.0"
+  }
+}
