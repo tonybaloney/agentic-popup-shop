@@ -17,7 +17,7 @@ RUN sh /uv-installer.sh && rm /uv-installer.sh
 ENV PATH="/root/.local/bin/:$PATH"
 
 # Create workspace directory structure to match expected paths
-RUN mkdir -p /workspace/data
+RUN mkdir -p /workspace/app/data
 
 # Copy the entire app structure to maintain relative paths
 # Copy shared package first
@@ -26,7 +26,7 @@ COPY shared /app/shared
 # Copy MCP server code
 COPY mcp /app/mcp
 
-COPY data /workspace/data
+COPY data /workspace/app/data
 
 # Set working directory to MCP server
 WORKDIR /app/mcp

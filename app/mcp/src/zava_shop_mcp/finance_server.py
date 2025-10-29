@@ -25,9 +25,11 @@ from starlette.responses import Response, JSONResponse
 from opentelemetry.instrumentation.mcp import McpInstrumentor
 McpInstrumentor().instrument()
 
+GUEST_TOKEN = os.getenv("DEV_GUEST_TOKEN", "dev-guest-token")
+
 verifier = StaticTokenVerifier(
     tokens={
-        os.getenv("DEV_GUEST_TOKEN", "dev-guest-token"): {
+        GUEST_TOKEN: {
             "client_id": "guest-user",
             "scopes": ["read:data"]
         }
@@ -298,12 +300,12 @@ async def get_current_utc_date() -> str:
 if __name__ == "__main__":
     logger.info("🚀 Starting Supplier Agent MCP Server")
     # Configure server settings
-    port = int(os.getenv("PORT", 8092))
+    port = int(os.getenv("PORT", 8002))
     host = os.getenv("HOST", "0.0.0.0")  # noqa: S104
     logger.info(
         "❤️ 📡 Supplier MCP endpoint starting at: http://%s:%d/mcp",
         host,
         port,
     )
-
+    logger.info("Guest token is '%s******%s'", GUEST_TOKEN[0:1], GUEST_TOKEN[-2:])
     mcp.run(transport="http", host=host, port=port, path="/mcp", stateless_http=True)

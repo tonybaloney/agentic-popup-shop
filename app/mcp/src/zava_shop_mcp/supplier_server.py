@@ -14,6 +14,7 @@ Uses pre-written SQL queries from supplier_sqlite.py for all database operations
 from opentelemetry.instrumentation.auto_instrumentation import initialize
 initialize()
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
+from fastmcp.server.auth import AccessToken
 from fastmcp import FastMCP
 from zava_shop_shared.supplier_sqlite import SupplierSQLiteProvider
 from pydantic import Field
@@ -28,17 +29,27 @@ from starlette.responses import Response, JSONResponse
 from opentelemetry.instrumentation.mcp import McpInstrumentor
 McpInstrumentor().instrument()
 
-verifier = StaticTokenVerifier(
+
+GUEST_TOKEN = os.getenv("DEV_GUEST_TOKEN", "dev-guest-token")
+
+logger = logging.getLogger(__name__)
+
+class LoggingStaticTokenVerifier(StaticTokenVerifier):
+    async def verify_token(self, token: str) -> AccessToken | None:
+        result = await super().verify_token(token)
+        if not result:
+            logger.warning("Could not verify token: %s******%s", token[0:1], token[-2:])
+        return result
+
+verifier = LoggingStaticTokenVerifier(
     tokens={
-        os.getenv("DEV_GUEST_TOKEN", "dev-guest-token"): {
+        GUEST_TOKEN: {
             "client_id": "guest-user",
             "scopes": ["read:data"]
         }
     },
     required_scopes=["read:data"]
 )
-
-logger = logging.getLogger(__name__)
 
 db: SupplierSQLiteProvider | None = None
 
@@ -269,12 +280,13 @@ async def get_current_utc_date() -> str:
 if __name__ == "__main__":
     logger.info("🚀 Starting Supplier Agent MCP Server")
     # Configure server settings
-    port = int(os.getenv("PORT", 8092))
+    port = int(os.getenv("PORT", 8002))
     host = os.getenv("HOST", "0.0.0.0")  # noqa: S104
     logger.info(
         "❤️ 📡 Supplier MCP endpoint starting at: http://%s:%d/mcp",
         host,
         port,
     )
+    logger.info("Guest token is '%s******%s'", GUEST_TOKEN[0:1], GUEST_TOKEN[-2:])
 
-    mcp.run(transport="http", host=host, port=port, path="/mcp", stateless_http=True)
+    mcp.run(transport="http", host=host, port=port, path="/mcp", log_level="DEBUG")
