@@ -500,7 +500,6 @@ async def get_stores(
                 Store.store_id,
                 Store.store_name,
                 Store.is_online,
-                Store.rls_user_id,
             )
 
             # Apply filter if provided

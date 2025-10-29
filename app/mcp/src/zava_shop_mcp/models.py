@@ -61,4 +61,3 @@ class StoreResult(BaseModel):
     store_id: int
     store_name: str
     is_online: bool
-    rls_user_id: Optional[int]
