@@ -51,8 +51,6 @@ class CompetitiveResult(BaseModel):
     is_competitive: bool
 
 def is_competitive():
-    """Factory that returns a predicate matching a specific spam_decision value."""
-
     def condition(message: Any) -> bool:
         # Only match when the upstream payload is a DetectionResult with the expected decision.
         return isinstance(message, CompetitiveResult) and message.is_competitive
