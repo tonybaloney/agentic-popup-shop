@@ -36,6 +36,16 @@ supplier_mcp_tools = MCPStreamableHTTPToolOTEL(
     request_timeout=30,
 )
 
+finance_mcp = MCPStreamableHTTPToolOTEL(
+    name="FinanceMCP",
+    url=os.getenv("FINANCE_MCP_HTTP", "http://localhost:8002") + "/mcp",
+    headers={
+         "Authorization": f"Bearer {os.getenv('DEV_GUEST_TOKEN','dev-guest-token')}"
+    },
+    load_tools=True,
+    load_prompts=False,
+    request_timeout=30,
+)
 
 class CompetitiveResult(BaseModel):
     is_competitive: bool
@@ -144,7 +154,8 @@ class AggregateInsights(Executor):
 compliance = AgentExecutor(
     chat_client.create_agent(
         instructions=(
-            "You're an expert legal and compliance researcher. You review a proposal and provide feedback."
+            "You're an expert legal and compliance researcher. You review a proposal and provide feedback on behalf of Zava stores." \
+            "Use the provided tools to find out information about other suppliers' ESG and compliance status."
         ),
         tools=[supplier_mcp_tools],
     ),
@@ -153,9 +164,10 @@ compliance = AgentExecutor(
 commercial = AgentExecutor(
     chat_client.create_agent(
         instructions=(
-            "You are an expert commercial analyst. Evaluate supplier proposals for market competitiveness and value."
+            "You are an expert commercial analyst. Evaluate supplier proposals for market competitiveness and value." \
+            "Use the supplied tools to understand our existing stock levels, prices and demand."
         ),
-        tools=[supplier_mcp_tools],
+        tools=[finance_mcp],
     ),
     id=COMMERCIAL_EXPERT_ID,
 )
@@ -163,6 +175,7 @@ procurement = AgentExecutor(
     chat_client.create_agent(
         instructions=(
             "You are an expert procurement analyst. Analyze supplier proposals for cost-effectiveness and strategic fit."
+            "Use the supplied tools to check existing supplier contracts and performance."
         ),
         tools=[supplier_mcp_tools],
     ),
@@ -175,14 +188,13 @@ dispatcher = DispatchToExperts(expert_ids=expert_ids, id="Proposal Dispatcher")
 aggregator = AggregateInsights(expert_ids=expert_ids, id="Competitive Analysis Aggregator")
 
 
-
 class NegotiatorSummarizerExecutor(Executor):
     @handler
     async def handle(self, request: AggregateInsightsResult, ctx: WorkflowContext[Never, str]) -> AgentExecutorResponse:
         chat_client_agent = chat_client.create_agent(
             instructions=(
                 "You are a skilled negotiator. Given that the proposal is competitive, draft a negotiation strategy and summarize key points." \
-                "Consult with existing suppliers if needed to optimize terms."
+                "Consult with existing suppliers from the tools provided if needed to optimize terms."
             ),
             tools=[supplier_mcp_tools],
         )
