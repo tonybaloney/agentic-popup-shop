@@ -180,7 +180,6 @@ export default {
         return {
           totalOrders: 0,
           totalItems: 0,
-          totalSpent: 0,
           totalSavings: 0
         };
       }
@@ -188,7 +187,6 @@ export default {
       return {
         totalOrders: this.orders.length,
         totalItems: this.orders.reduce((sum, order) => sum + order.total_items, 0),
-        totalSpent: this.orders.reduce((sum, order) => sum + order.order_total, 0),
         totalSavings: this.orders.reduce((sum, order) => {
           return sum + order.items.reduce((itemSum, item) => itemSum + item.discount_amount, 0);
         }, 0)
@@ -320,11 +318,6 @@ export default {
 
 .stat-icon.items {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: white;
-}
-
-.stat-icon.spent {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   color: white;
 }
 
