@@ -40,6 +40,12 @@ customerApi.interceptors.response.use(
 );
 
 export const customerService = {
+  // Get customer profile
+  async getProfile() {
+    const response = await customerApi.get('/api/users/profile');
+    return response.data;
+  },
+
   // Get customer orders
   async getOrders() {
     const response = await customerApi.get('/api/users/orders');

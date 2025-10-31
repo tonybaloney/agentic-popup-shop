@@ -47,6 +47,7 @@ from zava_shop_shared.models.sqlite.product_types import ProductType as ProductT
 from zava_shop_shared.models.sqlite.suppliers import Supplier as SupplierModel
 from zava_shop_shared.models.sqlite.orders import Order as OrderModel
 from zava_shop_shared.models.sqlite.order_items import OrderItem as OrderItemModel
+from zava_shop_shared.models.sqlite.customers import Customer as CustomerModel
 from .models import (
     Product, ProductList, Store, StoreList, Category, CategoryList,
     TopCategory, TopCategoryList, Supplier, SupplierList,
@@ -54,7 +55,7 @@ from .models import (
     ManagementProduct, ProductPagination, ManagementProductResponse,
     LoginRequest, LoginResponse, TokenData,
     WeeklyInsights, Insight, InsightAction,
-    OrderResponse, OrderItemResponse, OrderListResponse
+    OrderResponse, OrderItemResponse, OrderListResponse, CustomerProfile
 )
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
@@ -736,6 +737,85 @@ async def get_product_by_sku(sku: str) -> Product:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch product: {str(e)}"
+        )
+
+
+@app.get("/api/users/profile", response_model=CustomerProfile)
+async def get_user_profile(
+    current_user: TokenData = Depends(get_current_user)
+) -> CustomerProfile:
+    """
+    Get profile information for the authenticated customer user.
+    Requires authentication with customer role.
+    Returns customer details including name, email, and primary store.
+    """
+    try:
+        # Verify user has customer role and customer_id
+        if current_user.user_role != "customer":
+            raise HTTPException(
+                status_code=403,
+                detail="Only customers can access this endpoint"
+            )
+        
+        if not current_user.customer_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Customer ID not found in token"
+            )
+        
+        async with get_db_session() as session:
+            # Query customer profile
+            stmt = (
+                select(
+                    CustomerModel.customer_id,
+                    CustomerModel.first_name,
+                    CustomerModel.last_name,
+                    CustomerModel.email,
+                    CustomerModel.phone,
+                    CustomerModel.primary_store_id,
+                    StoreModel.store_name
+                )
+                .outerjoin(
+                    StoreModel,
+                    CustomerModel.primary_store_id == StoreModel.store_id
+                )
+                .where(CustomerModel.customer_id == current_user.customer_id)
+            )
+            
+            result = await session.execute(stmt)
+            row = result.first()
+            
+            if not row:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Customer profile not found"
+                )
+            
+            profile = CustomerProfile(
+                customer_id=row.customer_id,
+                first_name=row.first_name,
+                last_name=row.last_name,
+                email=row.email,
+                phone=row.phone,
+                primary_store_id=row.primary_store_id,
+                primary_store_name=row.store_name
+            )
+            
+            logger.info(
+                f"✅ Retrieved profile for customer {current_user.username}"
+            )
+            
+            return profile
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"❌ Error fetching profile for user {current_user.username}: {e}"
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch profile: {str(e)}"
         )
 
 

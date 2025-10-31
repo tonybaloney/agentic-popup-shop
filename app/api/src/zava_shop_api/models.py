@@ -257,3 +257,14 @@ class OrderListResponse(BaseModel):
     """List of customer orders"""
     orders: List[OrderResponse] = Field(..., description="List of orders")
     total: int = Field(..., description="Total number of orders")
+
+
+class CustomerProfile(BaseModel):
+    """Customer profile information"""
+    customer_id: int = Field(..., description="Customer identifier")
+    first_name: str = Field(..., description="Customer first name")
+    last_name: str = Field(..., description="Customer last name")
+    email: str = Field(..., description="Customer email address")
+    phone: Optional[str] = Field(None, description="Customer phone number")
+    primary_store_id: Optional[int] = Field(None, description="Primary store ID")
+    primary_store_name: Optional[str] = Field(None, description="Primary store name")

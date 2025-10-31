@@ -11,7 +11,7 @@
         <!-- Welcome Banner -->
         <div class="welcome-banner">
           <div class="banner-content">
-            <h1 class="welcome-title">Welcome back, {{ username }}! 👋</h1>
+            <h1 class="welcome-title">Welcome back, {{ customerName }}! 👋</h1>
             <p class="welcome-subtitle">Here's a summary of your recent orders</p>
           </div>
         </div>
@@ -154,7 +154,7 @@
       <!-- Error State -->
       <div v-if="error" class="error-message">
         <p>{{ error }}</p>
-        <button @click="loadOrders" class="btn btn-primary">Try Again</button>
+        <button @click="loadCustomerData" class="btn btn-primary">Try Again</button>
       </div>
     </div>
   </div>
@@ -171,7 +171,8 @@ export default {
       loading: true,
       error: null,
       orders: [],
-      username: authStore.user?.username || 'Customer'
+      profile: null,
+      customerName: 'Customer'
     };
   },
   computed: {
@@ -194,19 +195,28 @@ export default {
     }
   },
   mounted() {
-    this.loadOrders();
+    this.loadCustomerData();
   },
   methods: {
-    async loadOrders() {
+    async loadCustomerData() {
       this.loading = true;
       this.error = null;
 
       try {
-        const data = await customerService.getOrders();
-        this.orders = data.orders || [];
+        // Load profile and orders in parallel
+        const [profileData, ordersData] = await Promise.all([
+          customerService.getProfile(),
+          customerService.getOrders()
+        ]);
+
+        this.profile = profileData;
+        this.customerName = profileData.first_name;
+        this.orders = ordersData.orders || [];
       } catch (error) {
-        console.error('Error loading orders:', error);
-        this.error = 'Failed to load your orders. Please try again.';
+        console.error('Error loading customer data:', error);
+        this.error = 'Failed to load your information. Please try again.';
+        // Fallback to username if profile fetch fails
+        this.customerName = authStore.user?.username || 'Customer';
       } finally {
         this.loading = false;
       }
