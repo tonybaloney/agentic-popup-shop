@@ -50,6 +50,12 @@ export const customerService = {
   async getOrders() {
     const response = await customerApi.get('/api/users/orders');
     return response.data;
+  },
+
+  // Send chat message to AI assistant
+  async sendChatMessage(message) {
+    const response = await customerApi.post('/api/users/chat', { message });
+    return response.data;
   }
 };
 

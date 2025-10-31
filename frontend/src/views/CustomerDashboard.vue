@@ -157,15 +157,22 @@
         <button @click="loadCustomerData" class="btn btn-primary">Try Again</button>
       </div>
     </div>
+
+    <!-- AI Chat Widget -->
+    <CustomerChat />
   </div>
 </template>
 
 <script>
 import { customerService } from '../services/customer';
 import { authStore } from '../stores/auth';
+import CustomerChat from '../components/CustomerChat.vue';
 
 export default {
   name: 'CustomerDashboard',
+  components: {
+    CustomerChat
+  },
   data() {
     return {
       loading: true,

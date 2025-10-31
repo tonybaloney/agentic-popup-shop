@@ -55,7 +55,8 @@ from .models import (
     ManagementProduct, ProductPagination, ManagementProductResponse,
     LoginRequest, LoginResponse, TokenData,
     WeeklyInsights, Insight, InsightAction,
-    OrderResponse, OrderItemResponse, OrderListResponse, CustomerProfile
+    OrderResponse, OrderItemResponse, OrderListResponse, CustomerProfile,
+    CustomerChatRequest, CustomerChatResponse
 )
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
@@ -941,6 +942,93 @@ async def get_user_orders(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch orders: {str(e)}"
+        )
+
+
+@app.post("/api/users/chat", response_model=CustomerChatResponse)
+async def customer_chat(
+    request: CustomerChatRequest,
+    current_user: TokenData = Depends(get_current_user)
+) -> CustomerChatResponse:
+    """
+    AI chat assistant for customer inquiries.
+    Helps customers with product questions, order inquiries, and general support.
+    Requires authentication with customer role.
+    """
+    try:
+        # Verify user has customer role
+        if current_user.user_role != "customer":
+            raise HTTPException(
+                status_code=403,
+                detail="Only customers can access this endpoint"
+            )
+        
+        # Get customer profile for context
+        customer_name = current_user.username
+        try:
+            async with get_db_session() as session:
+                stmt = select(
+                    CustomerModel.first_name,
+                    CustomerModel.last_name
+                ).where(CustomerModel.customer_id == current_user.customer_id)
+                result = await session.execute(stmt)
+                row = result.first()
+                if row:
+                    customer_name = row.first_name
+        except Exception as e:
+            logger.warning(f"Could not fetch customer name: {e}")
+        
+        # Build context for AI
+        system_context = f"""You are a helpful AI shopping assistant for Zava Shop, 
+a popup clothing store. You're chatting with {customer_name}, a valued customer.
+
+You can help with:
+- Product recommendations and information
+- Order status and history
+- Store locations and hours
+- General shopping assistance
+- Returns and exchanges
+
+Be friendly, concise, and helpful. If you don't know something specific about 
+their orders or products, acknowledge it and offer to help them contact support."""
+
+        # Simple AI response (in production, this would call an LLM)
+        user_message = request.message.lower()
+        
+        # Generate response based on keywords
+        if any(word in user_message for word in ['hello', 'hi', 'hey']):
+            response_text = f"Hello {customer_name}! 👋 Welcome to Zava Shop! How can I help you today? I can assist with product recommendations, order information, or any questions you might have about our store."
+        elif any(word in user_message for word in ['order', 'orders', 'purchase']):
+            response_text = "I can help you with your orders! You can view your complete order history in the dashboard above. Would you like help finding a specific order or have questions about an order?"
+        elif any(word in user_message for word in ['product', 'item', 'buy', 'shop']):
+            response_text = "We have a great selection of clothing and accessories! We carry footwear, tops, bottoms, outerwear, and accessories. You can browse our products on the home page. Is there a specific type of item you're looking for?"
+        elif any(word in user_message for word in ['store', 'location', 'where']):
+            response_text = "We have popup stores across the United States! You can find our store locations and hours on the Stores page. Would you like me to help you find a store near you?"
+        elif any(word in user_message for word in ['return', 'exchange', 'refund']):
+            response_text = "For returns and exchanges, please contact our customer support team. They'll be happy to help you with any concerns about your purchase. Would you like me to provide you with their contact information?"
+        elif any(word in user_message for word in ['thank', 'thanks']):
+            response_text = f"You're very welcome, {customer_name}! Is there anything else I can help you with today? 😊"
+        else:
+            response_text = f"I'm here to help, {customer_name}! I can assist you with:\n\n• Browsing products and making recommendations\n• Checking your order history\n• Finding store locations\n• Answering questions about our store\n\nWhat would you like to know?"
+        
+        logger.info(
+            f"✅ AI chat response generated for customer {current_user.username}"
+        )
+        
+        return CustomerChatResponse(
+            message=response_text,
+            conversation_id=f"chat_{current_user.customer_id}_{int(datetime.now(timezone.utc).timestamp())}"
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"❌ Error processing chat for user {current_user.username}: {e}"
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process chat message: {str(e)}"
         )
 
 

@@ -1,0 +1,52 @@
+FROM python:3.12-slim
+ENV APPLICATIONINSIGHTS_CONNECTION_STRING=""
+
+# Set working directory
+WORKDIR /app
+
+# The installer requires curl (and certificates) to download the release archive
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates git && rm -rf /var/lib/apt/lists/*
+
+# Download the latest installer
+ADD https://astral.sh/uv/install.sh /uv-installer.sh
+
+# Run the installer then remove it
+RUN sh /uv-installer.sh && rm /uv-installer.sh
+
+# Ensure the installed binary is on the `PATH`
+ENV PATH="/root/.local/bin/:$PATH"
+
+# Create workspace directory structure to match expected paths
+RUN mkdir -p /workspace/app/data
+
+# Copy the entire app structure to maintain relative paths
+# Copy shared package first
+COPY shared /app/shared
+COPY agents /app/agents
+
+# Copy API server code
+COPY api /app/api
+
+COPY data /workspace/app/data
+
+# Set working directory to MCP server
+WORKDIR /app/api
+
+# Install dependencies using UV
+# This will install the MCP server and the local shared package
+RUN uv sync --frozen
+
+# Expose port (if needed for HTTP MCP server)
+EXPOSE 8000
+
+# Set environment variables for the MCP server
+ENV PYTHONPATH=/app/mcp:/app/shared/src
+ENV PYTHONUNBUFFERED=1
+
+# Use the startup script as the entrypoint
+ENTRYPOINT ["uv", "run", "python", "-m", "uvicorn", "zava_shop_api.app:app", "--port", "8000", "--host", "0.0.0.0", "--workers", "2"]
+
+# Labels
+LABEL maintainer="Zava Shop Team"
+LABEL description="API Server for Zava Shop Supplier Management"
+LABEL version="0.1.0"

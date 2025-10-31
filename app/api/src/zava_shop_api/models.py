@@ -268,3 +268,28 @@ class CustomerProfile(BaseModel):
     phone: Optional[str] = Field(None, description="Customer phone number")
     primary_store_id: Optional[int] = Field(None, description="Primary store ID")
     primary_store_name: Optional[str] = Field(None, description="Primary store name")
+
+
+# Chat models for customer AI agent
+class CustomerChatMessage(BaseModel):
+    """Chat message for AI agent conversation"""
+    role: str = Field(..., description="Message role: 'user' or 'assistant'")
+    content: str = Field(..., description="Message content")
+
+
+class CustomerChatRequest(BaseModel):
+    """Request to send message to AI agent"""
+    message: str = Field(..., description="User's message to the AI agent")
+    conversation_history: Optional[List[CustomerChatMessage]] = Field(
+        default=[],
+        description="Previous messages in the conversation"
+    )
+
+
+class CustomerChatResponse(BaseModel):
+    """Response from AI agent"""
+    message: str = Field(..., description="AI agent's response")
+    conversation_id: Optional[str] = Field(
+        None,
+        description="Conversation identifier for tracking"
+    )
