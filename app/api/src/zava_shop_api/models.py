@@ -196,6 +196,7 @@ class TokenData(BaseModel):
     username: str
     user_role: str
     store_id: Optional[int] = None
+    customer_id: Optional[int] = None
 
 
 class InsightAction(BaseModel):
@@ -224,3 +225,35 @@ class WeeklyInsights(BaseModel):
     """Weekly AI insights response"""
     summary: str = Field(..., description="Overall summary of the week's performance")
     insights: List[Insight] = Field(..., description="List of specific insights")
+
+
+# Order models for customer API
+class OrderItemResponse(BaseModel):
+    """Order item in a customer order"""
+    order_item_id: int = Field(..., description="Order item identifier")
+    product_id: int = Field(..., description="Product identifier")
+    product_name: str = Field(..., description="Product name")
+    sku: str = Field(..., description="Product SKU")
+    quantity: int = Field(..., description="Quantity ordered")
+    unit_price: float = Field(..., description="Unit price at time of order")
+    discount_percent: int = Field(..., description="Discount percentage applied")
+    discount_amount: float = Field(..., description="Discount amount")
+    total_amount: float = Field(..., description="Total amount for this line item")
+    image_url: Optional[str] = Field(None, description="Product image URL")
+
+
+class OrderResponse(BaseModel):
+    """Customer order response"""
+    order_id: int = Field(..., description="Order identifier")
+    order_date: str = Field(..., description="Order date (YYYY-MM-DD)")
+    store_id: int = Field(..., description="Store identifier")
+    store_name: str = Field(..., description="Store name")
+    items: List[OrderItemResponse] = Field(..., description="Order items")
+    total_items: int = Field(..., description="Total number of items")
+    order_total: float = Field(..., description="Total order amount")
+
+
+class OrderListResponse(BaseModel):
+    """List of customer orders"""
+    orders: List[OrderResponse] = Field(..., description="List of orders")
+    total: int = Field(..., description="Total number of orders")

@@ -37,9 +37,15 @@ const routes = [
     component: LoginPage
   },
   {
+    path: '/customer/dashboard',
+    name: 'CustomerDashboard',
+    component: () => import('../views/CustomerDashboard.vue'),
+    meta: { requiresAuth: true, requiresRole: 'customer' }
+  },
+  {
     path: '/management',
     component: ManagementLayout,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, requiresRole: ['admin', 'store_manager'] },
     children: [
       {
         path: '',
@@ -101,6 +107,24 @@ router.beforeEach((to, from, next) => {
     if (!authStore.isAuthenticated) {
       next('/login');
     } else {
+      // Check role-based access
+      const requiresRole = to.meta.requiresRole;
+      const userRole = authStore.user?.role;
+      
+      if (requiresRole) {
+        const allowedRoles = Array.isArray(requiresRole) ? requiresRole : [requiresRole];
+        if (!allowedRoles.includes(userRole)) {
+          // Redirect to appropriate dashboard based on role
+          if (userRole === 'customer') {
+            next('/customer/dashboard');
+          } else if (userRole === 'admin' || userRole === 'store_manager') {
+            next('/management');
+          } else {
+            next('/');
+          }
+          return;
+        }
+      }
       next();
     }
   } else {

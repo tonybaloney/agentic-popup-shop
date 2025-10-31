@@ -5,9 +5,19 @@
         <div class="header-top-content">
           <span class="header-message">Free shipping on orders over $50</span>
           <div class="header-actions">
-            <router-link to="/login" class="header-link">Login</router-link>
-            <span class="divider">|</span>
-            <button class="header-link" @click="handleSignup">Sign Up</button>
+            <template v-if="isAuthenticated">
+              <span class="user-info">Welcome, {{ username }}!</span>
+              <span class="divider">|</span>
+              <router-link v-if="userRole === 'customer'" to="/customer/dashboard" class="header-link">My Orders</router-link>
+              <router-link v-else-if="userRole === 'admin' || userRole === 'store_manager'" to="/management" class="header-link">Management</router-link>
+              <span class="divider">|</span>
+              <button class="header-link" @click="handleLogout">Logout</button>
+            </template>
+            <template v-else>
+              <router-link to="/login" class="header-link">Login</router-link>
+              <span class="divider">|</span>
+              <button class="header-link" @click="handleSignup">Sign Up</button>
+            </template>
           </div>
         </div>
       </div>
@@ -142,6 +152,8 @@
 </template>
 
 <script>
+import { authStore } from '../stores/auth';
+
 export default {
   name: 'AppHeader',
   data() {
@@ -150,6 +162,17 @@ export default {
       mobileMenuOpen: false,
       cartCount: 0 // Mock cart count
     };
+  },
+  computed: {
+    isAuthenticated() {
+      return authStore.isAuthenticated;
+    },
+    username() {
+      return authStore.user?.username || 'Guest';
+    },
+    userRole() {
+      return authStore.user?.role;
+    }
   },
   methods: {
     openDropdown(menu) {
@@ -173,6 +196,10 @@ export default {
     },
     handleCart() {
       alert('Cart feature - Coming soon!');
+    },
+    handleLogout() {
+      authStore.logout();
+      this.$router.push('/');
     }
   }
 };
@@ -214,10 +241,20 @@ export default {
   color: white;
   font-size: 0.875rem;
   transition: opacity 0.2s;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
 }
 
 .header-link:hover {
   opacity: 0.8;
+}
+
+.user-info {
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .divider {

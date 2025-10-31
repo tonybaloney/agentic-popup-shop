@@ -30,4 +30,11 @@ zava-shop-agents = { path = "../agents", editable = true }
 requires = ["uv_build>=0.9.3,<0.10.0"]
 build-backend = "uv_build"
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "httpx",
+]
+
 # uv run uvicorn zava_shop_api.app:app --reload

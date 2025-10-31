@@ -21,7 +21,7 @@ def test_client() -> Generator[TestClient, None, None]:
         TestClient: A test client for making API requests
     """
     # Import here to avoid circular imports and ensure fresh app instance
-    from app.api.app import app
+    from zava_shop_api.app import app
     
     with TestClient(app) as client:
         yield client

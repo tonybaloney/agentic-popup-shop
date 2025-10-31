@@ -45,13 +45,16 @@ from zava_shop_shared.models.sqlite.products import Product as ProductModel
 from zava_shop_shared.models.sqlite.categories import Category as CategoryModel
 from zava_shop_shared.models.sqlite.product_types import ProductType as ProductTypeModel
 from zava_shop_shared.models.sqlite.suppliers import Supplier as SupplierModel
+from zava_shop_shared.models.sqlite.orders import Order as OrderModel
+from zava_shop_shared.models.sqlite.order_items import OrderItem as OrderItemModel
 from .models import (
-    Product, ProductList, Store, StoreList, Category, CategoryList, 
-    TopCategory, TopCategoryList, Supplier, SupplierList, 
-    InventoryItem, InventorySummary, InventoryResponse, 
+    Product, ProductList, Store, StoreList, Category, CategoryList,
+    TopCategory, TopCategoryList, Supplier, SupplierList,
+    InventoryItem, InventorySummary, InventoryResponse,
     ManagementProduct, ProductPagination, ManagementProductResponse,
     LoginRequest, LoginResponse, TokenData,
-    WeeklyInsights, Insight, InsightAction
+    WeeklyInsights, Insight, InsightAction,
+    OrderResponse, OrderItemResponse, OrderListResponse
 )
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
@@ -91,6 +94,12 @@ USERS = {
         "role": "store_manager",
         "store_id": 2  # SF Union Square
     },
+    "tracey.lopez.4": {
+        "password": "tracey123",
+        "role": "customer",
+        "store_id": 1,
+        "customer_id": 4
+    }
 }
 
 
@@ -262,7 +271,8 @@ async def login(credentials: LoginRequest) -> LoginResponse:
     token_data = TokenData(
         username=credentials.username,
         user_role=user["role"],
-        store_id=user["store_id"]
+        store_id=user["store_id"],
+        customer_id=user.get("customer_id")
     )
     active_tokens[token] = token_data
     
@@ -519,7 +529,7 @@ async def get_products_by_category(
             total_result = await session.execute(total_stmt)
             total_count = total_result.scalar()
 
-            if total_count == 0:
+            if not total_count:
                 raise HTTPException(
                     status_code=404,
                     detail=f"No products found in category '{category}'"
@@ -726,6 +736,131 @@ async def get_product_by_sku(sku: str) -> Product:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch product: {str(e)}"
+        )
+
+
+@app.get("/api/users/orders", response_model=OrderListResponse)
+async def get_user_orders(
+    current_user: TokenData = Depends(get_current_user)
+) -> OrderListResponse:
+    """
+    Get all orders for the authenticated customer user.
+    Requires authentication with customer role.
+    Returns orders sorted by date (newest first) with all order items.
+    """
+    try:
+        # Verify user has customer role and customer_id
+        if current_user.user_role != "customer":
+            raise HTTPException(
+                status_code=403,
+                detail="Only customers can access this endpoint"
+            )
+        
+        if not current_user.customer_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Customer ID not found in token"
+            )
+        
+        async with get_db_session() as session:
+            # Query orders for this customer
+            stmt = (
+                select(
+                    OrderModel.order_id,
+                    OrderModel.order_date,
+                    OrderModel.store_id,
+                    StoreModel.store_name,
+                )
+                .join(StoreModel, OrderModel.store_id == StoreModel.store_id)
+                .where(OrderModel.customer_id == current_user.customer_id)
+                .order_by(OrderModel.order_date.desc())
+            )
+            
+            result = await session.execute(stmt)
+            order_rows = result.all()
+            
+            if not order_rows:
+                logger.info(
+                    f"✅ No orders found for customer {current_user.username}"
+                )
+                return OrderListResponse(orders=[], total=0)
+            
+            # For each order, get the order items
+            orders = []
+            for order_row in order_rows:
+                # Query order items
+                items_stmt = (
+                    select(
+                        OrderItemModel.order_item_id,
+                        OrderItemModel.product_id,
+                        ProductModel.product_name,
+                        ProductModel.sku,
+                        OrderItemModel.quantity,
+                        OrderItemModel.unit_price,
+                        OrderItemModel.discount_percent,
+                        OrderItemModel.discount_amount,
+                        OrderItemModel.total_amount,
+                        ProductModel.image_url
+                    )
+                    .join(
+                        ProductModel,
+                        OrderItemModel.product_id == ProductModel.product_id
+                    )
+                    .where(OrderItemModel.order_id == order_row.order_id)
+                )
+                
+                items_result = await session.execute(items_stmt)
+                item_rows = items_result.all()
+                
+                # Build order items list
+                order_items = [
+                    OrderItemResponse(
+                        order_item_id=item.order_item_id,
+                        product_id=item.product_id,
+                        product_name=item.product_name,
+                        sku=item.sku,
+                        quantity=item.quantity,
+                        unit_price=float(item.unit_price),
+                        discount_percent=item.discount_percent,
+                        discount_amount=float(item.discount_amount),
+                        total_amount=float(item.total_amount),
+                        image_url=item.image_url
+                    )
+                    for item in item_rows
+                ]
+                
+                # Calculate order totals
+                total_items = sum(item.quantity for item in order_items)
+                order_total = sum(item.total_amount for item in order_items)
+                
+                # Build order response
+                order = OrderResponse(
+                    order_id=order_row.order_id,
+                    order_date=order_row.order_date.isoformat(),
+                    store_id=order_row.store_id,
+                    store_name=order_row.store_name,
+                    items=order_items,
+                    total_items=total_items,
+                    order_total=order_total
+                )
+                orders.append(order)
+            
+            logger.info(
+                f"✅ Retrieved {len(orders)} orders for customer "
+                f"{current_user.username}"
+            )
+            
+            return OrderListResponse(orders=orders, total=len(orders))
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"❌ Error fetching orders for user {current_user.username}: {e}"
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch orders: {str(e)}"
         )
 
 
