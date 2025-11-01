@@ -62,7 +62,7 @@ const initializeChatKit = () => {
               console.log('Refreshing ChatKit session');
             }
 
-            const response = await fetch('/api/chatkit/session', {
+            const response = await fetch('/api/chatkit', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

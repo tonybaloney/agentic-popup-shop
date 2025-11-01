@@ -16,9 +16,8 @@ from agent_framework import (ChatMessage,
                              ExecutorFailedEvent,
                              WorkflowOutputEvent,
                              WorkflowStartedEvent)
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, Depends, Header
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 # Initialize in startup event
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
@@ -26,7 +25,6 @@ from fastapi_cache.decorator import cache
 
 from pydantic import BaseModel
 import json
-import secrets
 from datetime import datetime, timezone
 from zava_shop_shared.config import Config
 from zava_shop_agents.stock import workflow
@@ -56,9 +54,10 @@ from .models import (
     LoginRequest, LoginResponse, TokenData,
     WeeklyInsights, Insight, InsightAction,
     OrderResponse, OrderItemResponse, OrderListResponse, CustomerProfile,
-    CustomerChatRequest, CustomerChatResponse
 )
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+
+from zava_shop_api.auth import authenticate_user, get_current_user, get_current_user_from_token
 
 # Configure logging
 logging.basicConfig(
@@ -74,65 +73,6 @@ SCHEMA_NAME = "retail"
 # Database connections
 sqlalchemy_engine: Optional[AsyncEngine] = None
 async_session_factory: Optional[async_sessionmaker[AsyncSession]] = None
-
-# Token storage (in-memory for simplicity - in production use Redis or database)
-# Maps token -> TokenData
-active_tokens: dict[str, TokenData] = {}
-
-# Static user database (in production, this would be in a database with hashed passwords)
-USERS = {
-    "admin": {
-        "password": "admin123",
-        "role": "admin",
-        "store_id": None
-    },
-    "manager1": {
-        "password": "manager123",
-        "role": "store_manager",
-        "store_id": 1  # NYC Times Square
-    },
-    "manager2": {
-        "password": "manager123",
-        "role": "store_manager",
-        "store_id": 2  # SF Union Square
-    },
-    "tracey.lopez.4": {
-        "password": "tracey123",
-        "role": "customer",
-        "store_id": 1,
-        "customer_id": 4
-    }
-}
-
-
-# Authentication helper functions
-def generate_token() -> str:
-    """Generate a random secure token"""
-    return secrets.token_urlsafe(32)
-
-
-async def get_current_user(authorization: str = Header(...)) -> TokenData:
-    """
-    Dependency to get current user from bearer token.
-    Raises HTTPException if token is invalid or missing.
-    """
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    token = authorization.replace("Bearer ", "")
-    
-    if token not in active_tokens:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    return active_tokens[token]
 
 
 async def get_store_name(store_id: int) -> Optional[str]:
@@ -239,6 +179,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from zava_shop_api.chatkit_router import router as chatkit_router
+app.include_router(chatkit_router)
 
 # Health check endpoint
 @app.get("/health")
@@ -253,43 +195,28 @@ async def health_check():
 async def login(credentials: LoginRequest) -> LoginResponse:
     """
     Login endpoint to authenticate users and receive bearer token.
-    
+
     Supports two user roles:
     - admin: Can see all stores
     - store_manager: Can only see their assigned store
     """
-    # Validate credentials
-    user = USERS.get(credentials.username)
-    if not user or user["password"] != credentials.password:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid username or password"
-        )
-    
-    # Generate token
-    token = generate_token()
-    
-    # Store token data
-    token_data = TokenData(
-        username=credentials.username,
-        user_role=user["role"],
-        store_id=user["store_id"],
-        customer_id=user.get("customer_id")
+    token, user = await authenticate_user(
+        credentials.username,
+        credentials.password
     )
-    active_tokens[token] = token_data
-    
+
     # Get store name if store manager
     store_name = None
-    if user["store_id"]:
-        store_name = await get_store_name(user["store_id"])
-    
-    logger.info(f"✅ User {credentials.username} ({user['role']}) logged in")
-    
+    if user.store_id:
+        store_name = await get_store_name(user.store_id)
+
+    logger.info(f"✅ User {credentials.username} ({user.user_role}) logged in")
+
     return LoginResponse(
         access_token=token,
-        token_type="bearer",
-        user_role=user["role"],
-        store_id=user["store_id"],
+        token_type="bearer",  # noqa: S106
+        user_role=user.user_role,
+        store_id=user.store_id,
         store_name=store_name
     )
 
@@ -942,93 +869,6 @@ async def get_user_orders(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch orders: {str(e)}"
-        )
-
-
-@app.post("/api/users/chat", response_model=CustomerChatResponse)
-async def customer_chat(
-    request: CustomerChatRequest,
-    current_user: TokenData = Depends(get_current_user)
-) -> CustomerChatResponse:
-    """
-    AI chat assistant for customer inquiries.
-    Helps customers with product questions, order inquiries, and general support.
-    Requires authentication with customer role.
-    """
-    try:
-        # Verify user has customer role
-        if current_user.user_role != "customer":
-            raise HTTPException(
-                status_code=403,
-                detail="Only customers can access this endpoint"
-            )
-        
-        # Get customer profile for context
-        customer_name = current_user.username
-        try:
-            async with get_db_session() as session:
-                stmt = select(
-                    CustomerModel.first_name,
-                    CustomerModel.last_name
-                ).where(CustomerModel.customer_id == current_user.customer_id)
-                result = await session.execute(stmt)
-                row = result.first()
-                if row:
-                    customer_name = row.first_name
-        except Exception as e:
-            logger.warning(f"Could not fetch customer name: {e}")
-        
-        # Build context for AI
-        system_context = f"""You are a helpful AI shopping assistant for Zava Shop, 
-a popup clothing store. You're chatting with {customer_name}, a valued customer.
-
-You can help with:
-- Product recommendations and information
-- Order status and history
-- Store locations and hours
-- General shopping assistance
-- Returns and exchanges
-
-Be friendly, concise, and helpful. If you don't know something specific about 
-their orders or products, acknowledge it and offer to help them contact support."""
-
-        # Simple AI response (in production, this would call an LLM)
-        user_message = request.message.lower()
-        
-        # Generate response based on keywords
-        if any(word in user_message for word in ['hello', 'hi', 'hey']):
-            response_text = f"Hello {customer_name}! 👋 Welcome to Zava Shop! How can I help you today? I can assist with product recommendations, order information, or any questions you might have about our store."
-        elif any(word in user_message for word in ['order', 'orders', 'purchase']):
-            response_text = "I can help you with your orders! You can view your complete order history in the dashboard above. Would you like help finding a specific order or have questions about an order?"
-        elif any(word in user_message for word in ['product', 'item', 'buy', 'shop']):
-            response_text = "We have a great selection of clothing and accessories! We carry footwear, tops, bottoms, outerwear, and accessories. You can browse our products on the home page. Is there a specific type of item you're looking for?"
-        elif any(word in user_message for word in ['store', 'location', 'where']):
-            response_text = "We have popup stores across the United States! You can find our store locations and hours on the Stores page. Would you like me to help you find a store near you?"
-        elif any(word in user_message for word in ['return', 'exchange', 'refund']):
-            response_text = "For returns and exchanges, please contact our customer support team. They'll be happy to help you with any concerns about your purchase. Would you like me to provide you with their contact information?"
-        elif any(word in user_message for word in ['thank', 'thanks']):
-            response_text = f"You're very welcome, {customer_name}! Is there anything else I can help you with today? 😊"
-        else:
-            response_text = f"I'm here to help, {customer_name}! I can assist you with:\n\n• Browsing products and making recommendations\n• Checking your order history\n• Finding store locations\n• Answering questions about our store\n\nWhat would you like to know?"
-        
-        logger.info(
-            f"✅ AI chat response generated for customer {current_user.username}"
-        )
-        
-        return CustomerChatResponse(
-            message=response_text,
-            conversation_id=f"chat_{current_user.customer_id}_{int(datetime.now(timezone.utc).timestamp())}"
-        )
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(
-            f"❌ Error processing chat for user {current_user.username}: {e}"
-        )
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to process chat message: {str(e)}"
         )
 
 
@@ -1729,7 +1569,7 @@ async def get_products(
             count_stmt = select(func.count(func.distinct(
                 ProductModel.product_id))).select_from(stmt.alias())
             total_result = await session.execute(count_stmt)
-            total_count = total_result.scalar()
+            total_count = total_result.scalar() or 0
 
             # Apply ordering and pagination
             stmt = stmt.order_by(ProductModel.product_name).limit(
@@ -1820,25 +1660,11 @@ async def websocket_ai_agent_inventory(websocket: WebSocket):
             await websocket.close(code=1008, reason="Authentication required")
             return
 
-        # Validate token
-        if token not in active_tokens:
-            await websocket.send_json({
-                "type": "error",
-                "message": "Invalid or expired token",
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            })
-            await websocket.close(code=1008, reason="Invalid token")
-            return
-
-        current_user = active_tokens[token]
-        logger.info(
-            f"🔐 WebSocket authenticated: user={current_user.username}, "
-            f"role={current_user.user_role}, store={current_user.store_id}"
-        )
+        current_user = await get_current_user_from_token(token)
 
         input_message = request_data.get(
             'message', 'Analyze inventory and recommend restocking priorities')
-        
+
         # Store managers use their assigned store_id, admins can specify or use all stores
         if current_user.store_id is not None:
             # Store manager - use their store_id
