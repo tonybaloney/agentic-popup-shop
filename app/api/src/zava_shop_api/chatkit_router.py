@@ -8,10 +8,14 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from zava_shop_api.memory_store import MemoryStore
 from zava_shop_api.models import TokenData
 from zava_shop_api.auth import get_current_user
-from chatkit.server import ChatKitServer, ThreadStreamEvent
+from chatkit.server import ChatKitServer, StreamingResult
 from chatkit.agents import AgentContext, stream_agent_response, simple_to_agent_input
-from chatkit.types import ThreadMetadata, UserMessageItem
-from agents import Agent, Runner
+from chatkit.types import ThreadMetadata, UserMessageItem, ThreadStreamEvent
+from agents import Agent, Runner, OpenAIChatCompletionsModel
+
+# TODO: look for v2 API?
+from agent_framework.azure import AzureOpenAIChatClient
+import os
 
 from typing import AsyncIterator, Any
 import logging
@@ -24,6 +28,11 @@ router = APIRouter(prefix="/api/chatkit", tags=["chatkit"])
 # Initialize ChatKit data store (SQLite for development)
 data_store = MemoryStore()
 
+chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
+                                    endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
+                                    deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
+                                    api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
+
 
 class ZavaShopChatKitServer(ChatKitServer):
     """Custom ChatKit server for Zava Shop customer assistance."""
@@ -33,7 +42,10 @@ class ZavaShopChatKitServer(ChatKitServer):
         
         # Define the assistant agent
         self.assistant_agent = Agent[AgentContext](
-            model="gpt-4o-mini",
+            model=OpenAIChatCompletionsModel(
+                openai_client=chat_client,
+                model="gpt-5-mini"
+            ),
             name="Zava Shop Assistant",
             instructions="""You are a helpful AI shopping assistant for Zava Shop, 
 a popup clothing store. You can help customers with:
@@ -105,12 +117,10 @@ async def chatkit_endpoint(request: Request,
             "role": current_user.user_role,
             "user_agent": request.headers.get("user-agent"),
         }
-        
-        # Process the request
+
         result = await chatkit_server.process(await request.body(), context)
-        
-        # Return streaming or JSON response based on result type
-        if hasattr(result, '__aiter__'):  # Streaming result
+
+        if isinstance(result, StreamingResult):
             return StreamingResponse(result, media_type="text/event-stream")
         else:
             return Response(content=result.json, media_type="application/json")
