@@ -4,7 +4,7 @@ Separate from main API to keep code clean and modular.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from zava_shop_api.memory_store import MemoryStore
 from zava_shop_api.models import TokenData
 from zava_shop_api.auth import get_current_user
@@ -115,10 +115,12 @@ async def chatkit_endpoint(request: Request,
         else:
             return Response(content=result.json, media_type="application/json")
             
+    except HTTPException:
+        # Re-raise HTTP exceptions so FastAPI handles them properly
+        raise
     except Exception as e:
         logger.error(f"ChatKit endpoint error: {e}", exc_info=True)
-        return Response(
+        return JSONResponse(
             content={"error": str(e)},
-            status_code=500,
-            media_type="application/json"
+            status_code=500
         )
