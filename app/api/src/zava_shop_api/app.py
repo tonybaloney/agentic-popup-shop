@@ -43,8 +43,6 @@ from zava_shop_shared.models.sqlite.products import Product as ProductModel
 from zava_shop_shared.models.sqlite.categories import Category as CategoryModel
 from zava_shop_shared.models.sqlite.product_types import ProductType as ProductTypeModel
 from zava_shop_shared.models.sqlite.suppliers import Supplier as SupplierModel
-from zava_shop_shared.models.sqlite.orders import Order as OrderModel
-from zava_shop_shared.models.sqlite.order_items import OrderItem as OrderItemModel
 from zava_shop_shared.models.sqlite.customers import Customer as CustomerModel
 from .models import (
     Product, ProductList, Store, StoreList, Category, CategoryList,
@@ -53,8 +51,9 @@ from .models import (
     ManagementProduct, ProductPagination, ManagementProductResponse,
     LoginRequest, LoginResponse, TokenData,
     WeeklyInsights, Insight, InsightAction,
-    OrderResponse, OrderItemResponse, OrderListResponse, CustomerProfile,
+    OrderListResponse, CustomerProfile,
 )
+from .customers import get_customer_orders
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
 from zava_shop_api.auth import authenticate_user, get_current_user, get_current_user_from_token
@@ -83,6 +82,20 @@ async def get_store_name(store_id: int) -> Optional[str]:
             result = await session.execute(stmt)
             store_name = result.scalar_one_or_none()
             return store_name
+    except Exception:
+        return None
+
+
+async def get_user_name(user_id: int) -> Optional[str]:
+    """Get user name by ID"""
+    try:
+        async with get_db_session() as session:
+            stmt = select(CustomerModel.first_name, CustomerModel.last_name).where(CustomerModel.customer_id == user_id)
+            result = await session.execute(stmt)
+            row = result.first()
+            if row:
+                return f"{row.first_name} {row.last_name}"
+            return None
     except Exception:
         return None
 
@@ -193,7 +206,7 @@ async def health_check():
 # Authentication endpoint
 @app.post("/api/login", response_model=LoginResponse)
 async def login(credentials: LoginRequest) -> LoginResponse:
-    """ 
+    """
     Login endpoint to authenticate users and receive bearer token.
 
     Supports two user roles:
@@ -209,6 +222,10 @@ async def login(credentials: LoginRequest) -> LoginResponse:
     store_name = None
     if user.store_id:
         store_name = await get_store_name(user.store_id)
+    if user.customer_id:
+        name = await get_user_name(user.customer_id)
+    else:
+        name = None
 
     logger.info(f"✅ User {credentials.username} ({user.user_role}) logged in")
 
@@ -217,7 +234,8 @@ async def login(credentials: LoginRequest) -> LoginResponse:
         token_type="bearer",  # noqa: S106
         user_role=user.user_role,
         store_id=user.store_id,
-        store_name=store_name
+        store_name=store_name,
+        name=name
     )
 
 
@@ -709,16 +727,16 @@ async def get_user_profile(
                 )
                 .where(CustomerModel.customer_id == current_user.customer_id)
             )
-            
+
             result = await session.execute(stmt)
             row = result.first()
-            
+
             if not row:
                 raise HTTPException(
                     status_code=404,
                     detail="Customer profile not found"
                 )
-            
+
             profile = CustomerProfile(
                 customer_id=row.customer_id,
                 first_name=row.first_name,
@@ -728,13 +746,13 @@ async def get_user_profile(
                 primary_store_id=row.primary_store_id,
                 primary_store_name=row.store_name
             )
-            
+
             logger.info(
                 f"✅ Retrieved profile for customer {current_user.username}"
             )
-            
+
             return profile
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -763,103 +781,21 @@ async def get_user_orders(
                 status_code=403,
                 detail="Only customers can access this endpoint"
             )
-        
+
         if not current_user.customer_id:
             raise HTTPException(
                 status_code=403,
                 detail="Customer ID not found in token"
             )
-        
+
         async with get_db_session() as session:
-            # Query orders for this customer
-            stmt = (
-                select(
-                    OrderModel.order_id,
-                    OrderModel.order_date,
-                    OrderModel.store_id,
-                    StoreModel.store_name,
-                )
-                .join(StoreModel, OrderModel.store_id == StoreModel.store_id)
-                .where(OrderModel.customer_id == current_user.customer_id)
-                .order_by(OrderModel.order_date.desc())
+            orders = await get_customer_orders(
+                customer_id=current_user.customer_id,
+                session=session
             )
-            
-            result = await session.execute(stmt)
-            order_rows = result.all()
-            
-            if not order_rows:
-                logger.info(
-                    f"✅ No orders found for customer {current_user.username}"
-                )
-                return OrderListResponse(orders=[], total=0)
-            
-            # For each order, get the order items
-            orders = []
-            for order_row in order_rows:
-                # Query order items
-                items_stmt = (
-                    select(
-                        OrderItemModel.order_item_id,
-                        OrderItemModel.product_id,
-                        ProductModel.product_name,
-                        ProductModel.sku,
-                        OrderItemModel.quantity,
-                        OrderItemModel.unit_price,
-                        OrderItemModel.discount_percent,
-                        OrderItemModel.discount_amount,
-                        OrderItemModel.total_amount,
-                        ProductModel.image_url
-                    )
-                    .join(
-                        ProductModel,
-                        OrderItemModel.product_id == ProductModel.product_id
-                    )
-                    .where(OrderItemModel.order_id == order_row.order_id)
-                )
-                
-                items_result = await session.execute(items_stmt)
-                item_rows = items_result.all()
-                
-                # Build order items list
-                order_items = [
-                    OrderItemResponse(
-                        order_item_id=item.order_item_id,
-                        product_id=item.product_id,
-                        product_name=item.product_name,
-                        sku=item.sku,
-                        quantity=item.quantity,
-                        unit_price=float(item.unit_price),
-                        discount_percent=item.discount_percent,
-                        discount_amount=float(item.discount_amount),
-                        total_amount=float(item.total_amount),
-                        image_url=item.image_url
-                    )
-                    for item in item_rows
-                ]
-                
-                # Calculate order totals
-                total_items = sum(item.quantity for item in order_items)
-                order_total = sum(item.total_amount for item in order_items)
-                
-                # Build order response
-                order = OrderResponse(
-                    order_id=order_row.order_id,
-                    order_date=order_row.order_date.isoformat(),
-                    store_id=order_row.store_id,
-                    store_name=order_row.store_name,
-                    items=order_items,
-                    total_items=total_items,
-                    order_total=order_total
-                )
-                orders.append(order)
-            
-            logger.info(
-                f"✅ Retrieved {len(orders)} orders for customer "
-                f"{current_user.username}"
-            )
-            
-            return OrderListResponse(orders=orders, total=len(orders))
-    
+
+        return orders
+
     except HTTPException:
         raise
     except Exception as e:

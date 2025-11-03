@@ -3,11 +3,12 @@ ChatKit router for customer AI chat functionality.
 """
 
 from datetime import datetime
-from agent_framework import ChatMessage
+from agent_framework import ChatMessage, Role, ai_function
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse, JSONResponse
+from pydantic import BaseModel
 from zava_shop_api.memory_store import MemoryStore
-from zava_shop_api.models import TokenData
+from zava_shop_api.models import OrderListResponse, TokenData
 from zava_shop_api.auth import get_current_user
 from chatkit.server import ChatKitServer, StreamingResult
 from chatkit.types import (
@@ -26,7 +27,7 @@ from chatkit.types import (
 
 import os
 
-from typing import AsyncIterator, Any
+from typing import AsyncIterator
 import logging
 
 logger = logging.getLogger(__name__)
@@ -38,12 +39,20 @@ router = APIRouter(prefix="/api/chatkit", tags=["chatkit"])
 data_store = MemoryStore()
 
 from agent_framework.azure import AzureOpenAIChatClient
+from zava_shop_shared.finance_sqlite import FinanceSQLiteProvider
+from .customers import get_customer_orders
 
 chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
                                     endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
                                     deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
                                     api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
 
+class ChatKitContext(BaseModel):
+    """Context passed to ChatKit server."""
+    user_id: str
+    customer_id: int | None
+    role: str
+    user_agent: str | None
 
 
 class ZavaShopChatKitServer(ChatKitServer):
@@ -53,13 +62,14 @@ class ZavaShopChatKitServer(ChatKitServer):
         super().__init__(data_store, attachment_store=None)
 
         self.client = chat_client
+        self.db_provider = FinanceSQLiteProvider()
 
 
     async def respond(
         self,
         thread: ThreadMetadata,
         input_user_message: UserMessageItem | None,
-        context: Any,
+        context: ChatKitContext,
     ) -> AsyncIterator[ThreadStreamEvent]:
         """Process user messages and stream AI responses."""
 
@@ -80,71 +90,90 @@ class ZavaShopChatKitServer(ChatKitServer):
         # Emit user message added event
         yield ThreadItemAddedEvent(item=input_user_message)
 
-        user_input: list[ChatMessage] = [ChatMessage(role="user", text=m.text) for m in input_user_message.content if isinstance(m, UserMessageTextContent)]
+        user_input: list[ChatMessage] = [
+            ChatMessage(role="user", text=m.text)
+            for m in input_user_message.content
+            if isinstance(m, UserMessageTextContent)
+        ]
 
-        # Find and yield assistant messages (skip user messages)
-        async for update in self.client.get_streaming_response(user_input, tools=[]):
-            if update.role == "assistant" and update.text:
-                # Create assistant message item
+        # Track messages by ID as they stream in
+        messages_by_id: dict[str, str] = {}
+        message_created_at: dict[str, datetime] = {}
+        first_chunk_per_message: set[str] = set()
+
+        @ai_function
+        async def get_orders() -> dict:
+            """
+            You can retrieve the customer's orders by calling this function.
+            The customer is already authenticated in the chat context.
+            This function returns the orders as a dictionary for the authenticated user.
+            """
+            await self.db_provider.create_pool()
+            async with self.db_provider.get_session() as session:
+                if context.customer_id is None:
+                    raise ValueError("Customer ID is not available in context")
+
+                orders_response = await get_customer_orders(
+                    customer_id=context.customer_id,
+                    session=session
+                )
+                # Convert to dict for AI function return
+                return orders_response.model_dump()
+
+        # Stream assistant responses
+        async for update in self.client.get_streaming_response(user_input, tools=[get_orders]):
+            if update.role == Role.ASSISTANT and update.text and update.message_id:
+                msg_id = update.message_id
+
+                # Accumulate text for this message
+                if msg_id not in messages_by_id:
+                    messages_by_id[msg_id] = ""
+                    message_created_at[msg_id] = datetime.now()
+
+                messages_by_id[msg_id] += update.text
+
+                # Create/update assistant message item
                 assistant_message = AssistantMessageItem(
-                    id=update.message_id,
+                    id=msg_id,
                     thread_id=thread.id,
-                    created_at=datetime.fromisoformat(update.created_at or ""),
+                    created_at=message_created_at[msg_id],
                     content=[
                         AssistantMessageContent(
-                            text=text_msg,
+                            text=messages_by_id[msg_id],
                             annotations=[]
                         )
-                        for text_msg in update.text
                     ]
                 )
 
-                # Emit assistant message added
-                yield ThreadItemAddedEvent(item=assistant_message)
+                # Emit ThreadItemAdded for first chunk, ThreadItemAdded for updates
+                if msg_id not in first_chunk_per_message:
+                    first_chunk_per_message.add(msg_id)
+                    yield ThreadItemAddedEvent(item=assistant_message)
+                else:
+                    # For subsequent chunks, emit as updates (still using ThreadItemAddedEvent)
+                    # TODO: I think this should be ThreadItemUpdate, but that doesn't seem to behave the way I would expect
+                    yield ThreadItemAddedEvent(item=assistant_message)
+            else:
+                logger.warning(f"Received unsupported update: {update.to_dict()}")
 
-                # Emit message done
-                yield ThreadItemDoneEvent(item=assistant_message)
+        # Emit ThreadItemDone for each completed message
+        for msg_id, text in messages_by_id.items():
+            assistant_message = AssistantMessageItem(
+                id=msg_id,
+                thread_id=thread.id,
+                created_at=message_created_at[msg_id],
+                content=[
+                    AssistantMessageContent(
+                        text=text,
+                        annotations=[]
+                    )
+                ]
+            )
+            yield ThreadItemDoneEvent(item=assistant_message)
 
 
 # Initialize server
 chatkit_server = ZavaShopChatKitServer(data_store)
-
-
-@router.post("/session")
-async def create_chatkit_session(
-    current_user: TokenData = Depends(get_current_user)
-):
-    """
-    Create a new ChatKit session and return a client secret.
-    This endpoint is called by the ChatKit frontend SDK to initialize.
-    """
-    try:
-        # Verify user has customer role
-        if current_user.user_role != "customer":
-            raise HTTPException(
-                status_code=403,
-                detail="Only customers can access this endpoint"
-            )
-        
-        # Create a session token/secret for the user
-        # For ChatKit, this is typically a JWT or session identifier
-        import secrets
-        client_secret = secrets.token_urlsafe(32)
-        
-        # Store the session mapping (in production, use Redis or database)
-        # For now, we'll return a simple token
-        return {
-            "client_secret": client_secret,
-            "user_id": current_user.username,
-            "customer_id": current_user.customer_id
-        }
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error creating ChatKit session: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.post("")
 async def chatkit_endpoint(request: Request,
@@ -164,12 +193,12 @@ async def chatkit_endpoint(request: Request,
             )
 
         # Pass user context to ChatKit
-        context = {
-            "user_id": current_user.username,
-            "customer_id": current_user.customer_id,
-            "role": current_user.user_role,
-            "user_agent": request.headers.get("user-agent"),
-        }
+        context = ChatKitContext(
+            user_id=current_user.username,
+            customer_id=current_user.customer_id,
+            role=current_user.user_role,
+            user_agent=request.headers.get("user-agent"),
+        )
 
         result = await chatkit_server.process(await request.body(), context)
 

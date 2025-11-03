@@ -88,15 +88,24 @@ class TestChatKitRealIntegration:
         
         # Parse the streaming response to get thread_id
         thread_id = None
+        print(f"\n📝 Raw response text (first 500 chars):\n{response.text[:500]}\n")
         for line in response.text.split('\n'):
             if line.startswith('data: ') and line.strip() != 'data: [DONE]':
                 try:
                     data = json.loads(line[6:])  # Remove 'data: ' prefix
+                    print(f"Event type: {data.get('type')}, keys: {list(data.keys())}")
                     if data.get("type") == "threads.create.response":
                         thread_id = data.get("thread_id")
                         print(f"✅ Thread created: {thread_id}")
                         break
-                except json.JSONDecodeError:
+                    elif data.get("type") == "threads.item.created":
+                        # Alternative event type
+                        if "thread" in data and "id" in data["thread"]:
+                            thread_id = data["thread"]["id"]
+                            print(f"✅ Thread created (from threads.item.created): {thread_id}")
+                            break
+                except json.JSONDecodeError as e:
+                    print(f"JSON decode error: {e} for line: {line[:100]}")
                     continue
         
         assert thread_id is not None, "Failed to extract thread_id from response"

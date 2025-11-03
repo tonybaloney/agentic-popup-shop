@@ -189,6 +189,7 @@ class LoginResponse(BaseModel):
     user_role: str = Field(..., description="User role (admin or store_manager)")
     store_id: Optional[int] = Field(None, description="Store ID for store managers")
     store_name: Optional[str] = Field(None, description="Store name for store managers")
+    name: Optional[str] = Field(None, description="Full name of the user")
 
 
 class TokenData(BaseModel):

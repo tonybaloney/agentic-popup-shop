@@ -33,8 +33,8 @@ USERS: dict[str, UserAuthModel] = {
         role="store_manager",
         store_id=2  # SF Union Square
     ),
-    "tracey.lopez.4": UserAuthModel(
-        password="tracey123",
+    "stacey": UserAuthModel(
+        password="stacey123",
         role="customer",
         store_id=1,
         customer_id=4
