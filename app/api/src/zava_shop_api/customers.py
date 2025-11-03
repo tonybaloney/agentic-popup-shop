@@ -15,7 +15,8 @@ logger = getLogger(__name__)
 
 async def get_customer_orders(
     customer_id: int,
-    session: AsyncSession
+    session: AsyncSession,
+    limit: int = 10
 ) -> OrderListResponse:
     """
     Endpoint to retrieve orders for the authenticated customer.
@@ -30,6 +31,7 @@ async def get_customer_orders(
         )
         .join(StoreModel, OrderModel.store_id == StoreModel.store_id)
         .where(OrderModel.customer_id == customer_id)
+        .limit(limit)
         .order_by(OrderModel.order_date.desc())
     )
     

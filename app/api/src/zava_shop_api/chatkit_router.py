@@ -24,7 +24,7 @@ from chatkit.widgets import Button, Card, Col, Divider, Image, Row, Text, Title,
 from agent_framework_chatkit import ThreadItemConverter, stream_agent_response
 import os
 
-from typing import AsyncIterator, Callable
+from typing import AsyncIterator, Callable, Optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,8 @@ def render_order_widget(data: OrderResponse) -> WidgetRoot:
         Row(
             align="center",
             children=[
-                Image(src=order_item.image_url, size=48),
+                # TODO: This renders from the openai CDN, I don't know how to override the domain
+                # Image(src=f"/images/{order_item.image_url}", size=48),
                 Col(
                     children=[
                         Text(
@@ -110,45 +111,38 @@ def render_order_widget(data: OrderResponse) -> WidgetRoot:
 
     return Card(
             size="sm",
-            children=Col(
-                children=[
-                    # Items section
-                    Col(
-                        children=order_rows
-                    ),
-                    
-                    # Divider
-                    Divider(flush=True),
-                    
-                    # Pricing section
-                    Col(
-                        content=[
-                            Row(
-                                content=[
-                                    Text(value="Total with tax", weight="semibold", size="sm"),
-                                    Spacer(),
-                                    Text(value=data.total_amount, weight="semibold", size="sm")
-                                ]
-                            )
-                        ]
-                    ),
-                    
-                    # Divider
-                    Divider(flush=True),
-                    
-                    # Buttons section
-                    Col(
-                        content=[
-                            Button(
-                                label="Return",
-                                # on_click_action=ClickAction(type="purchase"),
-                                style="primary",
-                                block=True
-                            )
-                        ]
-                    )
-                ]
-            )
+            children=[
+                Col(
+                    children=order_rows
+                ),
+                
+                Divider(flush=True),
+                
+                Col(
+                    children=[
+                        Row(
+                            children=[
+                                Text(value="Total with tax", weight="semibold", size="sm"),
+                                Spacer(),
+                                Text(value=f"${data.order_total:.2f}", weight="semibold", size="sm")
+                            ]
+                        )
+                    ]
+                ),
+                
+                Divider(flush=True),
+                
+                Col(
+                    children=[
+                        Button(
+                            label="Return",
+                            # on_click_action=ClickAction(type="purchase"),
+                            style="primary",
+                            block=True
+                        )
+                    ]
+                )
+            ]
         )
 
 
@@ -186,9 +180,10 @@ class ZavaShopChatKitServer(ChatKitServer):
         orders: list[OrderResponse] = []
 
         @ai_function
-        async def get_orders() -> dict:
+        async def get_orders(limit: int = 5) -> dict:
             """
             You can retrieve the customer's orders by calling this function.
+            Orders are already ordered by most recent first, so calling with limit=1 will return the most recent order.
             The customer is already authenticated in the chat context.
             This function returns the orders as a dictionary for the authenticated user.
             """
@@ -199,7 +194,8 @@ class ZavaShopChatKitServer(ChatKitServer):
 
                 orders_response = await get_customer_orders(
                     customer_id=context.customer_id,
-                    session=session
+                    session=session,
+                    limit=limit
                 )
                 orders.extend(orders_response.orders)
                 # Convert to dict for AI function return
