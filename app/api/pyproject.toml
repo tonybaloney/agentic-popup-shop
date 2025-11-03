@@ -10,10 +10,11 @@ dependencies = [
     "pydantic",
     "aiosqlite>=0.20.0,<0.21.0",
     "sqlalchemy[asyncio]>=2.0.0,<3.0.0",
-    "agent-framework-core>=1.0.0b251016",
-    
+    # "agent-framework-core>=1.0.0b251016",
+
     # Chatkit
     "openai-chatkit",
+    "agent-framework-chatkit@git+https://github.com/ekzhu/agent-framework.git@chatkit#egg=agent-framework-chatkit&subdirectory=python/packages/chatkit",
 
     "opentelemetry-instrumentation-fastapi",
     "opentelemetry-instrumentation-sqlalchemy",

@@ -71,6 +71,7 @@ var apiService = builder.AddPythonModule("api", "./app/api/", "uvicorn")
 
 builder.AddViteApp("frontend", "./frontend")
     .WithNpm(install: true)
+    .WithEnvironment("VITE_CHATKIT_DOMAIN_KEY", envVars["VITE_CHATKIT_DOMAIN_KEY"])
     .WithReference(apiService)
     .WaitFor(apiService);
 

@@ -15,7 +15,7 @@ export const authStore = reactive({
         password
       });
       
-      const { access_token, user_role, store_id, store_name } = response.data;
+      const { access_token, user_role, store_id, store_name, name } = response.data;
       
       // Store authentication data
       this.isAuthenticated = true;
@@ -24,7 +24,8 @@ export const authStore = reactive({
         username,
         role: user_role,
         store_id,
-        store_name
+        store_name,
+        name
       };
       
       // Persist to sessionStorage

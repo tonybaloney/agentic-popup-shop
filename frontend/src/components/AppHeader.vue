@@ -11,12 +11,12 @@
               <router-link v-if="userRole === 'customer'" to="/customer/dashboard" class="header-link">My Orders</router-link>
               <router-link v-else-if="userRole === 'admin' || userRole === 'store_manager'" to="/management" class="header-link">Management</router-link>
               <span class="divider">|</span>
-              <button class="header-link" @click="handleLogout">Logout</button>
+              <a class="header-link" @click="handleLogout">Logout</a>
             </template>
             <template v-else>
               <router-link to="/login" class="header-link">Login</router-link>
               <span class="divider">|</span>
-              <button class="header-link" @click="handleSignup">Sign Up</button>
+              <a class="header-link" @click="handleSignup">Sign Up</a>
             </template>
           </div>
         </div>

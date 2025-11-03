@@ -2,29 +2,20 @@
 ChatKit router for customer AI chat functionality.
 """
 
-from datetime import datetime
-from agent_framework import ChatMessage, Role, ai_function
+from agent_framework import ChatAgent, ai_function
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 from zava_shop_api.memory_store import MemoryStore
-from zava_shop_api.models import OrderListResponse, TokenData
+from zava_shop_api.models import TokenData
 from zava_shop_api.auth import get_current_user
 from chatkit.server import ChatKitServer, StreamingResult
 from chatkit.types import (
     ThreadMetadata,
     UserMessageItem,
     ThreadStreamEvent,
-    ThreadCreatedEvent,
-    ThreadItemAddedEvent,
-    ThreadItemDoneEvent,
-    Thread,
-    AssistantMessageItem,
-    AssistantMessageContent,
-    UserMessageTextContent,
-    Page,
 )
-
+from agent_framework_chatkit import ThreadItemConverter, stream_agent_response
 import os
 
 from typing import AsyncIterator
@@ -62,8 +53,16 @@ class ZavaShopChatKitServer(ChatKitServer):
         super().__init__(data_store, attachment_store=None)
 
         self.client = chat_client
+        self.agent = ChatAgent(
+            chat_client,
+            instructions=(
+                "You are a helpful assistant."
+                "Provide concise answers to user questions."
+                "If you don't know the answer, say 'I don't know'."
+            )
+        )
         self.db_provider = FinanceSQLiteProvider()
-
+        self.converter = ThreadItemConverter()
 
     async def respond(
         self,
@@ -73,33 +72,10 @@ class ZavaShopChatKitServer(ChatKitServer):
     ) -> AsyncIterator[ThreadStreamEvent]:
         """Process user messages and stream AI responses."""
 
-        # Emit ThreadCreatedEvent
-        chatkit_thread = Thread(
-            id=thread.id,
-            created_at=thread.created_at,
-            title=thread.title,
-            status=thread.status,
-            metadata=thread.metadata,
-            items=Page(data=[], has_more=False, after=None)
-        )
-        yield ThreadCreatedEvent(thread=chatkit_thread)
+        agent_messages = await self.converter.to_agent_input(input_user_message)
 
         if not input_user_message:
             raise ValueError("No user message provided")
-
-        # Emit user message added event
-        yield ThreadItemAddedEvent(item=input_user_message)
-
-        user_input: list[ChatMessage] = [
-            ChatMessage(role="user", text=m.text)
-            for m in input_user_message.content
-            if isinstance(m, UserMessageTextContent)
-        ]
-
-        # Track messages by ID as they stream in
-        messages_by_id: dict[str, str] = {}
-        message_created_at: dict[str, datetime] = {}
-        first_chunk_per_message: set[str] = set()
 
         @ai_function
         async def get_orders() -> dict:
@@ -120,56 +96,14 @@ class ZavaShopChatKitServer(ChatKitServer):
                 # Convert to dict for AI function return
                 return orders_response.model_dump()
 
-        # Stream assistant responses
-        async for update in self.client.get_streaming_response(user_input, tools=[get_orders]):
-            if update.role == Role.ASSISTANT and update.text and update.message_id:
-                msg_id = update.message_id
 
-                # Accumulate text for this message
-                if msg_id not in messages_by_id:
-                    messages_by_id[msg_id] = ""
-                    message_created_at[msg_id] = datetime.now()
 
-                messages_by_id[msg_id] += update.text
-
-                # Create/update assistant message item
-                assistant_message = AssistantMessageItem(
-                    id=msg_id,
-                    thread_id=thread.id,
-                    created_at=message_created_at[msg_id],
-                    content=[
-                        AssistantMessageContent(
-                            text=messages_by_id[msg_id],
-                            annotations=[]
-                        )
-                    ]
-                )
-
-                # Emit ThreadItemAdded for first chunk, ThreadItemAdded for updates
-                if msg_id not in first_chunk_per_message:
-                    first_chunk_per_message.add(msg_id)
-                    yield ThreadItemAddedEvent(item=assistant_message)
-                else:
-                    # For subsequent chunks, emit as updates (still using ThreadItemAddedEvent)
-                    # TODO: I think this should be ThreadItemUpdate, but that doesn't seem to behave the way I would expect
-                    yield ThreadItemAddedEvent(item=assistant_message)
-            else:
-                logger.warning(f"Received unsupported update: {update.to_dict()}")
-
-        # Emit ThreadItemDone for each completed message
-        for msg_id, text in messages_by_id.items():
-            assistant_message = AssistantMessageItem(
-                id=msg_id,
+        async for event in stream_agent_response(
+                self.agent.run_stream(agent_messages, tools=[get_orders]),
                 thread_id=thread.id,
-                created_at=message_created_at[msg_id],
-                content=[
-                    AssistantMessageContent(
-                        text=text,
-                        annotations=[]
-                    )
-                ]
-            )
-            yield ThreadItemDoneEvent(item=assistant_message)
+            ):
+                yield event
+
 
 
 # Initialize server

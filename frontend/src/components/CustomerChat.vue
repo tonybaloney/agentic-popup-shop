@@ -11,15 +11,25 @@
       </svg>
     </button>
 
-    <div v-show="isOpen" class="chatkit-wrapper">
+    <div v-show="isOpen" class="chatkit-wrapper" :class="{ 'maximized': isMaximized }">
       <div class="chatkit-header">
         <h3>Zava Assistant</h3>
-        <button @click="toggleChat" class="close-btn" aria-label="Close chat">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <div class="header-buttons">
+          <button @click="toggleMaximize" class="maximize-btn" :aria-label="isMaximized ? 'Minimize chat' : 'Maximize chat'">
+            <svg v-if="!isMaximized" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+            </svg>
+          </button>
+          <button @click="toggleChat" class="close-btn" aria-label="Close chat">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
       </div>
       <div ref="chatkitMount" class="chatkit-widget"></div>
     </div>
@@ -31,13 +41,19 @@ import { ref, onBeforeUnmount, watch } from 'vue';
 import { createRoot } from 'react-dom/client';
 import React from 'react';
 import { ChatKit, useChatKit } from '@openai/chatkit-react';
+import { authStore } from '../stores/auth';
 
 const isOpen = ref(false);
+const isMaximized = ref(false);
 const chatkitMount = ref(null);
 let reactRoot = null;
 
 const toggleChat = () => {
   isOpen.value = !isOpen.value;
+};
+
+const toggleMaximize = () => {
+  isMaximized.value = !isMaximized.value;
 };
 
 watch(isOpen, async (newValue) => {
@@ -57,26 +73,26 @@ const initializeChatKit = () => {
     const ChatKitWrapper = () => {
       const { control } = useChatKit({
         api: {
-          getClientSecret: async (existing) => {
-            if (existing) {
-              console.log('Refreshing ChatKit session');
+          url: '/api/chatkit',
+          domainKey: import.meta.env.VITE_CHATKIT_DOMAIN_KEY || '',
+          fetch: async (input, init) => {
+            const token = authStore.getToken();
+
+            const headers = new Headers(init?.headers || {});
+            if (token) {
+              headers.set('Authorization', `Bearer ${token}`);
             }
 
-            const response = await fetch('/api/chatkit', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
-              }
-            });
+            const modifiedInit = {
+              ...init,
+              headers,
+            };
 
-            if (!response.ok) {
-              throw new Error('Failed to create ChatKit session');
-            }
-
-            const data = await response.json();
-            return data.client_secret;
-          }
+            return fetch(input, modifiedInit);
+          },
+        },
+        startScreen: {
+          greeting: `Hello ${authStore.user?.name || 'Guest'}, what can I help you with today?`,
         }
       });
 
@@ -143,6 +159,14 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   animation: slideIn 0.3s ease;
+  transition: all 0.3s ease;
+}
+
+.chatkit-wrapper.maximized {
+  width: calc(100vw - 40px);
+  height: calc(100vh - 40px);
+  max-width: none;
+  border-radius: 12px;
 }
 
 @keyframes slideIn {
@@ -172,6 +196,13 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
+.header-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.maximize-btn,
 .close-btn {
   background: none;
   border: none;
@@ -185,6 +216,7 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
+.maximize-btn:hover,
 .close-btn:hover {
   background: rgba(255, 255, 255, 0.1);
 }

@@ -7,9 +7,18 @@ resolution-markers = [
 ]
 
 [[package]]
+name = "agent-framework-chatkit"
+version = "1.0.0b251001"
+source = { git = "https://github.com/ekzhu/agent-framework.git?subdirectory=python%2Fpackages%2Fchatkit&rev=chatkit#b87b60c1e95f8d3175e3cf961ec65381079d4c2f" }
+dependencies = [
+    { name = "agent-framework-core" },
+    { name = "openai-chatkit" },
+]
+
+[[package]]
 name = "agent-framework-core"
 version = "1.0.0b251016"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&rev=main#0fc1b8837b2482d704f81f5867e8b0f088255911" }
+source = { git = "https://github.com/ekzhu/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&rev=chatkit#b87b60c1e95f8d3175e3cf961ec65381079d4c2f" }
 dependencies = [
     { name = "aiofiles" },
     { name = "azure-identity" },
@@ -29,7 +38,7 @@ dependencies = [
 [[package]]
 name = "agent-framework-devui"
 version = "1.0.0b251016"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=main#0fc1b8837b2482d704f81f5867e8b0f088255911" }
+source = { git = "https://github.com/ekzhu/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=chatkit#b87b60c1e95f8d3175e3cf961ec65381079d4c2f" }
 dependencies = [
     { name = "agent-framework-core" },
     { name = "fastapi" },
@@ -2041,9 +2050,9 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-framework-core", git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&rev=main" },
-    { name = "agent-framework-devui", git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=main" },
-    { name = "agent-framework-devui", marker = "extra == 'ui'", git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=main" },
+    { name = "agent-framework-core", git = "https://github.com/ekzhu/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&rev=chatkit" },
+    { name = "agent-framework-devui", git = "https://github.com/ekzhu/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=chatkit" },
+    { name = "agent-framework-devui", marker = "extra == 'ui'", git = "https://github.com/ekzhu/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=chatkit" },
     { name = "azure-identity", specifier = ">=1.23.0,<2.0.0" },
     { name = "azure-monitor-opentelemetry" },
     { name = "azure-monitor-opentelemetry-exporter" },
@@ -2058,7 +2067,7 @@ name = "zava-shop-api"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "agent-framework-core" },
+    { name = "agent-framework-chatkit" },
     { name = "aiosqlite" },
     { name = "fastapi" },
     { name = "fastapi-cache2" },
@@ -2083,7 +2092,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-framework-core", specifier = ">=1.0.0b251016" },
+    { name = "agent-framework-chatkit", git = "https://github.com/ekzhu/agent-framework.git?subdirectory=python%2Fpackages%2Fchatkit&rev=chatkit" },
     { name = "aiosqlite", specifier = ">=0.20.0,<0.21.0" },
     { name = "fastapi" },
     { name = "fastapi-cache2" },
