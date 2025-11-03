@@ -2088,7 +2088,7 @@ requires-dist = [
     { name = "fastapi" },
     { name = "fastapi-cache2" },
     { name = "httpx", marker = "extra == 'dev'" },
-    { name = "openai-chatkit", specifier = ">=0.1.0" },
+    { name = "openai-chatkit" },
     { name = "opentelemetry-distro" },
     { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-instrumentation-fastapi" },

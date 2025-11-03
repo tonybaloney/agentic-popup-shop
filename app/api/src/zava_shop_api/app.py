@@ -193,7 +193,7 @@ async def health_check():
 # Authentication endpoint
 @app.post("/api/login", response_model=LoginResponse)
 async def login(credentials: LoginRequest) -> LoginResponse:
-    """
+    """ 
     Login endpoint to authenticate users and receive bearer token.
 
     Supports two user roles:
