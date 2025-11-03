@@ -9,7 +9,7 @@ resolution-markers = [
 [[package]]
 name = "agent-framework-core"
 version = "1.0.0b251016"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&rev=main#0fc1b8837b2482d704f81f5867e8b0f088255911" }
+source = { git = "https://github.com/ekzhu/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&rev=chatkit#b87b60c1e95f8d3175e3cf961ec65381079d4c2f" }
 dependencies = [
     { name = "aiofiles" },
     { name = "azure-identity" },
@@ -29,7 +29,7 @@ dependencies = [
 [[package]]
 name = "agent-framework-devui"
 version = "1.0.0b251016"
-source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=main#0fc1b8837b2482d704f81f5867e8b0f088255911" }
+source = { git = "https://github.com/ekzhu/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=chatkit#b87b60c1e95f8d3175e3cf961ec65381079d4c2f" }
 dependencies = [
     { name = "agent-framework-core" },
     { name = "fastapi" },
@@ -1760,9 +1760,9 @@ ui = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-framework-core", git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&rev=main" },
-    { name = "agent-framework-devui", git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=main" },
-    { name = "agent-framework-devui", marker = "extra == 'ui'", git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=main" },
+    { name = "agent-framework-core", git = "https://github.com/ekzhu/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&rev=chatkit" },
+    { name = "agent-framework-devui", git = "https://github.com/ekzhu/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=chatkit" },
+    { name = "agent-framework-devui", marker = "extra == 'ui'", git = "https://github.com/ekzhu/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=chatkit" },
     { name = "azure-identity", specifier = ">=1.23.0,<2.0.0" },
     { name = "azure-monitor-opentelemetry" },
     { name = "azure-monitor-opentelemetry-exporter" },

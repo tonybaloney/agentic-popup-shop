@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # Finance MCP Server
+  finance-mcp:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.financemcp
+    container_name: zava-finance-mcp
+    ports:
+      - "8001:8002"
+    environment:
+      - PORT=8002
+      - DEV_GUEST_TOKEN=${DEV_GUEST_TOKEN}
+      - APPLICATIONINSIGHTS_CONNECTION_STRING=${APPLICATIONINSIGHTS_CONNECTION_STRING}
+      - OTEL_PYTHON_EXCLUDED_URLS=/health
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - zava-network
+
+  # Supplier MCP Server
+  supplier-mcp:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.mcp
+    container_name: zava-supplier-mcp
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+      - DEV_GUEST_TOKEN=${DEV_GUEST_TOKEN}
+      - APPLICATIONINSIGHTS_CONNECTION_STRING=${APPLICATIONINSIGHTS_CONNECTION_STRING}
+      - OTEL_PYTHON_EXCLUDED_URLS=/health
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - zava-network
+
+  # API Server
+  api:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.api
+    container_name: zava-api
+    ports:
+      - "8091:8000"
+    environment:
+      - UVICORN_PORT=8000
+      - DEV_GUEST_TOKEN=${DEV_GUEST_TOKEN}
+      - FINANCE_MCP_HTTP=http://finance-mcp:8002
+      - SUPPLIER_MCP_HTTP=http://supplier-mcp:8002
+      # OpenAI/Azure OpenAI settings
+      - AZURE_OPENAI_ENDPOINT_GPT5=${AZURE_OPENAI_ENDPOINT_GPT5}
+      - AZURE_OPENAI_API_KEY_GPT5=${AZURE_OPENAI_API_KEY_GPT5}
+      - AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5=${AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5}
+      - AZURE_OPENAI_ENDPOINT_VERSION_GPT5=${AZURE_OPENAI_ENDPOINT_VERSION_GPT5:-2024-12-01-preview}
+      # Observability
+      - APPLICATIONINSIGHTS_CONNECTION_STRING=${APPLICATIONINSIGHTS_CONNECTION_STRING}
+      - OTEL_PYTHON_EXCLUDED_URLS=/health
+    depends_on:
+      finance-mcp:
+        condition: service_healthy
+      supplier-mcp:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - zava-network
+
+  # Frontend Web Server
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: zava-frontend
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_URL=http://localhost:8091
+      - VITE_CHATKIT_DOMAIN_KEY=${VITE_CHATKIT_DOMAIN_KEY}
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - zava-network
+
+networks:
+  zava-network:
+    driver: bridge
+
+volumes:
+  # Uncomment if you need persistent data storage
+  # zava-data:
+  #   driver: local

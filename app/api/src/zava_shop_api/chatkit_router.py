@@ -1,24 +1,30 @@
 """
 ChatKit router for customer AI chat functionality.
 """
-
+from datetime import datetime
 from agent_framework import ChatAgent, ai_function
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 from zava_shop_api.memory_store import MemoryStore
-from zava_shop_api.models import TokenData
+from zava_shop_api.models import OrderResponse, TokenData
 from zava_shop_api.auth import get_current_user
 from chatkit.server import ChatKitServer, StreamingResult
 from chatkit.types import (
     ThreadMetadata,
+    ThreadItemDoneEvent,
     UserMessageItem,
     ThreadStreamEvent,
+    WidgetItem,
 )
+from chatkit.store import StoreItemType, default_generate_id
+from chatkit.actions import ActionConfig
+from chatkit.widgets import Button, Card, Col, Divider, Image, Row, Text, Title, WidgetRoot, Spacer
+
 from agent_framework_chatkit import ThreadItemConverter, stream_agent_response
 import os
 
-from typing import AsyncIterator
+from typing import AsyncIterator, Callable
 import logging
 
 logger = logging.getLogger(__name__)
@@ -44,6 +50,106 @@ class ChatKitContext(BaseModel):
     customer_id: int | None
     role: str
     user_agent: str | None
+
+
+async def stream_widget(
+    thread_id: str,
+    widget: WidgetRoot,
+    copy_text: str | None = None,
+    generate_id: Callable[[StoreItemType], str] = default_generate_id,
+) -> AsyncIterator[ThreadStreamEvent]:
+    """Stream a ChatKit widget as a ThreadStreamEvent.
+    This helper function creates a ChatKit widget item and yields it as a
+    ThreadItemDoneEvent that can be consumed by the ChatKit UI.
+    Args:
+        thread_id: The ChatKit thread ID for the conversation.
+        widget: The ChatKit widget to display.
+        copy_text: Optional text representation of the widget for copy/paste.
+        generate_id: Optional function to generate IDs for ChatKit items.
+    Yields:
+        ThreadStreamEvent: ChatKit event containing the widget.
+    """
+    item_id = generate_id("message")
+
+    widget_item = WidgetItem(
+        id=item_id,
+        thread_id=thread_id,
+        created_at=datetime.now(),
+        widget=widget,
+        copy_text=copy_text,
+    )
+
+    yield ThreadItemDoneEvent(type="thread.item.done", item=widget_item)
+
+def render_order_widget(data: OrderResponse) -> WidgetRoot:
+
+    order_rows = [
+        Row(
+            align="center",
+            children=[
+                Image(src=order_item.image_url, size=48),
+                Col(
+                    children=[
+                        Text(
+                            value=order_item.product_name,
+                            size="md",
+                            weight="semibold",
+                            color="emphasis"
+                        ),
+                        Text(
+                            value=f"{order_item.quantity} x ${order_item.unit_price:.2f}",
+                            size="sm",
+                            color="secondary"
+                        )
+                    ]
+                )
+            ]
+        )
+        for order_item in data.items
+    ]
+
+    return Card(
+            size="sm",
+            children=Col(
+                children=[
+                    # Items section
+                    Col(
+                        children=order_rows
+                    ),
+                    
+                    # Divider
+                    Divider(flush=True),
+                    
+                    # Pricing section
+                    Col(
+                        content=[
+                            Row(
+                                content=[
+                                    Text(value="Total with tax", weight="semibold", size="sm"),
+                                    Spacer(),
+                                    Text(value=data.total_amount, weight="semibold", size="sm")
+                                ]
+                            )
+                        ]
+                    ),
+                    
+                    # Divider
+                    Divider(flush=True),
+                    
+                    # Buttons section
+                    Col(
+                        content=[
+                            Button(
+                                label="Return",
+                                # on_click_action=ClickAction(type="purchase"),
+                                style="primary",
+                                block=True
+                            )
+                        ]
+                    )
+                ]
+            )
+        )
 
 
 class ZavaShopChatKitServer(ChatKitServer):
@@ -77,6 +183,8 @@ class ZavaShopChatKitServer(ChatKitServer):
         if not input_user_message:
             raise ValueError("No user message provided")
 
+        orders: list[OrderResponse] = []
+
         @ai_function
         async def get_orders() -> dict:
             """
@@ -93,6 +201,7 @@ class ZavaShopChatKitServer(ChatKitServer):
                     customer_id=context.customer_id,
                     session=session
                 )
+                orders.extend(orders_response.orders)
                 # Convert to dict for AI function return
                 return orders_response.model_dump()
 
@@ -104,6 +213,15 @@ class ZavaShopChatKitServer(ChatKitServer):
             ):
                 yield event
 
+        if orders:
+            for order in orders:
+                widget = render_order_widget(order)
+                async for widget_event in stream_widget(
+                    thread_id=thread.id,
+                    widget=widget,
+                    copy_text=f"Order #{order.order_id}: {order.total_items} from {order.store_name}, Total: ${order.order_total}"
+                ):
+                    yield widget_event
 
 
 # Initialize server
