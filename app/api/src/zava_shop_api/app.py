@@ -56,7 +56,12 @@ from .models import (
 from .customers import get_customer_orders
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
-from zava_shop_api.auth import authenticate_user, get_current_user, get_current_user_from_token
+from zava_shop_api.auth import (
+    authenticate_user,
+    get_current_user,
+    get_current_user_from_token,
+    logout_all_user_sessions,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -138,6 +143,15 @@ async def lifespan(app: FastAPI):
     # Initialize cache
     backend = InMemoryBackend()
     FastAPICache.init(backend=backend)
+
+    # Initialize token store
+    try:
+        from zava_shop_api.auth import token_store
+        await token_store.initialize()
+        logger.info("✅ Token store initialized")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize token store: {e}")
+        raise
 
     yield
 
@@ -238,6 +252,13 @@ async def login(credentials: LoginRequest) -> LoginResponse:
         name=name
     )
 
+@app.post("/api/logout")
+async def logout(current_user: TokenData = Depends(get_current_user)):
+    """Logout the current user from all sessions."""
+    await logout_all_user_sessions(current_user.username)
+    return {
+        "message": "Successfully logged out from all sessions",
+    }
 
 # Stores endpoint
 @app.get("/api/stores", response_model=StoreList)
