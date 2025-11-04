@@ -35,14 +35,22 @@ router = APIRouter(prefix="/api/chatkit", tags=["chatkit"])
 # Initialize ChatKit data store (SQLite for development)
 data_store = MemoryStore()
 
-from agent_framework.azure import AzureOpenAIChatClient
+from agent_framework_azure_ai import AzureAIAgentClientV2
+from azure.identity.aio import DefaultAzureCredential
+
 from zava_shop_shared.finance_sqlite import FinanceSQLiteProvider
 from .customers import get_customer_orders
 
-chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
-                                    endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
-                                    deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
-                                    api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
+# chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
+#                                     endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
+#                                     deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
+#                                     api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
+
+chat_client = AzureAIAgentClientV2(
+    async_credential=DefaultAzureCredential(),
+    agent_name="zava-customer-agent",
+    model_deployment_name="gpt-4.1-mini"
+    )
 
 class ChatKitContext(BaseModel):
     """Context passed to ChatKit server."""

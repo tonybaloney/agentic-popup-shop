@@ -61,9 +61,9 @@ var apiService = builder.AddPythonModule("api", "./app/api/", "uvicorn")
     .WithEnvironment("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5", envVars["AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"])
     .WithEnvironment("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", envVars["AZURE_OPENAI_ENDPOINT_VERSION_GPT5"])
     // Agent SDK
-    // .WithEnvironment("AZURE_AIPROJECT_ENDPOINT", envVars["AZURE_AIPROJECT_ENDPOINT"])
-    // .WithEnvironment("AZURE_AIPROJECT_API_KEY", envVars["AZURE_AIPROJECT_API_KEY"])
-    // .WithEnvironment("AZURE_AIPROJECT_AGENT_ID", envVars["AZURE_AIPROJECT_AGENT_ID"])
+    .WithEnvironment("AZURE_AI_PROJECT_ENDPOINT", envVars["AZURE_AI_PROJECT_ENDPOINT"])
+    .WithEnvironment("AZURE_AI_PROJECT_API_KEY", envVars["AZURE_AI_PROJECT_API_KEY"])
+    .WithEnvironment("AZURE_AI_PROJECT_AGENT_ID", envVars["AZURE_AI_PROJECT_AGENT_ID"])
     // Extra
     .WithTracing(appInsightsConnectionString)
     .WithEnvironment("DEV_GUEST_TOKEN", envVars["DEV_GUEST_TOKEN"])
