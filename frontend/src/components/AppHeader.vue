@@ -197,8 +197,8 @@ export default {
     handleCart() {
       alert('Cart feature - Coming soon!');
     },
-    handleLogout() {
-      authStore.logout();
+    async handleLogout() {
+      await authStore.logout();
       this.$router.push('/');
     }
   }

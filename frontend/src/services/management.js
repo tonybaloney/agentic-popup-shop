@@ -25,10 +25,10 @@ managementApi.interceptors.request.use(
 // Add response interceptor to handle 401 errors
 managementApi.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response && error.response.status === 401) {
       // Token is invalid or expired, logout user
-      authStore.logout();
+      await authStore.logout();
       // Redirect to login page
       window.location.href = '/login';
     }

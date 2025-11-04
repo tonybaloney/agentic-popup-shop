@@ -109,8 +109,8 @@ export default {
     closeMobileMenu() {
       this.mobileMenuOpen = false;
     },
-    handleLogout() {
-      authStore.logout();
+    async handleLogout() {
+      await authStore.logout();
       this.$router.push('/');
     }
   }

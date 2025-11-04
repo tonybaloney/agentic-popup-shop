@@ -28,11 +28,11 @@ customerApi.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
+  async (error) => {
     console.error('Customer API Error:', error.response?.status, error.message);
     if (error.response?.status === 401) {
       // Token expired or invalid
-      authStore.logout();
+      await authStore.logout();
       window.location.href = '/login';
     }
     return Promise.reject(error);
