@@ -205,8 +205,6 @@ USERS: dict[str, UserAuthModel] = {
 }
 
 
-
-
 # Authentication helper functions
 def generate_token() -> str:
     """Generate a random secure token"""

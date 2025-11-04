@@ -16,7 +16,7 @@ from agent_framework import (ChatMessage,
                              ExecutorFailedEvent,
                              WorkflowOutputEvent,
                              WorkflowStartedEvent)
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, Depends
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 # Initialize in startup event
 from fastapi_cache import FastAPICache
@@ -60,7 +60,7 @@ from zava_shop_api.auth import (
     authenticate_user,
     get_current_user,
     get_current_user_from_token,
-    logout_all_user_sessions,
+    logout_user,
 )
 
 # Configure logging
@@ -253,12 +253,18 @@ async def login(credentials: LoginRequest) -> LoginResponse:
     )
 
 @app.post("/api/logout")
-async def logout(current_user: TokenData = Depends(get_current_user)):
-    """Logout the current user from all sessions."""
-    await logout_all_user_sessions(current_user.username)
-    return {
-        "message": "Successfully logged out from all sessions",
-    }
+async def logout(authorization: str = Header(None)):
+    """Logout the current user from this session."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    token = authorization.replace("Bearer ", "")
+    success = await logout_user(token)
+
+    if success:
+        return {"message": "Successfully logged out"}
+    else:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 # Stores endpoint
 @app.get("/api/stores", response_model=StoreList)
