@@ -92,7 +92,7 @@ services:
     ports:
       - "80:80"
     environment:
-      - VITE_API_URL=http://localhost:8091
+      - API_HOST=api:8091
       - VITE_CHATKIT_DOMAIN_KEY=${VITE_CHATKIT_DOMAIN_KEY}
     depends_on:
       api:

@@ -74,7 +74,7 @@ const initializeChatKit = () => {
       const { control } = useChatKit({
         api: {
           url: '/api/chatkit',
-          domainKey: import.meta.env.VITE_CHATKIT_DOMAIN_KEY || '',
+          domainKey: window.ENV?.CHATKIT_DOMAIN_KEY || import.meta.env.VITE_CHATKIT_DOMAIN_KEY || '',
           fetch: async (input, init) => {
             const token = authStore.getToken();
 
