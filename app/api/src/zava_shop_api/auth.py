@@ -1,3 +1,4 @@
+import os
 from fastapi import HTTPException, Header
 import secrets
 import logging
@@ -182,22 +183,22 @@ class UserAuthModel(dict):  # this should be internal to this module
 # Static user database (in production, this would be in a database with hashed passwords)
 USERS: dict[str, UserAuthModel] = {
     "admin": UserAuthModel(
-        password="admin123",
+        password=os.environ.get("DEMO_PASSWORD", "admin123"),
         role="admin",
         store_id=None
     ),
     "manager1": UserAuthModel(
-        password="manager123",
+        password=os.environ.get("DEMO_PASSWORD", "manager123"),
         role="store_manager",
         store_id=1  # NYC Times Square
     ),
     "manager2": UserAuthModel(
-        password="manager123",
+        password=os.environ.get("DEMO_PASSWORD", "manager123"),
         role="store_manager",
         store_id=2  # SF Union Square
     ),
     "stacey": UserAuthModel(
-        password="stacey123",
+        password=os.environ.get("DEMO_PASSWORD", "stacey123"),
         role="customer",
         store_id=1,
         customer_id=4
