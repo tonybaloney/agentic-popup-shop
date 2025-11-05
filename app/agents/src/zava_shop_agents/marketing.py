@@ -20,9 +20,7 @@ from agent_framework import (
     FunctionCallContent,
     FunctionResultContent,
     RequestInfoEvent,
-    RequestInfoExecutor,
-    RequestInfoMessage,
-    RequestResponse,
+    response_handler,
     Role,
     ToolMode,
     WorkflowBuilder,
@@ -73,17 +71,18 @@ images_directory.mkdir(exist_ok=True)
 Sample: Multi-agent marketing workflow with creative tools and HITL
 
 Pipeline layout:
-campaign_planner_agent -> coordinator -> creative_agent (with tools) -> coordinator 
--> hitl_review (HITL) -> coordinator -> creative_agent | localization_agent -> coordinator -> output
+campaign_planner_agent -> coordinator -> creative_agent (with tools) -> coordinator
+-> coordinator.request_info() (HITL) -> coordinator.handle_draft_feedback()
+-> creative_agent | localization_agent -> coordinator -> output
 
 The campaign planner agent drafts marketing campaign briefs.
 The creative agent generates social media images, videos, and captions using tools.
-Human reviews the creatives and provides feedback.
-The localization agent translates the approved content to Spanish.
+Human reviews the creatives and provides feedback via ctx.request_info().
+The localization agent translates the approved content for target markets.
 
 Demonstrates:
 - Tool-enabled agent for creative generation (images and video)
-- RequestInfoExecutor for human-in-the-loop approval  
+- New ctx.request_info() + @response_handler pattern for HITL
 - Multi-agent coordination and feedback loops
 - Localization workflow
 
@@ -284,7 +283,7 @@ def create_promotional_video(
 
 
 @dataclass
-class DraftFeedbackRequest(RequestInfoMessage):
+class DraftFeedbackRequest:
     """Payload sent for human review."""
     prompt: str = ""
     draft_text: str = ""
@@ -305,16 +304,16 @@ class LocalizedCaption:
 
 
 class Coordinator(Executor):
-    """Bridge between the campaign planner, creative agent, human feedback, localization, and publishing schedule."""
+    """Bridge between the campaign planner, creative agent, localization, and publishing schedule.
+    
+    Handles human-in-the-loop approvals using ctx.request_info() and @response_handler."""
 
-    def __init__(self, id: str, planner_id: str, creative_id: str, hitl_review_id: str, localization_id: str, publishing_id: str, final_hitl_approval_id: str) -> None:
+    def __init__(self, id: str, planner_id: str, creative_id: str, localization_id: str, publishing_id: str) -> None:
         super().__init__(id)
         self.planner_id = planner_id
         self.creative_id = creative_id
-        self.hitl_review_id = hitl_review_id
         self.localization_id = localization_id
         self.publishing_id = publishing_id
-        self.final_hitl_approval_id = final_hitl_approval_id
         self.generated_assets = []  # Store generated creative assets
         self.target_markets = ""  # Store user-selected target markets
 
@@ -501,13 +500,14 @@ class Coordinator(Executor):
                 "Keep it under 30 words. Type 'approve' to accept as-is."
             )
             
-            await ctx.send_message(
-                DraftFeedbackRequest(
+            # Use new request_info API instead of sending to RequestInfoExecutor
+            await ctx.request_info(
+                request_data=DraftFeedbackRequest(
                     prompt=prompt, 
                     draft_text=draft_text,
                     media_assets=self.generated_assets
                 ),
-                target_id=self.hitl_review_id,
+                response_type=str
             )
             return  # CRITICAL: Don't fall through to default handler
         
@@ -518,18 +518,18 @@ class Coordinator(Executor):
             # Emit custom event so chat_ui can capture the schedule
             await ctx.add_event(PublishingScheduleResponseEvent(schedule_response))
             
-            # Request human approval for the schedule
+            # Request human approval for the schedule using new request_info API
             prompt = (
                 "Review the publishing schedule. Type 'approve' to accept or provide feedback for adjustments."
             )
             
-            await ctx.send_message(
-                DraftFeedbackRequest(
+            await ctx.request_info(
+                request_data=DraftFeedbackRequest(
                     prompt=prompt,
                     draft_text=schedule_response,
                     media_assets=[]
                 ),
-                target_id=self.final_hitl_approval_id,
+                response_type=str
             )
             return
         
@@ -643,29 +643,35 @@ class Coordinator(Executor):
         # If we reach here, it's an unexpected executor - log and ignore
         print(f"⚠️ WARNING: Unexpected executor response: {draft.executor_id}")
 
-    @handler
-    async def on_human_feedback(
+    @response_handler
+    async def handle_draft_feedback(
         self,
-        feedback: RequestResponse[DraftFeedbackRequest, str],
+        original_request: DraftFeedbackRequest,
+        response: str,
         ctx: WorkflowContext[AgentExecutorRequest, str],
     ) -> None:
-        """Process human feedback and route accordingly."""
-        note = (feedback.data or "").strip()
-        original = feedback.original_request
-        request_id = feedback.request_id
+        """Handle responses to DraftFeedbackRequest using new @response_handler pattern.
         
-        # Check if this is schedule approval (no media_assets means it's the schedule review)
-        if not original.media_assets or len(original.media_assets) == 0:
+        This method handles three different approval flows:
+        1. Creative approval → leads to market selection
+        2. Market selection response → leads to localization
+        3. Schedule approval → workflow complete
+        """
+        note = (response or "").strip()
+        
+        # Check if this is schedule approval (no media_assets means schedule review)
+        if not original_request.media_assets or len(original_request.media_assets) == 0:
             if note.lower() == "approve":
                 # Schedule approved - complete workflow
                 print("✅ Publishing schedule approved - workflow complete!")
-                await ctx.yield_output(original.draft_text)
+                await ctx.yield_output(original_request.draft_text)
             else:
                 # User provided feedback on schedule - revise
                 instruction = (
-                    "A human reviewer shared the following feedback on the publishing schedule:\n"
+                    "A human reviewer shared the following feedback on the "
+                    "publishing schedule:\n"
                     f"{note or 'No specific guidance provided.'}\n\n"
-                    f"Previous schedule:\n{original.draft_text}\n\n"
+                    f"Previous schedule:\n{original_request.draft_text}\n\n"
                     "Revise the publishing schedule based on the feedback."
                 )
                 
@@ -679,28 +685,29 @@ class Coordinator(Executor):
             return
         
         # This is creative approval (has media_assets)
-        if note.lower() == "approve" and original.draft_text:
+        if note.lower() == "approve" and original_request.draft_text:
             # Human approved creative - now ask which markets to target
             print("✅ Creative approved - requesting target markets from user")
             
             # Ask user for target markets before localization
             market_prompt = "Which market(s) would you like to target?"
             
-            # Emit event so chat_ui can display this as coming from localization agent
+            # Emit event so chat_ui can display this from localization agent
             await ctx.add_event(MarketSelectionQuestionEvent(market_prompt))
             
-            await ctx.send_message(
-                DraftFeedbackRequest(
+            # Use new request_info API for market selection
+            await ctx.request_info(
+                request_data=DraftFeedbackRequest(
                     prompt=market_prompt,
                     draft_text="",  # No draft to show, just asking for input
-                    media_assets=self.generated_assets  # Keep assets for next step
+                    media_assets=self.generated_assets  # Keep for next step
                 ),
-                target_id=self.hitl_review_id,
+                response_type=str
             )
             return
 
-        # If draft_text is empty and we have media_assets, this is market selection response
-        if self.generated_assets and not original.draft_text:
+        # If draft_text empty and have media_assets, this is market selection
+        if self.generated_assets and not original_request.draft_text:
             # This is the market selection response
             target_markets = note.strip()
             self.target_markets = target_markets  # Store for publishing agent
@@ -716,16 +723,19 @@ class Coordinator(Executor):
                 
                 # Combine caption and hashtags for this asset
                 combined_text = f"{caption} {hashtags}"
-                content_to_translate.append(f"Asset {idx} ({asset_type}): {combined_text}")
+                content_to_translate.append(
+                    f"Asset {idx} ({asset_type}): {combined_text}"
+                )
             
             localization_input = (
                 f"Target markets: {target_markets}\n\n"
-                "Translate the following social media content for the specified markets. "
-                "Each line is one complete post with caption and hashtags:\n\n" + 
-                "\n".join(content_to_translate)
+                "Translate the following social media content for the "
+                "specified markets. "
+                "Each line is one complete post with caption and hashtags:\n\n"
+                + "\n".join(content_to_translate)
             )
             
-            print(f"🌍 Sending content to localization agent:\n{localization_input}\n")
+            print(f"🌍 Sending to localization agent:\n{localization_input}\n")
             
             await ctx.send_message(
                 AgentExecutorRequest(
@@ -736,12 +746,13 @@ class Coordinator(Executor):
             )
             return
 
-        # Human provided feedback on creatives; prompt the creative agent to revise.
+        # Human provided feedback on creatives; prompt creative agent to revise
         instruction = (
             "A human reviewer shared the following guidance:\n"
             f"{note or 'No specific guidance provided.'}\n\n"
-            f"Previous creative work:\n{original.draft_text}\n\n"
-            "Revise the social media creatives and captions based on the feedback. "
+            f"Previous creative work:\n{original_request.draft_text}\n\n"
+            "Revise the social media creatives and captions based on the "
+            "feedback. "
             "Regenerate images/video as needed and update captions accordingly."
         )
         
@@ -966,36 +977,33 @@ All responses MUST be valid JSON using this exact structure:
     )
 
 
-    hitl_review = RequestInfoExecutor(id="hitl_review")
-    final_hitl_approval = RequestInfoExecutor(id="final_hitl_approval")
+    # No longer need RequestInfoExecutor nodes - using ctx.request_info() instead
     coordinator = Coordinator(
         id="coordinator",
         planner_id=campaign_planner_agent.id,
         creative_id=creative_agent.id,
-        hitl_review_id=hitl_review.id,
         localization_id=localization_agent.id,
         publishing_id=publishing_agent.id,
-        final_hitl_approval_id=final_hitl_approval.id,
     )
 
     # Build the workflow with name and description for DevUI
+    # Note: HITL interactions now handled via ctx.request_info() in Coordinator
     workflow: Workflow = (
         WorkflowBuilder(
             name="Marketing Campaign with Creative Tools and HITL",
-            description="Campaign planner → creative agent (images/video) → human review → market selection → localization → publishing schedule → human approval. Multi-stage HITL workflow."
+            description="Campaign planner → creative agent (images/video) → "
+                       "human review → market selection → localization → "
+                       "publishing schedule → human approval. Multi-stage "
+                       "HITL workflow using ctx.request_info() pattern."
         )
         .set_start_executor(campaign_planner_agent)
         .add_edge(campaign_planner_agent, coordinator)
         .add_edge(coordinator, creative_agent)
         .add_edge(creative_agent, coordinator)
-        .add_edge(coordinator, hitl_review)
-        .add_edge(hitl_review, coordinator)
         .add_edge(coordinator, localization_agent)
         .add_edge(localization_agent, coordinator)
         .add_edge(coordinator, publishing_agent)
         .add_edge(publishing_agent, coordinator)
-        .add_edge(coordinator, final_hitl_approval)
-        .add_edge(final_hitl_approval, coordinator)
         .build()
     )
     
