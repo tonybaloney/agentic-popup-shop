@@ -72,7 +72,7 @@ export default {
 
     const checkWorkflowStatus = async () => {
       try {
-        const response = await fetch('/api/status');
+        const response = await fetch('/api/marketing/status');
         const data = await response.json();
         workflowStatus.value = data.status === 'online' ? 'online' : 'offline';
       } catch (error) {

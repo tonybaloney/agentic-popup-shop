@@ -65,8 +65,7 @@ export function useWebSocket() {
     }
 
     isConnectingRef.value = true;
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.hostname}:8091/ws`;
+    const wsUrl = `/api/marketing/ws`;
 
     console.log('Connecting to WebSocket:', wsUrl);
     const ws = new WebSocket(wsUrl);
@@ -161,7 +160,7 @@ export function useWebSocket() {
     } else {
       // Fallback to HTTP POST if WebSocket is not connected
       try {
-        await fetch('/api/message', {
+        await fetch('/api/marketing/message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ content })
