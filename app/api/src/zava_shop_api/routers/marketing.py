@@ -18,7 +18,7 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 
-from zava_shop_agents.marketing import get_workflow
+from zava_shop_agents.marketing import LocalizationResponseEvent, MarketSelectionQuestionEvent, PublishingScheduleResponseEvent, get_workflow, CampaignPlannerResponseEvent, CreativeAssetsGeneratedEvent
 
 from agent_framework import ChatMessage, Workflow
 
@@ -197,7 +197,7 @@ async def _process_agent_framework_event(event):
     # Check for custom events by class name
     event_type_name = type(event).__name__
     
-    if event_type_name == 'CampaignPlannerResponseEvent':
+    if isinstance(event, CampaignPlannerResponseEvent):
         logger.info("Campaign Planner Response Event received")
         response_text = event.response_text
         
@@ -241,11 +241,11 @@ async def _process_agent_framework_event(event):
             })
         return
     
-    if event_type_name == 'CreativeAssetsGeneratedEvent':
+    elif isinstance(event, CreativeAssetsGeneratedEvent):
         logger.info(f"Creative Assets Generated: {len(event.assets)} assets")
         return
     
-    if event_type_name == 'MarketSelectionQuestionEvent':
+    elif isinstance(event, MarketSelectionQuestionEvent):
         question_text = event.question_text
         
         await _broadcast({
@@ -265,7 +265,7 @@ async def _process_agent_framework_event(event):
         })
         return
     
-    if event_type_name == 'LocalizationResponseEvent':
+    elif isinstance(event, LocalizationResponseEvent):
         logger.info("Localization Response Event received")
         response_text = event.response_text
         
@@ -298,7 +298,7 @@ async def _process_agent_framework_event(event):
             })
         return
     
-    if event_type_name == 'PublishingScheduleResponseEvent':
+    elif isinstance(event, PublishingScheduleResponseEvent):
         logger.info("Publishing Schedule Response Event received")
         response_text = event.response_text
         
@@ -328,7 +328,7 @@ async def _process_agent_framework_event(event):
         return
     
     # Handle standard Agent Framework events
-    if isinstance(event, AgentExecutorResponse):
+    elif isinstance(event, AgentExecutorResponse):
         executor_name = event.executor_id.replace('_', ' ').title()
         agent_text = (
             event.agent_run_response.text
@@ -427,7 +427,7 @@ async def _send_to_workflow(content: str):
             
     except Exception as e:
         logger.error(f"Error in _send_to_workflow: {e}")
-        
+
         error_message = {
             'type': 'error',
             'content': f'Failed to send message to workflow: {str(e)}',
