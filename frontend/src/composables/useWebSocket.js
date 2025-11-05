@@ -65,7 +65,7 @@ export function useWebSocket() {
     }
 
     isConnectingRef.value = true;
-    const wsUrl = `/api/marketing/ws`;
+    const wsUrl = `/ws/marketing/campaign`;
 
     console.log('Connecting to WebSocket:', wsUrl);
     const ws = new WebSocket(wsUrl);

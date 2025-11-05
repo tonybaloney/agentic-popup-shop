@@ -20,13 +20,14 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from zava_shop_agents.marketing import get_workflow
 
-from agent_framework import ChatMessage
+from agent_framework import ChatMessage, Workflow
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Create router
+# Create routers
 router = APIRouter(prefix="/api/marketing", tags=["marketing"])
+ws_router = APIRouter(tags=["marketing-websocket"])
 
 # Store active WebSocket connections
 active_connections: List[WebSocket] = []
@@ -98,7 +99,7 @@ def convert_file_to_data_uri(file_path: str) -> str:
             "Error Loading Image%3C/text%3E%3C/svg%3E"
         )
 
-
+# TODO: Connect this to Campaign Brief pane
 def _format_campaign_plan(plan_data: Dict[str, Any]) -> str:
     """Format CampaignPlan data as markdown for the Campaign Brief pane."""
     lines = []
@@ -381,7 +382,6 @@ async def _process_agent_framework_event(event):
 async def _send_to_workflow(content: str):
     """Send user message to the workflow by running it directly."""
     global workflow_instance, pending_requests
-    
     try:
         if pending_requests['is_pending'] and pending_requests['request_id']:
             logger.info(f"Responding to HITL request: {pending_requests['request_id']}")
@@ -428,7 +428,7 @@ async def process_user_input(content: str):
     """Process user input and send to workflow."""
     if not content:
         return
-    
+
     user_message = {
         'type': 'user',
         'content': content,
@@ -436,10 +436,11 @@ async def process_user_input(content: str):
     }
     conversation_history.append(user_message)
     await _broadcast(user_message)
-    
+
     try:
         await _send_to_workflow(content)
     except Exception as e:
+        logger.exception("Failed to process user input", exc_info=e)
         error_message = {
             'type': 'error',
             'content': f'Failed to send message to workflow: {str(e)}',
@@ -456,24 +457,24 @@ def init_workflow():
     workflow_instance = get_workflow()
 
 
-# Routes
-@router.websocket("/ws")
+# WebSocket route on the separate router
+@ws_router.websocket("/ws/marketing/campaign")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time communication."""
     await websocket.accept()
     active_connections.append(websocket)
-    
+
     await websocket.send_json({
         'type': 'system',
         'content': 'Connected to Marketing Campaign Workflow',
         'timestamp': datetime.now().isoformat()
     })
-    
+
     try:
         while True:
             data = await websocket.receive_text()
             message_data = json.loads(data)
-            
+
             if message_data.get('type') == 'message':
                 content = message_data.get('content', '').strip()
                 if content:
@@ -492,11 +493,11 @@ async def websocket_endpoint(websocket: WebSocket):
 async def handle_message(data: Dict[str, Any]):
     """Handle incoming messages via HTTP POST."""
     content = data.get('content', '').strip()
-    
+
     if content:
         await process_user_input(content)
         return JSONResponse({'status': 'success'})
-    
+
     return JSONResponse(
         {'status': 'error', 'message': 'No content provided'},
         status_code=400
