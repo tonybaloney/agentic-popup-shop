@@ -202,7 +202,12 @@ USERS: dict[str, UserAuthModel] = {
         role="customer",
         store_id=1,
         customer_id=4
-    )
+    ),
+    "marketing": UserAuthModel(
+        password=os.environ.get("DEMO_PASSWORD", "marketing123"),
+        role="marketing",
+        store_id=None
+    ),
 }
 
 
