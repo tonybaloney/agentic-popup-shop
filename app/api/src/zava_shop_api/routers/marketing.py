@@ -520,10 +520,10 @@ async def check_workflow_status():
     try:
         global workflow_instance
         if workflow_instance is not None:
-            return JSONResponse({'status': 'ok', 'workflow': 'available'})
+            return JSONResponse({'status': 'online', 'mode': 'direct'})
         else:
             return JSONResponse(
-                {'status': 'error', 'message': 'Workflow not initialized'},
+                {'status': 'offline', 'message': 'Workflow not initialized'},
                 status_code=503
             )
     except Exception as e:
