@@ -41,9 +41,9 @@
 
 <script>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
-import { useWebSocket } from '../../composables/useWebSocket';
-import ChatBox from '../../components/marketing/ChatBox.vue';
-import CampaignDetails from '../../components/marketing/CampaignDetails.vue';
+import { useWebSocket } from '../composables/useWebSocket';
+import ChatBox from '../components/marketing/ChatBox.vue';
+import CampaignDetails from '../components/marketing/CampaignDetails.vue';
 
 export default {
   name: 'MarketingDashboard',
@@ -231,6 +231,7 @@ export default {
   flex-direction: column;
   background: #f6f8fa;
   height: 100%;
+  overflow: hidden;
 }
 
 .dashboard-header {
@@ -240,6 +241,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .header-content h2 {
@@ -302,6 +304,7 @@ export default {
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   background: white;
+  min-height: 0;
 }
 
 .chat-sidebar {
@@ -312,6 +315,7 @@ export default {
   position: relative;
   flex-shrink: 0;
   border-right: 1px solid #d0d7de;
+  min-height: 0;
 }
 
 .marketing-dashboard.sidebar-collapsed .chat-sidebar {

@@ -20,15 +20,18 @@ export default {
 
 <style scoped>
 #marketing-app {
-  min-height: 100vh;
+  height: 90vh;
   display: flex;
   flex-direction: column;
   background: #f5f7fa;
+  overflow: hidden;
 }
 
 .marketing-content {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 </style>

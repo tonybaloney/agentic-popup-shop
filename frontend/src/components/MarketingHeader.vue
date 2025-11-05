@@ -4,7 +4,7 @@
       <div class="header-content">
         <div class="logo-section">
           <router-link to="/marketing" class="logo">
-            <span class="logo-text">GitHub Popup Store</span>
+            <span class="logo-text">Zava Popup Store</span>
             <span class="logo-subtitle">Marketing Dashboard</span>
           </router-link>
         </div>

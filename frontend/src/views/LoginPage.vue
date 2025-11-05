@@ -75,6 +75,8 @@ export default {
             this.$router.push('/customer/dashboard');
           } else if (userRole === 'admin' || userRole === 'store_manager') {
             this.$router.push('/management');
+          } else if (userRole === 'marketing') {
+            this.$router.push('/marketing');
           } else {
             this.$router.push('/');
           }

@@ -451,10 +451,14 @@ export default {
   flex: 1;
   overflow-y: auto;
   background: #ffffff;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .details-content {
   padding: 1.5rem;
+  flex: 1;
 }
 
 .accordion-section {

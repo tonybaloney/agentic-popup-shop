@@ -123,6 +123,7 @@ export default {
   height: 100%;
   background: #ffffff;
   border-right: 1px solid #d0d7de;
+  min-height: 0;
 }
 
 .chat-header {
@@ -132,6 +133,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .chat-header h3 {
@@ -164,6 +166,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-height: 0;
 }
 
 .chat-messages::-webkit-scrollbar {
@@ -189,6 +192,7 @@ export default {
   background: #f6f8fa;
   display: flex;
   gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 #message-input {
