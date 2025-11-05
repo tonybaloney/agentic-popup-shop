@@ -377,6 +377,13 @@ async def _process_agent_framework_event(event):
                     'content': '✅ Workflow completed!',
                     'timestamp': datetime.now().isoformat()
                 })
+    else:
+        logger.warning(f"Unhandled event type: {event_type_name}")
+        await _broadcast({
+            'type': 'system',
+            'content': f"Unhandled event type: {event_type_name}",
+            'timestamp': datetime.now().isoformat()
+        })
 
 
 async def _send_to_workflow(content: str):
@@ -420,6 +427,15 @@ async def _send_to_workflow(content: str):
             
     except Exception as e:
         logger.error(f"Error in _send_to_workflow: {e}")
+        
+        error_message = {
+            'type': 'error',
+            'content': f'Failed to send message to workflow: {str(e)}',
+            'timestamp': datetime.now().isoformat()
+        }
+        conversation_history.append(error_message)
+        await _broadcast(error_message)
+
         traceback.print_exc()
         raise
 
