@@ -5,9 +5,7 @@ FastAPI router for the marketing campaign workflow with WebSocket streaming.
 Handles workflow execution, HITL approvals, and media asset serving.
 """
 
-import asyncio
 import base64
-import importlib.util
 import json
 import logging
 import os
@@ -185,14 +183,11 @@ async def _broadcast(message: Dict[str, Any]):
 async def _process_agent_framework_event(event):
     """Process Agent Framework event objects from run_stream()."""
     from agent_framework import (
-        ExecutorInvokedEvent,
-        ExecutorCompletedEvent,
         RequestInfoEvent,
         ExecutorFailedEvent,
         WorkflowStatusEvent,
         WorkflowRunState,
         AgentExecutorResponse,
-        AgentRunUpdateEvent,
     )
     
     global pending_requests
@@ -500,7 +495,7 @@ async def handle_message(data: Dict[str, Any]):
     
     if content:
         await process_user_input(content)
-        return JSONResponse({'status': 'ok'})
+        return JSONResponse({'status': 'success'})
     
     return JSONResponse(
         {'status': 'error', 'message': 'No content provided'},
