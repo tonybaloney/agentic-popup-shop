@@ -43,7 +43,7 @@ ENV PYTHONPATH=/app/mcp:/app/shared/src
 ENV PYTHONUNBUFFERED=1
 
 # Use the startup script as the entrypoint
-ENTRYPOINT ["uv", "run", "python", "-m", "zava_shop_mcp.supplier_server"]
+ENTRYPOINT ["uv", "run", "python", "-m", "zava_shop_mcp.finance_server"]
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
@@ -51,5 +51,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Labels
 LABEL maintainer="Zava Shop Team"
-LABEL description="MCP Server for Zava Shop Supplier Management"
+LABEL description="MCP Server for Zava Shop Financial Management"
 LABEL version="0.1.0"
