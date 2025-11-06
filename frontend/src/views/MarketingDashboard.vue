@@ -15,6 +15,7 @@
           v-if="!sidebarCollapsed"
           :messages="messages"
           :is-connected="isConnected"
+          :workflow-status="workflowStatus"
           @send-message="handleSendMessage"
         />
       </div>
@@ -41,6 +42,7 @@ export default {
   },
   setup() {
     const sidebarCollapsed = ref(false);
+    const workflowStatus = ref('checking');
     const campaignData = ref({
       brief: '',
       media: [],
@@ -56,6 +58,16 @@ export default {
     const { messages, sendMessage, isConnected } = useWebSocket();
 
 
+    let statusCheckInterval = null;
+    const checkWorkflowStatus = async () => {
+      try {
+        const response = await fetch('/api/marketing/status');
+        const data = await response.json();
+        workflowStatus.value = data.status === 'online' ? 'online' : 'offline';
+      } catch (error) {
+        workflowStatus.value = 'offline';
+      }
+    };
 
     const handleSendMessage = (message) => {
       // Check if this is an approval/reject decision
@@ -178,10 +190,19 @@ export default {
       extractCampaignData(newMessages);
     }, { deep: true });
 
-
+    onMounted(() => {
+      checkWorkflowStatus();
+      statusCheckInterval = setInterval(checkWorkflowStatus, 10000);
+    });
+    onUnmounted(() => {
+      if (statusCheckInterval) {
+        clearInterval(statusCheckInterval);
+      }
+    });
 
     return {
       sidebarCollapsed,
+      workflowStatus,
       campaignData,
       loadingStates,
       messages,

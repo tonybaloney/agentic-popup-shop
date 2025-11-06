@@ -31,22 +31,16 @@ from agent_framework import (
     WorkflowOutputEvent,
     handler,
 )
-from agent_framework.azure import AzureOpenAIChatClient
-from azure.identity import AzureCliCredential
-from dotenv import load_dotenv
 from openai import AzureOpenAI
 from PIL import Image
 from pydantic import Field
 import requests
 import traceback
 
-# Load environment variables
-# Load from parent directory first (root .env), then local
-root_env = Path(__file__).parent.parent / ".env"
-if root_env.exists():
-    load_dotenv(root_env, override=True)
-else:
-    load_dotenv()
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Configuration for image generation
 # Try new env var names first, fall back to old ones
@@ -54,6 +48,21 @@ IMAGE_ENDPOINT = os.getenv("IMAGE_ENDPOINT") or os.getenv("AZURE_OPENAI_ENDPOINT
 IMAGE_API_KEY = os.getenv("IMAGE_API_KEY") or os.getenv("AZURE_OPENAI_API_KEY", "")
 IMAGE_MODEL_DEPLOYMENT = os.getenv("IMAGE_MODEL") or os.getenv("AZURE_OPENAI_IMAGE_DEPLOYMENT_NAME", "dall-e-3")
 DEBUG_SKIP_IMAGES = os.getenv("DEBUG_SKIP_IMAGES", "false").lower() == "true"
+
+from agent_framework_azure_ai import AzureAIClient
+from azure.identity.aio import DefaultAzureCredential
+
+# Agents v2
+chat_client = AzureAIClient(
+    async_credential=DefaultAzureCredential(),
+    agent_name=os.environ.get("AZURE_AI_PROJECT_AGENT_ID", "zava-marketing-agent"),
+    model_deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5", "gpt-5-mini")
+)
+
+# chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
+#                                     endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
+#                                     deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
+#                                     api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
 
 print(f"🔧 Image Generation Config:")
 print(f"   Endpoint: {IMAGE_ENDPOINT[:50]}..." if IMAGE_ENDPOINT else "   Endpoint: NOT SET")
@@ -327,23 +336,23 @@ class Coordinator(Executor):
             return
         
         print(f"\n🔧 AGENT UPDATE for creative_agent")
-        print(f"🔧 DEBUG: update type: {type(update).__name__}")
+        logger.debug(" update type: {type(update).__name__}")
         
         # AgentRunUpdateEvent should contain messages as they're produced
         if hasattr(update, 'messages') and update.messages:
-            print(f"🔧 DEBUG: Found {len(update.messages)} messages in update")
+            logger.debug(" Found {len(update.messages)} messages in update")
             for msg_idx, msg in enumerate(update.messages):
-                print(f"🔧 DEBUG: Message {msg_idx} - type: {type(msg).__name__}, role: {msg.role if hasattr(msg, 'role') else 'N/A'}")
+                logger.debug(" Message {msg_idx} - type: {type(msg).__name__}, role: {msg.role if hasattr(msg, 'role') else 'N/A'}")
                 
                 if hasattr(msg, 'content'):
                     content = msg.content
                     
                     # Handle content as list (multimodal messages with tool calls/results)
                     if isinstance(content, list):
-                        print(f"🔧 DEBUG: Message {msg_idx} has list content with {len(content)} items")
+                        logger.debug(" Message {msg_idx} has list content with {len(content)} items")
                         for item_idx, item in enumerate(content):
                             item_type = type(item).__name__
-                            print(f"🔧 DEBUG:   Item {item_idx}: {item_type}")
+                            logger.debug("   Item {item_idx}: {item_type}")
                             
                             # Capture FunctionResultContent (tool outputs)
                             if isinstance(item, FunctionResultContent):
@@ -366,9 +375,9 @@ class Coordinator(Executor):
                     # Handle string content
                     elif isinstance(content, str):
                         preview = content[:100] if len(content) > 100 else content
-                        print(f"🔧 DEBUG: Message {msg_idx} string content: {preview}")
+                        logger.debug(" Message {msg_idx} string content: {preview}")
         else:
-            print(f"🔧 DEBUG: No messages in this update")
+            logger.debug(" No messages in this update")
         
         print(f"� Total assets captured: {len(self.generated_assets)}\n")
     
@@ -765,12 +774,7 @@ def get_workflow():
     The campaign planner creates a brief, the creative agent generates social media assets (images, video, captions),
     a human reviews and provides feedback, then the localization agent translates the approved content to Spanish.
     """    
-    chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
-                                    endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
-                                    deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
-                                    api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
-
-
+    
     campaign_planner_agent = AgentExecutor(
         agent=chat_client.create_agent(
             name="campaign_planner_agent",
