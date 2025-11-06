@@ -52,12 +52,8 @@ DEBUG_SKIP_IMAGES = os.getenv("DEBUG_SKIP_IMAGES", "false").lower() == "true"
 from agent_framework_azure_ai import AzureAIClient
 from azure.identity.aio import DefaultAzureCredential
 
-# Agents v2
-chat_client = AzureAIClient(
-    async_credential=DefaultAzureCredential(),
-    agent_name=os.environ.get("AZURE_AI_PROJECT_AGENT_ID", "zava-marketing-agent"),
-    model_deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5", "gpt-5-mini")
-)
+model_deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5", "gpt-5-mini")
+
 
 # chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
 #                                     endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
@@ -776,7 +772,11 @@ def get_workflow():
     """    
     
     campaign_planner_agent = AgentExecutor(
-        agent=chat_client.create_agent(
+        agent=AzureAIClient(
+            async_credential=DefaultAzureCredential(),
+            agent_name="zava-marketing-planner-agent",
+            model_deployment_name=model_deployment_name
+        ).create_agent(
             name="campaign_planner_agent",
             instructions="""Here’s a concise, rewritten version of your instruction — narrowed to focus on **social media campaigns using images and video**, and requiring slightly less information while keeping the JSON format rule intact:
 
@@ -865,7 +865,11 @@ All responses MUST be valid JSON using this exact structure:
     )
 
     creative_agent = AgentExecutor(
-        agent=chat_client.create_agent(
+        agent=AzureAIClient(
+            async_credential=DefaultAzureCredential(),
+            agent_name="zava-marketing-creative-agent",
+            model_deployment_name=model_deployment_name
+        ).create_agent(
             name="creative_agent",
             instructions=(
                 "You are a creative director who produces social media assets. "
@@ -892,7 +896,11 @@ All responses MUST be valid JSON using this exact structure:
     )
 
     localization_agent = AgentExecutor(
-        agent=chat_client.create_agent(
+        agent=AzureAIClient(
+            async_credential=DefaultAzureCredential(),
+            agent_name="zava-marketing-localization-agent",
+            model_deployment_name=model_deployment_name
+        ).create_agent(
             name="localization_agent",
             instructions=(
                 "You are a localization specialist who translates marketing content for international markets. "
@@ -930,7 +938,11 @@ All responses MUST be valid JSON using this exact structure:
     )
 
     publishing_agent = AgentExecutor(
-        agent=chat_client.create_agent(
+        agent=AzureAIClient(
+            async_credential=DefaultAzureCredential(),
+            agent_name="zava-marketing-publishing-agent",
+            model_deployment_name=model_deployment_name
+        ).create_agent(
             name="publishing_agent",
             instructions=(
                 "You are a social media publishing strategist. Create optimal posting schedules for Instagram and TikTok.\n\n"
