@@ -28,6 +28,6 @@ export default {
 
 .management-content {
   flex: 1;
-  padding: 2rem 0;
+  padding: 1.5rem 0;
 }
 </style>

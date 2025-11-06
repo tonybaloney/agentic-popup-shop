@@ -6,11 +6,11 @@
   --accent-hover: #9EC9D9;
   --background-color: #fff;
   --text-color: #0a0c0c;
-  --border-color: #A6C8D9;
-  --hover-color: #9EC9D9;
+  --border-color: #5A6B75;
+  --hover-color: #5FA8C2;
   --dark-bg: #0a0c0c;
-  --success-color: #9EC9D9;
-  --warning-color: #A6C8D9;
+  --success-color: #3BB273;
+  --warning-color: #E6A23C;
 }
 
 * {
