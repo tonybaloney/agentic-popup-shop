@@ -5,7 +5,8 @@ import base64
 import json
 import os
 from dataclasses import dataclass
-from datetime import datetime
+import time
+import re
 from io import BytesIO
 from pathlib import Path
 from typing import Annotated
@@ -23,6 +24,7 @@ from agent_framework import (
     response_handler,
     Role,
     ToolMode,
+    Workflow,
     WorkflowBuilder,
     WorkflowContext,
     WorkflowEvent,
@@ -35,6 +37,8 @@ from dotenv import load_dotenv
 from openai import AzureOpenAI
 from PIL import Image
 from pydantic import Field
+import requests
+import traceback
 
 # Load environment variables
 # Load from parent directory first (root .env), then local
@@ -138,8 +142,6 @@ def create_social_media_image(
     hashtags: Annotated[str, Field(description="3-5 relevant hashtags, e.g. '#innovation #tech #future'")],
 ) -> str:
     """Generate a social media image for the campaign using DALL-E."""
-    import time
-    
     timestamp = int(time.time())
     safe_theme = campaign_theme.replace(" ", "_").replace("/", "_")[:50]
     filename = f"social_image_{safe_theme}_{timestamp}.png"
@@ -204,7 +206,6 @@ def create_social_media_image(
         elif "url" in json_response["data"][0]:
             # Fallback to URL format (requires requests library)
             try:
-                import requests
                 image_url = json_response["data"][0]["url"]
                 print(f"🎨 Downloading image from URL: {image_url[:50]}...")
                 response = requests.get(image_url)
@@ -234,7 +235,6 @@ def create_social_media_image(
         return json.dumps(result_data)
         
     except Exception as e:
-        import traceback
         error_details = traceback.format_exc()
         print(f"❌ Error generating image: {e}")
         print(f"❌ Full traceback:\n{error_details}")
@@ -261,8 +261,6 @@ def create_promotional_video(
     duration_seconds: Annotated[int, Field(description="Video duration in seconds (15-60).")] = 30,
 ) -> str:
     """Generate a promotional video for the campaign."""
-    import time
-    import json
     timestamp = int(time.time())
     filename = f"promo_video_{timestamp}.mp4"
     
@@ -354,7 +352,6 @@ class Coordinator(Executor):
                                 if hasattr(item, 'output'):
                                     print(f"   Output preview: {item.output[:200]}")
                                     try:
-                                        import json
                                         asset_data = json.loads(item.output)
                                         print(f"✅ Captured creative asset: {asset_data.get('type')} - {asset_data.get('filename')}")
                                         self.generated_assets.append(asset_data)
@@ -390,9 +387,6 @@ class Coordinator(Executor):
             print(f"\n🎨 Creative agent response received - using file scan workaround")
             
             # WORKAROUND: Since tool outputs aren't accessible, scan for recently created files
-            import os
-            import time
-            from pathlib import Path
             
             images_dir = Path(__file__).parent / "generated_images"
             current_time = time.time()
@@ -412,7 +406,7 @@ class Coordinator(Executor):
                 recent_files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
                 
                 # Extract captions and hashtags from agent's text response
-                import re
+
                 agent_text = draft.agent_run_response.text if hasattr(draft, 'agent_run_response') else ""
                 print(f"Agent response: {agent_text}")
                 
@@ -578,7 +572,6 @@ class Coordinator(Executor):
             
             # Parse the JSON response to check final_plan flag
             try:
-                import json
                 response_data = json.loads(planner_response)
                 final_plan = response_data.get('final_plan', False)
                 
@@ -771,9 +764,7 @@ def get_workflow():
     Returns a workflow that demonstrates multi-agent marketing with creative tools and human-in-the-loop feedback.
     The campaign planner creates a brief, the creative agent generates social media assets (images, video, captions),
     a human reviews and provides feedback, then the localization agent translates the approved content to Spanish.
-    """
-    from agent_framework import Workflow
-    
+    """    
     chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
                                     endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
                                     deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
