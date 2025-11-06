@@ -70,19 +70,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-db: FinanceSQLiteProvider | None = None
+db: FinanceSQLiteProvider = FinanceSQLiteProvider()
 
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator:
-    global db
-    db = FinanceSQLiteProvider()
-    try:
-        await db.create_pool()
-        yield
-    finally:
-        # Cleanup on shutdown
-        if db:
-            await db.close_engine()
+    yield
+    db.close_engine()
 
 
 
@@ -92,8 +85,6 @@ mcp = FastMCP("Zava Finance Agent MCP Server", auth=verifier, lifespan=app_lifes
 
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(request: Request) -> Response:
-    if not db:
-        return JSONResponse({"status": "error", "message": "Server not initialized"}, status_code=500)
     return JSONResponse({"status": "ok"})
 
 @mcp.tool()
@@ -122,7 +113,7 @@ async def get_company_order_policy(
     try:
         logger.info(
             f"Retrieving company order policy for department: {department}")
-        assert db, "Server not initialized"  # noqa: S101
+        await db.create_pool()
         async with db.get_session() as session:
             # Build query using ORM
             policy_description = case(
@@ -214,7 +205,7 @@ async def get_supplier_contract(
     try:
         logger.info(
             f"Retrieving supplier contract for supplier_id: {supplier_id}")
-        assert db, "Server not initialized"  # noqa: S101
+        await db.create_pool()
         async with db.get_session() as session:
             # Calculate days until expiry
             current_date = func.current_date()
@@ -308,7 +299,7 @@ async def get_historical_sales_data(
         logger.info(
             f"Retrieving historical sales data for store_id: {store_id}, "
             f"category_name: {category_name}, days_back: {days_back}")
-        assert db, "Server not initialized"  # noqa: S101
+        await db.create_pool()
         async with db.get_session() as session:
             # Calculate cutoff date
             cutoff_date = datetime.now() - timedelta(days=days_back)
@@ -401,7 +392,7 @@ async def get_current_inventory_status(
             f"Retrieving current inventory status for store_id: {store_id},"
             f" category_name: {category_name}, "
             f" low_stock_threshold: {low_stock_threshold}")
-        assert db, "Server not initialized"  # noqa: S101
+        await db.create_pool()
         async with db.get_session() as session:
             # Calculate inventory and retail values
             inventory_value = (
@@ -494,7 +485,7 @@ async def get_stores(
         >>> result = await get_stores(store_name="Online")
     """
     try:
-        assert db, "Server not initialized"  # noqa: S101
+        await db.create_pool()
         async with db.get_session() as session:
             # Build query using ORM
             stmt = select(
@@ -551,4 +542,4 @@ if __name__ == "__main__":
         port,
     )
     logger.info("Guest token is '%s******%s'", GUEST_TOKEN[0:1], GUEST_TOKEN[-2:])
-    mcp.run(transport="http", host=host, port=port, path="/mcp", stateless_http=True)
+    mcp.run(transport="http", host=host, port=port, path="/mcp")
