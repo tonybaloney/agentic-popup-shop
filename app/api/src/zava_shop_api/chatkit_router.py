@@ -41,17 +41,18 @@ from azure.identity.aio import DefaultAzureCredential
 from zava_shop_shared.finance_sqlite import FinanceSQLiteProvider
 from .customers import get_customer_orders
 
+chat_client = AzureAIClient(
+    async_credential=DefaultAzureCredential(),
+    agent_name=os.environ.get("AZURE_AI_PROJECT_AGENT_ID", "zava-customer-agent"),
+    agent_version=os.environ.get("AZURE_AI_PROJECT_AGENT_VERSION", None),
+    model_deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5", "gpt-5-mini")
+)
+
+# Old API
 # chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
 #                                     endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
 #                                     deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
 #                                     api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
-
-chat_client = AzureAIClient(
-    async_credential=DefaultAzureCredential(),
-    agent_name="zava-customer-agent",
-    agent_version="3",
-    model_deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5", "gpt-5-mini")
-    )
 
 class ChatKitContext(BaseModel):
     """Context passed to ChatKit server."""
