@@ -27,7 +27,7 @@
 
       <!-- AI Agent Alert Banner -->
       <div v-if="summary && summary.low_stock_count > 0" class="ai-banner">
-        <div class="banner-icon">🤖</div>
+<vibe-icon name="warning" size="48"></vibe-icon>
         <div class="banner-content">
           <div class="banner-title">
             <strong>{{ summary.low_stock_count }}</strong> items are low on stock!
@@ -37,15 +37,7 @@
           </div>
         </div>
         <router-link to="/management/ai-agent" class="banner-button">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="10" rx="2"/>
-            <circle cx="12" cy="5" r="2"/>
-            <path d="M12 7v4"/>
-            <line x1="8" y1="16" x2="8" y2="16"/>
-            <line x1="16" y1="16" x2="16" y2="16"/>
-            <path d="M9 21v-2"/>
-            <path d="M15 21v-2"/>
-          </svg>
+<vibe-icon name="sparkle" size="24"></vibe-icon>
           Launch AI Agent
         </router-link>
       </div>
@@ -53,28 +45,28 @@
       <!-- Summary Cards -->
       <div v-if="summary" class="summary-cards">
         <div class="summary-card">
-          <div class="card-icon">📦</div>
+          <div class="card-icon"><vibe-icon name="box" size="24"></vibe-icon></div>
           <div class="card-content">
             <div class="card-label">Total Items</div>
             <div class="card-value">{{ summary.total_items }}</div>
           </div>
         </div>
         <div class="summary-card alert">
-          <div class="card-icon">⚠️</div>
+          <div class="card-icon"><vibe-icon name="warning" size="24"></vibe-icon></div>
           <div class="card-content">
             <div class="card-label">Low Stock</div>
             <div class="card-value">{{ summary.low_stock_count }}</div>
           </div>
         </div>
         <div class="summary-card">
-          <div class="card-icon">💰</div>
+          <div class="card-icon"><vibe-icon name="money" size="24"></vibe-icon></div>
           <div class="card-content">
             <div class="card-label">Stock Value</div>
             <div class="card-value">${{ formatNumber(summary.total_stock_value) }}</div>
           </div>
         </div>
         <div class="summary-card">
-          <div class="card-icon">🏪</div>
+          <div class="card-icon"><vibe-icon name="money-calculator" size="24"></vibe-icon></div>
           <div class="card-content">
             <div class="card-label">Retail Value</div>
             <div class="card-value">${{ formatNumber(summary.total_retail_value) }}</div>
@@ -154,7 +146,7 @@
                   <img v-if="item.image_url" :src="`/images/${item.image_url}`" 
                        :alt="item.product_name" class="product-thumb" 
                        @error="handleImageError" />
-                  <div class="product-thumb-placeholder" v-else>📦</div>
+                  <div class="product-thumb-placeholder" v-else><vibe-icon name="box" size="24"></vibe-icon></div>
                   <div class="product-details">
                     <router-link 
                       :to="`/management/products/${item.sku}`" 
@@ -182,10 +174,10 @@
               <td class="reorder-point">{{ item.reorder_point }}</td>
               <td>
                 <span v-if="item.is_low_stock" class="status-badge status-low">
-                  ⚠️ Low Stock
+                  <vibe-icon name="warning" size="24"></vibe-icon> Low Stock
                 </span>
                 <span v-else class="status-badge status-good">
-                  ✓ Good
+                  <vibe-icon name="checkmark" size="24"></vibe-icon> Good
                 </span>
               </td>
               <td class="value-cell">${{ formatNumber(item.stock_value) }}</td>
@@ -275,7 +267,7 @@ export default {
             id: store.id,
             name: store.name
           }));
-          console.log(`✅ Loaded ${this.stores.length} stores from API`);
+          console.log(`Loaded ${this.stores.length} stores from API`);
         }
       } catch (error) {
         console.error('Error loading stores:', error);
@@ -290,7 +282,7 @@ export default {
           { id: 7, name: 'Zava Pop-Up Spokane Pavilion' },
           { id: 8, name: 'Zava Pop-Up Tacoma Mall' }
         ];
-        console.log('⚠️ Using fallback hardcoded stores');
+        console.log('Using fallback hardcoded stores');
       } finally {
         this.loadingStores = false;
       }
@@ -302,7 +294,7 @@ export default {
         // API returns {categories: [...]}
         if (response.data && response.data.categories) {
           this.categories = response.data.categories.map(cat => cat.name);
-          console.log(`✅ Loaded ${this.categories.length} categories from API`);
+          console.log(`Loaded ${this.categories.length} categories from API`);
         }
       } catch (error) {
         console.error('Error loading categories:', error);
@@ -315,7 +307,7 @@ export default {
           'Footwear',
           'Outerwear'
         ];
-        console.log('⚠️ Using fallback hardcoded categories');
+        console.log('Using fallback hardcoded categories');
       } finally {
         this.loadingCategories = false;
       }
@@ -393,14 +385,14 @@ export default {
 }
 
 .header-left h1 {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  color: var(--primary-color);
+  color: var(--accent-color);
 }
 
 .page-description {
-  color: var(--secondary-color);
+  color: var(--text-color);
   font-size: 0.95rem;
 }
 
@@ -417,13 +409,13 @@ export default {
 
 /* AI Agent Banner */
 .ai-banner {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #183D4c 0%, #092040 100%);
   color: white;
   padding: 1.5rem 2rem;
   border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.5rem;
   margin-bottom: 2rem;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
   animation: slideIn 0.5s ease-out;
@@ -480,14 +472,16 @@ export default {
   align-items: center;
   gap: 0.5rem;
   background: white;
-  color: #667eea;
+  color: var(--primary-color);
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   font-weight: 600;
+  margin-top: 1rem;
   text-decoration: none;
   transition: all 0.2s;
   white-space: nowrap;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-width: 200px;
 }
 
 .banner-button:hover {
@@ -497,7 +491,7 @@ export default {
 }
 
 .banner-button svg {
-  stroke: #667eea;
+  stroke: var(--primary-color);
 }
 
 /* Summary Cards */
@@ -539,7 +533,7 @@ export default {
 
 .card-label {
   font-size: 0.875rem;
-  color: var(--secondary-color);
+  color: var(--text-color);
   margin-bottom: 0.25rem;
 }
 
@@ -648,8 +642,8 @@ export default {
 }
 
 .inventory-table thead {
-  background: #f6f8fa;
-  border-bottom: 2px solid #d0d7de;
+  /* background: var(--secondary-color); */
+  border-bottom: 1px solid var(--border-color);
 }
 
 .inventory-table th {
@@ -739,7 +733,7 @@ export default {
 
 .product-type {
   font-size: 0.75rem;
-  color: var(--secondary-color);
+  color: var(--text-color);
 }
 
 .sku-cell {
@@ -761,14 +755,14 @@ export default {
 
 .store-location {
   font-size: 0.75rem;
-  color: var(--secondary-color);
+  color: var(--text-color);
 }
 
 /* Category Badge */
 .category-badge {
   display: inline-block;
   padding: 0.25rem 0.75rem;
-  background: #e1e4e8;
+  background: var(--secondary-color);
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -783,7 +777,7 @@ export default {
 }
 
 .reorder-point {
-  color: var(--secondary-color);
+  color: var(--text-color);
   text-align: center;
   min-width: 80px;
 }
@@ -836,18 +830,18 @@ export default {
 
 .supplier-code {
   font-size: 0.7rem;
-  color: var(--secondary-color);
+  color: var(--text-color);
   font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
   margin-bottom: 0.25rem;
 }
 
 .lead-time {
   font-size: 0.7rem;
-  color: var(--secondary-color);
+  color: var(--text-color);
 }
 
 .no-supplier {
-  color: var(--secondary-color);
+  color: var(--text-color);
   font-style: italic;
   font-size: 0.8rem;
 }
@@ -892,7 +886,7 @@ export default {
 }
 
 .empty-state svg {
-  stroke: var(--secondary-color);
+  stroke: var(--text-color);
   margin-bottom: 1.5rem;
 }
 
@@ -904,7 +898,7 @@ export default {
 }
 
 .empty-state p {
-  color: var(--secondary-color);
+  color: var(--text-color);
 }
 
 /* Responsive */

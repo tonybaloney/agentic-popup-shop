@@ -407,7 +407,7 @@ export default {
 
 .banner-content {
   padding: 1.5rem 2rem;
-  background: linear-gradient(135deg, #183D4c 0%, #9EC9D9 100%);
+  background: linear-gradient(135deg, #183D4c 0%, #092040 100%);
   color: white;
 }
 
