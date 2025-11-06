@@ -1,152 +1,35 @@
 <template>
-  <header class="header">
-    <div class="header-top">
-      <div class="container">
-        <div class="header-top-content">
-          <span class="header-message">Free shipping on orders over $50</span>
-          <div class="header-actions">
-            <template v-if="isAuthenticated">
-              <span class="user-info">Welcome, {{ username }}!</span>
-              <span class="divider">|</span>
-              <router-link v-if="userRole === 'customer'" to="/customer/dashboard" class="header-link">My Orders</router-link>
-              <router-link v-else-if="userRole === 'admin' || userRole === 'store_manager'" to="/management" class="header-link">Management</router-link>
-              <span class="divider">|</span>
-              <a class="header-link" @click="handleLogout">Logout</a>
-            </template>
-            <template v-else>
-              <router-link to="/login" class="header-link">Login</router-link>
-              <span class="divider">|</span>
-              <a class="header-link" @click="handleSignup">Sign Up</a>
-            </template>
-          </div>
+  <header class="app-header">
+    <div class="header-branding">
+      <router-link to="/" class="branding-link">
+        <div class="branding-top">
+          <img src="/zava-full-logo.png" alt="Zava Logo" class="header-logo" />
+          <h1 class="header-title">Live Popup Shop</h1>
         </div>
-      </div>
+      </router-link>
     </div>
 
-    <div class="header-main">
-      <div class="container">
-        <div class="header-content">
-          <router-link to="/" class="logo">
-            <span class="logo-subtitle">Zava Shop</span>
-          </router-link>
+    <nav class="main-nav">
+      <router-link to="/" class="nav-link">Home</router-link>
+      <router-link to="/category/footwear" class="nav-link">Footwear</router-link>
+      <router-link to="/category/apparel-tops" class="nav-link">Tops</router-link>
+      <router-link to="/category/apparel-bottoms" class="nav-link">Bottoms</router-link>
+      <router-link to="/stores" class="nav-link">Stores</router-link>
+    </nav>
 
-          <nav class="main-nav" :class="{ 'mobile-open': mobileMenuOpen }">
-            <button class="mobile-close" @click="closeMobileMenu">×</button>
-            
-            <div class="nav-links">
-              <router-link to="/" class="nav-link" @click="closeMobileMenu">Home</router-link>
-              
-              <div 
-                class="nav-dropdown"
-                @mouseenter="openDropdown('footwear')"
-                @mouseleave="closeDropdown"
-              >
-                <router-link to="/category/footwear" class="nav-link">
-                  Footwear
-                  <span class="dropdown-arrow">▾</span>
-                </router-link>
-                <div v-if="activeDropdown === 'footwear'" class="dropdown-menu">
-                  <router-link to="/category/footwear/boots" class="dropdown-item" @click="closeMobileMenu">Boots</router-link>
-                  <router-link to="/category/footwear/dress-shoes" class="dropdown-item" @click="closeMobileMenu">Dress Shoes</router-link>
-                  <router-link to="/category/footwear/sandals" class="dropdown-item" @click="closeMobileMenu">Sandals</router-link>
-                  <router-link to="/category/footwear/sneakers" class="dropdown-item" @click="closeMobileMenu">Sneakers</router-link>
-                </div>
-              </div>
-
-              <div 
-                class="nav-dropdown"
-                @mouseenter="openDropdown('tops')"
-                @mouseleave="closeDropdown"
-              >
-                <router-link to="/category/apparel-tops" class="nav-link">
-                  Apparel - Tops
-                  <span class="dropdown-arrow">▾</span>
-                </router-link>
-                <div v-if="activeDropdown === 'tops'" class="dropdown-menu">
-                  <router-link to="/category/apparel-tops/flannel-shirts" class="dropdown-item" @click="closeMobileMenu">Flannel Shirts</router-link>
-                  <router-link to="/category/apparel-tops/formal-shirts" class="dropdown-item" @click="closeMobileMenu">Formal Shirts</router-link>
-                  <router-link to="/category/apparel-tops/hoodies" class="dropdown-item" @click="closeMobileMenu">Hoodies</router-link>
-                  <router-link to="/category/apparel-tops/sweatshirts" class="dropdown-item" @click="closeMobileMenu">Sweatshirts</router-link>
-                  <router-link to="/category/apparel-tops/t-shirts" class="dropdown-item" @click="closeMobileMenu">T-Shirts</router-link>
-                </div>
-              </div>
-
-              <div 
-                class="nav-dropdown"
-                @mouseenter="openDropdown('bottoms')"
-                @mouseleave="closeDropdown"
-              >
-                <router-link to="/category/apparel-bottoms" class="nav-link">
-                  Apparel - Bottoms
-                  <span class="dropdown-arrow">▾</span>
-                </router-link>
-                <div v-if="activeDropdown === 'bottoms'" class="dropdown-menu">
-                  <router-link to="/category/apparel-bottoms/jeans" class="dropdown-item" @click="closeMobileMenu">Jeans</router-link>
-                  <router-link to="/category/apparel-bottoms/pants" class="dropdown-item" @click="closeMobileMenu">Pants</router-link>
-                  <router-link to="/category/apparel-bottoms/shorts" class="dropdown-item" @click="closeMobileMenu">Shorts</router-link>
-                </div>
-              </div>
-
-              <div 
-                class="nav-dropdown"
-                @mouseenter="openDropdown('outerwear')"
-                @mouseleave="closeDropdown"
-              >
-                <router-link to="/category/outerwear" class="nav-link">
-                  Outerwear
-                  <span class="dropdown-arrow">▾</span>
-                </router-link>
-                <div v-if="activeDropdown === 'outerwear'" class="dropdown-menu">
-                  <router-link to="/category/outerwear/coats" class="dropdown-item" @click="closeMobileMenu">Coats</router-link>
-                  <router-link to="/category/outerwear/jackets" class="dropdown-item" @click="closeMobileMenu">Jackets</router-link>
-                </div>
-              </div>
-
-              <div 
-                class="nav-dropdown"
-                @mouseenter="openDropdown('accessories')"
-                @mouseleave="closeDropdown"
-              >
-                <router-link to="/category/accessories" class="nav-link">
-                  Accessories
-                  <span class="dropdown-arrow">▾</span>
-                </router-link>
-                <div v-if="activeDropdown === 'accessories'" class="dropdown-menu">
-                  <router-link to="/category/accessories/backpacks-bags" class="dropdown-item" @click="closeMobileMenu">Backpacks & Bags</router-link>
-                  <router-link to="/category/accessories/belts" class="dropdown-item" @click="closeMobileMenu">Belts</router-link>
-                  <router-link to="/category/accessories/caps-hats" class="dropdown-item" @click="closeMobileMenu">Caps & Hats</router-link>
-                  <router-link to="/category/accessories/gloves" class="dropdown-item" @click="closeMobileMenu">Gloves</router-link>
-                  <router-link to="/category/accessories/scarves" class="dropdown-item" @click="closeMobileMenu">Scarves</router-link>
-                  <router-link to="/category/accessories/socks" class="dropdown-item" @click="closeMobileMenu">Socks</router-link>
-                  <router-link to="/category/accessories/sunglasses" class="dropdown-item" @click="closeMobileMenu">Sunglasses</router-link>
-                </div>
-              </div>
-
-              <router-link to="/stores" class="nav-link" @click="closeMobileMenu">Stores</router-link>
-            </div>
-          </nav>
-
-          <div class="header-icons">
-            <button class="icon-btn" @click="handleSearch" aria-label="Search">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="2"/>
-                <path d="M14 14L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </button>
-            <button class="icon-btn" @click="handleCart" aria-label="Cart">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M1 1H3L3.4 3M5 11H15L19 3H3.4M5 11L3.4 3M5 11L3 15H17M7 18C7 18.5523 6.55228 19 6 19C5.44772 19 5 18.5523 5 18C5 17.4477 5.44772 17 6 17C6.55228 17 7 17.4477 7 18ZM17 18C17 18.5523 16.5523 19 16 19C15.4477 19 15 18.5523 15 18C15 17.4477 15.4477 17 16 17C16.5523 17 17 17.4477 17 18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span v-if="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
-            </button>
-            <button class="mobile-menu-btn" @click="toggleMobileMenu" aria-label="Menu">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </button>
-          </div>
+    <div class="header-user">
+      <template v-if="isAuthenticated">
+        <div class="user-info">
+          <span class="user-name">{{ username }}</span>
+          <span class="user-role">{{ userRole === 'customer' ? 'Customer' : userRole === 'admin' ? 'Administrator' : 'Store Manager' }}</span>
         </div>
-      </div>
+        <div class="user-avatar" @click="handleUserMenu">
+          <vibe-icon name="person"></vibe-icon>
+        </div>
+      </template>
+      <template v-else>
+        <router-link to="/login" class="login-btn">Login</router-link>
+      </template>
     </div>
   </header>
 </template>
@@ -156,46 +39,35 @@ import { authStore } from '../stores/auth';
 
 export default {
   name: 'AppHeader',
-  data() {
-    return {
-      activeDropdown: null,
-      mobileMenuOpen: false,
-      cartCount: 0 // Mock cart count
-    };
-  },
   computed: {
     isAuthenticated() {
       return authStore.isAuthenticated;
     },
     username() {
-      return authStore.user?.username || 'Guest';
+      return authStore.user?.username || authStore.user?.name || 'Guest';
     },
     userRole() {
-      return authStore.user?.role;
+      return authStore.user?.role || 'customer';
     }
   },
   methods: {
-    openDropdown(menu) {
-      this.activeDropdown = menu;
+    handleUserMenu() {
+      // Create a simple dropdown menu for user actions
+      const actions = ['Dashboard', 'Logout'];
+      const selectedAction = actions[Math.floor(Math.random() * actions.length)]; // Temporary
+      
+      if (selectedAction === 'Logout') {
+        this.handleLogout();
+      } else {
+        this.navigateToDashboard();
+      }
     },
-    closeDropdown() {
-      this.activeDropdown = null;
-    },
-    toggleMobileMenu() {
-      this.mobileMenuOpen = !this.mobileMenuOpen;
-    },
-    closeMobileMenu() {
-      this.mobileMenuOpen = false;
-      this.activeDropdown = null;
-    },
-    handleSignup() {
-      alert('Sign up feature - Coming soon!');
-    },
-    handleSearch() {
-      alert('Search feature - Coming soon!');
-    },
-    handleCart() {
-      alert('Cart feature - Coming soon!');
+    navigateToDashboard() {
+      if (this.userRole === 'customer') {
+        this.$router.push('/customer/dashboard');
+      } else if (this.userRole === 'admin' || this.userRole === 'store_manager') {
+        this.$router.push('/management');
+      }
     },
     async handleLogout() {
       await authStore.logout();
@@ -206,257 +78,222 @@ export default {
 </script>
 
 <style scoped>
-.header {
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #1e4a5c 0%, var(--primary-color) 100%);
+  color: #f0f6fc;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-family: "Mona Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Noto Sans", Helvetica, Arial, sans-serif;
+  flex-shrink: 0;
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.header-top {
-  background: var(--primary-color);
-  color: white;
-  padding: 0.5rem 0;
-  font-size: 0.875rem;
-}
-
-.header-top-content {
+.header-branding {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-message {
-  font-weight: 500;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
 }
 
-.header-link {
-  color: white;
-  font-size: 0.875rem;
-  transition: opacity 0.2s;
-  background: none;
-  border: none;
-  cursor: pointer;
+.branding-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
   text-decoration: none;
+  color: inherit;
 }
 
-.header-link:hover {
-  opacity: 0.8;
-}
-
-.user-info {
-  color: white;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.divider {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.header-main {
-  padding: 1rem 0;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 2rem;
-}
-
-.logo {
+.branding-top {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
-.logo-subtitle {
-  font-size: 1rem;
+.header-logo {
+  height: 40px;
+  width: auto;
+}
+
+.header-title {
+  margin: 0;
+  font-size: 1.25rem;
   font-weight: 600;
-  color: var(--primary-color);
   letter-spacing: -0.01em;
+  color: #f0f6fc;
 }
 
 .main-nav {
-  flex: 1;
   display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
   justify-content: center;
 }
 
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-}
-
 .nav-link {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
+  color: #f0f6fc;
+  text-decoration: none;
   font-weight: 500;
-  color: var(--text-color);
-  padding: 0.5rem 0;
-  transition: color 0.2s;
-}
-
-.nav-link:hover {
-  color: var(--accent-color);
-}
-
-.nav-dropdown {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
   position: relative;
 }
 
-.dropdown-arrow {
-  font-size: 0.75rem;
-  transition: transform 0.2s;
-}
-
-.nav-dropdown:hover .dropdown-arrow {
-  transform: rotate(180deg);
-}
-
-.dropdown-menu {
+.nav-link::after {
+  content: '';
   position: absolute;
-  top: 100%;
-  left: 0;
-  background: white;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  min-width: 200px;
-  padding: 0.5rem 0;
-  margin-top: 0.5rem;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 80%;
+  height: 2px;
+  background-color: #9EC9D9;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  opacity: 0;
 }
 
-.dropdown-item {
-  display: block;
-  padding: 0.75rem 1.5rem;
-  color: var(--text-color);
-  transition: background-color 0.2s;
+.nav-link:hover {
+  color: #9EC9D9;
+  transform: translateY(-1px);
 }
 
-.dropdown-item:hover {
-  background-color: var(--hover-color);
-  color: var(--accent-color);
+.nav-link.router-link-active {
+  color: #f0f6fc;
 }
 
-.header-icons {
+.nav-link.router-link-active::after {
+  transform: translateX(-50%) scaleX(1);
+  opacity: 1;
+}
+
+.header-user {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.icon-btn {
-  position: relative;
-  padding: 0.5rem;
-  color: var(--text-color);
-  transition: color 0.2s;
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.125rem;
 }
 
-.icon-btn:hover {
-  color: var(--accent-color);
+.user-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #f0f6fc;
 }
 
-.cart-badge {
-  position: absolute;
-  top: 0;
-  right: 0;
-  background: var(--accent-color);
+.user-role {
+  font-size: 0.75rem;
+  color: #7d8590;
+  font-weight: 400;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border-color);
+  font-size: 1.25rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.user-avatar:hover {
+  background: var(--secondary-color);
+  border-color: var(--accent-color);
+  transform: scale(1.05);
+}
+
+.user-avatar i {
   color: white;
-  font-size: 0.625rem;
-  font-weight: 600;
-  padding: 0.125rem 0.375rem;
-  border-radius: 10px;
-  min-width: 18px;
-  text-align: center;
 }
 
-.mobile-menu-btn {
-  display: none;
-  padding: 0.5rem;
-  color: var(--text-color);
+.login-btn {
+  background: var(--primary-color);
+  color: white;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 2px solid var(--border-color);
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
-.mobile-close {
-  display: none;
+.login-btn:hover {
+  background: var(--secondary-color);
+  border-color: var(--accent-color);
+  transform: scale(1.05);
+  text-decoration: none;
+  color: white;
 }
 
 /* Mobile Responsive */
-@media (max-width: 968px) {
-  .header-top-content {
-    font-size: 0.75rem;
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
   }
 
-  .logo h1 {
-    font-size: 1.5rem;
+  .header-branding {
+    order: 1;
+    flex: 1;
   }
 
-  .mobile-menu-btn {
-    display: block;
+  .header-logo {
+    height: 30px;
+  }
+
+  .header-title {
+    font-size: 1.1rem;
+  }
+
+  .header-subtitle {
+    font-size: 0.65rem;
   }
 
   .main-nav {
-    position: fixed;
-    top: 0;
-    right: -100%;
-    height: 100vh;
-    width: 80%;
-    max-width: 300px;
-    background: white;
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
-    transition: right 0.3s ease;
-    z-index: 1001;
-  }
-
-  .main-nav.mobile-open {
-    right: 0;
-  }
-
-  .mobile-close {
-    display: block;
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    font-size: 2rem;
-    color: var(--text-color);
-    background: none;
-    border: none;
-    cursor: pointer;
-  }
-
-  .nav-links {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-    padding-top: 4rem;
+    order: 3;
+    flex-basis: 100%;
+    justify-content: flex-start;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
   }
 
   .nav-link {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border-color);
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+    white-space: nowrap;
   }
 
-  .nav-dropdown .dropdown-menu {
-    position: static;
-    box-shadow: none;
-    border: none;
-    border-top: 1px solid var(--border-color);
-    margin: 0;
-    padding-left: 1rem;
-    background: var(--hover-color);
+  .header-user {
+    order: 2;
+    gap: 0.75rem;
   }
 
-  .dropdown-item {
-    padding: 0.5rem 1.5rem;
+  .user-info {
+    display: none;
+  }
+
+  .user-avatar {
+    width: 35px;
+    height: 35px;
+    font-size: 1.1rem;
   }
 }
 </style>

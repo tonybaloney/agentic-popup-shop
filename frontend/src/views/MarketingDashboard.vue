@@ -1,17 +1,6 @@
 <template>
   <div :class="['marketing-dashboard', { 'sidebar-collapsed': sidebarCollapsed }]">
-    <div class="dashboard-header">
-      <div class="header-content">
-        <h2>Campaign Workflow</h2>
-        <p class="subtitle">AI-powered campaign planning and content creation</p>
-      </div>
-      <div class="workflow-status">
-        <span :class="['status-badge', workflowStatus]">
-          <span class="status-dot"></span>
-          {{ workflowStatus === 'online' ? 'Workflow Online' : 'Checking...' }}
-        </span>
-      </div>
-    </div>
+
 
     <div class="dashboard-body">
       <div class="chat-sidebar">
@@ -26,7 +15,6 @@
           v-if="!sidebarCollapsed"
           :messages="messages"
           :is-connected="isConnected"
-          :workflow-status="workflowStatus"
           @send-message="handleSendMessage"
         />
       </div>
@@ -53,7 +41,6 @@ export default {
   },
   setup() {
     const sidebarCollapsed = ref(false);
-    const workflowStatus = ref('checking');
     const campaignData = ref({
       brief: '',
       media: [],
@@ -68,17 +55,7 @@ export default {
 
     const { messages, sendMessage, isConnected } = useWebSocket();
 
-    let statusCheckInterval = null;
 
-    const checkWorkflowStatus = async () => {
-      try {
-        const response = await fetch('/api/marketing/status');
-        const data = await response.json();
-        workflowStatus.value = data.status === 'online' ? 'online' : 'offline';
-      } catch (error) {
-        workflowStatus.value = 'offline';
-      }
-    };
 
     const handleSendMessage = (message) => {
       // Check if this is an approval/reject decision
@@ -201,20 +178,10 @@ export default {
       extractCampaignData(newMessages);
     }, { deep: true });
 
-    onMounted(() => {
-      checkWorkflowStatus();
-      statusCheckInterval = setInterval(checkWorkflowStatus, 10000);
-    });
 
-    onUnmounted(() => {
-      if (statusCheckInterval) {
-        clearInterval(statusCheckInterval);
-      }
-    });
 
     return {
       sidebarCollapsed,
-      workflowStatus,
       campaignData,
       loadingStates,
       messages,
@@ -234,67 +201,7 @@ export default {
   overflow: hidden;
 }
 
-.dashboard-header {
-  background: #ffffff;
-  border-bottom: 1px solid #d0d7de;
-  padding: 1.5rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
-}
 
-.header-content h2 {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1f2328;
-}
-
-.subtitle {
-  margin: 0.25rem 0 0;
-  color: #6e7781;
-  font-size: 0.9rem;
-}
-
-.workflow-status {
-  display: flex;
-  align-items: center;
-}
-
-.status-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: #f6f8fa;
-  border: 1px solid #d0d7de;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #1f2328;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #2da44e;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-.status-badge.offline .status-dot {
-  background: #cf222e;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
 
 .dashboard-body {
   display: flex;
@@ -377,15 +284,5 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .dashboard-header {
-    flex-direction: column;
-    gap: 1rem;
-    text-align: center;
-    padding: 1.5rem;
-  }
-
-  .header-content h1 {
-    font-size: 1.5rem;
-  }
 }
 </style>

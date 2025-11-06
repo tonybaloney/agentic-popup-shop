@@ -3,8 +3,8 @@
     <!-- Hero Section -->
     <section class="hero">
       <div class="hero-content">
-        <h1 class="hero-title">Zava Popup Shop</h1>
-        <p class="hero-subtitle">Premium Merchandise & Apparel at Popup Locations</p>
+        <h1 class="hero-title">Premium Technical Apparel</h1>
+        <p class="hero-subtitle">Weaving the future with intelligent fabric</p>
         <router-link to="/category/accessories" class="btn btn-primary hero-btn">
           Shop Now
         </router-link>
@@ -253,7 +253,7 @@ export default {
 }
 
 .hero-title {
-  font-size: 4rem;
+  font-size: 3rem;
   font-weight: 700;
   margin-bottom: 1rem;
   letter-spacing: 0.05em;
