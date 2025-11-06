@@ -217,7 +217,7 @@ export default {
 .hero {
   position: relative;
   height: 300px;
-  background-image: url('../assets/images/store.jpg');
+  background-image: url('/zava-hero-bg.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
