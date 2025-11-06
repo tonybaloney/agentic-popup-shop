@@ -8,8 +8,8 @@ resolution-markers = [
 
 [[package]]
 name = "agent-framework-core"
-version = "1.0.0b251028"
-source = { git = "https://github.com/tonybaloney/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&rev=ignite_all#0777e0c1b4bd219227aa73df962ad944b70c7b6e" }
+version = "1.0.0b251104"
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&rev=feature-python-foundry-agents#599c5c2bc61eafd168b0e26841cbdf56cfaf87eb" }
 dependencies = [
     { name = "azure-identity" },
     { name = "mcp", extra = ["ws"] },
@@ -25,8 +25,8 @@ dependencies = [
 
 [[package]]
 name = "agent-framework-devui"
-version = "1.0.0b251028"
-source = { git = "https://github.com/tonybaloney/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=ignite_all#0777e0c1b4bd219227aa73df962ad944b70c7b6e" }
+version = "1.0.0b251104"
+source = { git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=feature-python-foundry-agents#599c5c2bc61eafd168b0e26841cbdf56cfaf87eb" }
 dependencies = [
     { name = "agent-framework-core" },
     { name = "fastapi" },
@@ -1743,8 +1743,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-framework-core", git = "https://github.com/tonybaloney/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&rev=ignite_all" },
-    { name = "agent-framework-devui", git = "https://github.com/tonybaloney/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=ignite_all" },
+    { name = "agent-framework-core", git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fcore&rev=feature-python-foundry-agents" },
+    { name = "agent-framework-devui", git = "https://github.com/microsoft/agent-framework.git?subdirectory=python%2Fpackages%2Fdevui&rev=feature-python-foundry-agents" },
     { name = "azure-identity", specifier = ">=1.23.0,<2.0.0" },
     { name = "azure-monitor-opentelemetry" },
     { name = "azure-monitor-opentelemetry-exporter" },

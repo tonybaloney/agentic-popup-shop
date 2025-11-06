@@ -24,7 +24,7 @@ from chatkit.widgets import Button, Card, Col, Divider, Image, Row, Text, Title,
 from agent_framework_chatkit import ThreadItemConverter, stream_agent_response
 import os
 
-from typing import AsyncIterator, Callable, Optional
+from typing import AsyncIterator, Callable
 import logging
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ router = APIRouter(prefix="/api/chatkit", tags=["chatkit"])
 # Initialize ChatKit data store (SQLite for development)
 data_store = MemoryStore()
 
-from agent_framework_azure_ai import AzureAIAgentClientV2
+from agent_framework_azure_ai import AzureAIClient
 from azure.identity.aio import DefaultAzureCredential
 
 from zava_shop_shared.finance_sqlite import FinanceSQLiteProvider
@@ -46,10 +46,11 @@ from .customers import get_customer_orders
 #                                     deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
 #                                     api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
 
-chat_client = AzureAIAgentClientV2(
+chat_client = AzureAIClient(
     async_credential=DefaultAzureCredential(),
     agent_name="zava-customer-agent",
-    model_deployment_name="gpt-4.1-mini"
+    agent_version="3",
+    model_deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5", "gpt-5-mini")
     )
 
 class ChatKitContext(BaseModel):
