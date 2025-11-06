@@ -16,10 +16,7 @@
           <div class="banner-content">
             <div class="banner-info">
               <div class="banner-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                  <polyline points="9 22 9 12 15 12 15 22"/>
-                </svg>
+<vibe-icon name="home" size="32" filled></vibe-icon>
               </div>
               <div class="banner-text">
                 <h2 class="banner-title">{{ storeName }}</h2>
@@ -33,10 +30,7 @@
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-icon revenue">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <line x1="12" y1="1" x2="12" y2="23"/>
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-              </svg>
+<vibe-icon name="money" size="24"></vibe-icon>
             </div>
             <div class="stat-content">
               <div class="stat-value">${{ formatNumber(stats.totalRevenue) }}</div>
@@ -47,10 +41,7 @@
 
           <div class="stat-card">
             <div class="stat-icon products">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                <line x1="3" y1="6" x2="21" y2="6"/>
-              </svg>
+              <vibe-icon name="box" size="24"></vibe-icon>
             </div>
             <div class="stat-content">
               <div class="stat-value">{{ stats.totalProducts }}</div>
@@ -61,11 +52,8 @@
 
           <div class="stat-card">
             <div class="stat-icon suppliers">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="8.5" cy="7" r="4"/>
-                <path d="M20 8v6M23 11h-6"/>
-              </svg>
+<vibe-icon name="person-add" size="24"></vibe-icon>
+
             </div>
             <div class="stat-content">
               <div class="stat-value">{{ stats.totalSuppliers }}</div>
@@ -76,9 +64,8 @@
 
           <div class="stat-card">
             <div class="stat-icon stores">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              </svg>
+<vibe-icon name="home" size="24"></vibe-icon>
+
             </div>
             <div class="stat-content">
               <div class="stat-value">{{ stats.totalStores }}</div>
@@ -91,11 +78,8 @@
         <!-- Alerts -->
         <div class="alerts-section">
           <div class="alert alert-warning">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-              <line x1="12" y1="9" x2="12" y2="13"/>
-              <line x1="12" y1="17" x2="12.01" y2="17"/>
-            </svg>
+<vibe-icon name="warning" size="24"></vibe-icon>
+
             <div>
               <strong>{{ stats.lowStockItems }} products</strong> are running low on stock
               <router-link to="/management/inventory" class="alert-link">View Inventory →</router-link>
@@ -103,11 +87,7 @@
           </div>
 
           <div class="alert alert-info">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="16" x2="12" y2="12"/>
-              <line x1="12" y1="8" x2="12.01" y2="8"/>
-            </svg>
+<vibe-icon name="info" size="24"></vibe-icon>
             <div>
               <strong>{{ stats.pendingOrders }} pending orders</strong> awaiting approval
             </div>
@@ -141,15 +121,11 @@
           <div class="chart-card insights-card">
             <div class="insights-header">
               <h3 class="chart-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 0.5rem;">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                  <circle cx="9" cy="10" r="1" fill="currentColor"/>
-                  <circle cx="12" cy="10" r="1" fill="currentColor"/>
-                  <circle cx="15" cy="10" r="1" fill="currentColor"/>
-                </svg>
+<vibe-icon name="chat" size="24"></vibe-icon>
                 Weekly Insights
               </h3>
-              <span class="ai-badge">✨ AI Generated</span>
+              <span class="ai-badge"><vibe-icon name="sparkle"></vibe-icon>
+ AI Generated</span>
             </div>
             
             <div class="insights-content" v-if="!loadingInsights">
@@ -165,19 +141,9 @@
                   :class="'insight-' + insight.type"
                 >
                   <div class="insight-icon">
-                    <svg v-if="insight.type === 'success'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    <svg v-else-if="insight.type === 'warning'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                      <line x1="12" y1="9" x2="12" y2="13"/>
-                      <line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                    <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"/>
-                      <line x1="12" y1="16" x2="12" y2="12"/>
-                      <line x1="12" y1="8" x2="12.01" y2="8"/>
-                    </svg>
+                    <vibe-icon v-if="insight.type === 'success'" name="checkmark" size="24"></vibe-icon>
+                    <vibe-icon v-else-if="insight.type === 'warning'" name="warning" size="24"></vibe-icon>
+                    <vibe-icon v-else name="info" size="24"></vibe-icon>
                   </div>
                   <div class="insight-text">
                     <strong>{{ insight.title }}</strong>
@@ -441,7 +407,7 @@ export default {
 
 .banner-content {
   padding: 1.5rem 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #183D4c 0%, #9EC9D9 100%);
   color: white;
 }
 
@@ -518,9 +484,9 @@ export default {
   flex-shrink: 0;
 }
 
-.stat-icon.revenue { background: #e3f2fd; color: #1976d2; }
+.stat-icon.revenue { background: #e8f5e9; color: #388e3c; }
 .stat-icon.products { background: #f3e5f5; color: #7b1fa2; }
-.stat-icon.suppliers { background: #e8f5e9; color: #388e3c; }
+.stat-icon.suppliers { background: #e3f2fd; color: #1976d2; }
 .stat-icon.stores { background: #fff3e0; color: #f57c00; }
 
 .stat-content {
@@ -536,7 +502,7 @@ export default {
 
 .stat-label {
   font-size: 0.875rem;
-  color: var(--secondary-color);
+  color: var(--accent-color);
   font-weight: 500;
   margin-bottom: 0.25rem;
 }
@@ -550,7 +516,7 @@ export default {
 
 .stat-info {
   font-size: 0.75rem;
-  color: var(--secondary-color);
+  color: var(--border-color);
 }
 
 /* Alerts */
@@ -614,6 +580,9 @@ export default {
   font-weight: 600;
   margin-bottom: 1.5rem;
   color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* Category Chart */
@@ -641,7 +610,7 @@ export default {
 }
 
 .category-revenue {
-  color: var(--secondary-color);
+  color: var(--text-color);
   font-weight: 500;
 }
 
@@ -656,7 +625,7 @@ export default {
 .bar-fill {
   position: absolute;
   height: 100%;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: linear-gradient(90deg, #183D4c, #0a0c0c);
   border-radius: 12px;
   transition: width 0.6s ease;
 }
@@ -673,7 +642,7 @@ export default {
 
 /* Weekly Insights */
 .insights-card {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  /* background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); */
   border: 2px solid #e1e8ed;
 }
 
@@ -689,18 +658,17 @@ export default {
   align-items: center;
   gap: 0.25rem;
   padding: 0.375rem 0.75rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  color: var(--accent-color);
   font-size: 0.75rem;
   font-weight: 600;
   border-radius: 20px;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  border: 1px solid var(--accent-color);
+  margin-top: -18px;
 }
 
 .insights-content {
   background: white;
   border-radius: 8px;
-  padding: 1.25rem;
 }
 
 .insights-loading {
@@ -733,7 +701,7 @@ export default {
   color: var(--text-color);
   margin-bottom: 1.5rem;
   padding-bottom: 1.25rem;
-  border-bottom: 2px solid var(--border-color);
+  /* border-bottom: 2px solid var(--border-color); */
 }
 
 .insights-list {
@@ -754,23 +722,23 @@ export default {
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.insight-item:hover {
+/* .insight-item:hover {
   transform: translateX(4px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
+} */
 
 .insight-item.insight-success {
-  border-left-color: #388e3c;
+  border-left-color: var(--success-color);
   background: #e8f5e9;
 }
 
 .insight-item.insight-warning {
-  border-left-color: #f57c00;
+  border-left-color: var(--warning-color);
   background: #fff3e0;
 }
 
 .insight-item.insight-info {
-  border-left-color: #1976d2;
+  border-left-color: var(--primary-color);
   background: #e3f2fd;
 }
 
@@ -789,15 +757,15 @@ export default {
 }
 
 .insight-success .insight-icon {
-  color: #388e3c;
+  color: var(--success-color);
 }
 
 .insight-warning .insight-icon {
-  color: #f57c00;
+  color: var(--warning-color);
 }
 
 .insight-info .insight-icon {
-  color: #1976d2;
+  color: var(--primary-color);
 }
 
 .insight-text {
@@ -816,7 +784,7 @@ export default {
 .insight-text p {
   font-size: 0.875rem;
   line-height: 1.5;
-  color: var(--secondary-color);
+  color: var(--text-color);
   margin: 0;
 }
 
@@ -841,36 +809,36 @@ export default {
 }
 
 .insight-success .insight-action-btn {
-  color: #2e7d32;
-  border-color: #2e7d32;
+  color: var(--success-color);
+  border-color: var(--success-color);
 }
 
 .insight-success .insight-action-btn:hover {
-  background: #2e7d32;
+  background: var(--success-color);
   color: white;
   transform: translateX(2px);
   box-shadow: 0 2px 8px rgba(46, 125, 50, 0.3);
 }
 
 .insight-warning .insight-action-btn {
-  color: #e65100;
-  border-color: #e65100;
+  color: var(--warning-color);
+  border-color: var(--warning-color);
 }
 
 .insight-warning .insight-action-btn:hover {
-  background: #e65100;
+  background: var(--warning-color);
   color: white;
   transform: translateX(2px);
   box-shadow: 0 2px 8px rgba(230, 81, 0, 0.3);
 }
 
 .insight-info .insight-action-btn {
-  color: #1565c0;
-  border-color: #1565c0;
+  color: var(--primary-color);
+  border-color: var(--primary-color);
 }
 
 .insight-info .insight-action-btn:hover {
-  background: #1565c0;
+  background: var(--primary-color);
   color: white;
   transform: translateX(2px);
   box-shadow: 0 2px 8px rgba(21, 101, 192, 0.3);
@@ -933,7 +901,7 @@ export default {
 
 .action-content p {
   font-size: 0.75rem;
-  color: var(--secondary-color);
+  color: var(--text-color);
   margin: 0;
 }
 
