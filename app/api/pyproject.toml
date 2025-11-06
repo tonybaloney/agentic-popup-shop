@@ -14,7 +14,12 @@ dependencies = [
 
     # Chatkit
     "openai-chatkit",
-    "agent-framework-chatkit@git+https://github.com/ekzhu/agent-framework.git@chatkit#egg=agent-framework-chatkit&subdirectory=python/packages/chatkit",
+    "agent-framework-chatkit@git+https://github.com/microsoft/agent-framework.git@feature-python-foundry-agents#egg=agent-framework-chatkit&subdirectory=python/packages/chatkit",
+
+    # Azure AI preview
+    "azure-ai-projects==2.0.0a20251103001",
+    "agent-framework-azure-ai@git+https://github.com/microsoft/agent-framework.git@feature-python-foundry-agents#egg=agent-framework-azure-ai&subdirectory=python/packages/azure-ai",
+    "aiohttp",
 
     "opentelemetry-instrumentation-fastapi",
     "opentelemetry-instrumentation-sqlalchemy",
@@ -40,5 +45,13 @@ dev = [
     "pytest-asyncio",
     "httpx",
 ]
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple/"
+
+[[tool.uv.index]]
+name = "azure-sdk-for-python"
+url = "https://pkgs.dev.azure.com/azure-sdk/public/_packaging/azure-sdk-for-python/pypi/simple/"
 
 # uv run uvicorn zava_shop_api.app:app --reload

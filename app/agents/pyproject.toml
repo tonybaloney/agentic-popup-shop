@@ -4,20 +4,15 @@ version = "0.1.0"
 description = "Agent implementations for the shop application"
 requires-python = ">=3.12"
 dependencies = [
-    "agent-framework-core@git+https://github.com/ekzhu/agent-framework.git@chatkit#egg=agent-framework-core&subdirectory=python/packages/core",
+    "agent-framework-core@git+https://github.com/microsoft/agent-framework.git@feature-python-foundry-agents#egg=agent-framework-core&subdirectory=python/packages/core",
     "azure-identity>=1.23.0,<2.0.0",
     "opentelemetry-instrumentation-openai",
-    "agent-framework-devui@git+https://github.com/ekzhu/agent-framework.git@chatkit#egg=agent-framework-devui&subdirectory=python/packages/devui",
+    "agent-framework-devui@git+https://github.com/microsoft/agent-framework.git@feature-python-foundry-agents#egg=agent-framework-devui&subdirectory=python/packages/devui",
     "opentelemetry-exporter-otlp",
     "azure-monitor-opentelemetry",
     "azure-monitor-opentelemetry-exporter",
     "opentelemetry-distro",
 
-]
-
-[project.optional-dependencies]
-ui = [
-"agent-framework-devui@git+https://github.com/ekzhu/agent-framework.git@chatkit#egg=agent-framework-devui&subdirectory=python/packages/devui",
 ]
 
 [build-system]
