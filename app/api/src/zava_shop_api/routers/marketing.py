@@ -20,8 +20,14 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from zava_shop_agents.marketing import LocalizationResponseEvent, MarketSelectionQuestionEvent, PublishingScheduleResponseEvent, get_workflow, CampaignPlannerResponseEvent, CreativeAssetsGeneratedEvent
 
-from agent_framework import ChatMessage, Workflow
-
+from agent_framework import AgentRunUpdateEvent, ChatMessage
+from agent_framework import (
+    RequestInfoEvent,
+    ExecutorFailedEvent,
+    WorkflowStatusEvent,
+    WorkflowRunState,
+    AgentExecutorResponse,
+)
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -55,7 +61,7 @@ def convert_file_to_data_uri(file_path: str) -> str:
     """Convert a file:// URL to a base64 data URI for browser display."""
     if file_path.startswith("file://"):
         file_path = file_path.replace("file://", "")
-    
+
     path = Path(file_path)
     if not path.exists():
         logger.warning(f"Image file not found: {file_path}")
@@ -67,11 +73,11 @@ def convert_file_to_data_uri(file_path: str) -> str:
             "font-family='Arial' font-size='16' fill='%23cc0000'%3E"
             "Image Not Found%3C/text%3E%3C/svg%3E"
         )
-    
+
     try:
         with open(path, "rb") as f:
             image_data = f.read()
-        
+
         ext = path.suffix.lower()
         mime_types = {
             '.png': 'image/png',
@@ -81,13 +87,14 @@ def convert_file_to_data_uri(file_path: str) -> str:
             '.webp': 'image/webp'
         }
         mime_type = mime_types.get(ext, 'image/png')
-        
+
         b64_data = base64.b64encode(image_data).decode('utf-8')
         data_uri = f"data:{mime_type};base64,{b64_data}"
-        
-        logger.info(f"Converted {path.name} to data URI ({len(b64_data)} chars)")
+
+        logger.info(
+            f"Converted {path.name} to data URI ({len(b64_data)} chars)")
         return data_uri
-        
+
     except Exception as e:
         logger.error(f"Error converting image to data URI: {e}")
         return (
@@ -100,39 +107,42 @@ def convert_file_to_data_uri(file_path: str) -> str:
         )
 
 # TODO: Connect this to Campaign Brief pane
+
+
 def _format_campaign_plan(plan_data: Dict[str, Any]) -> str:
     """Format CampaignPlan data as markdown for the Campaign Brief pane."""
     lines = []
     lines.append("# 📋 Campaign Plan\n")
-    
+
     if 'campaign_name' in plan_data:
         lines.append(f"**Campaign:** {plan_data['campaign_name']}\n")
-    
+
     if 'target_audience' in plan_data:
         lines.append(f"**Target Audience:** {plan_data['target_audience']}\n")
-    
+
     if 'key_message' in plan_data:
         lines.append(f"**Key Message:** {plan_data['key_message']}\n")
-    
+
     if 'channels' in plan_data and plan_data['channels']:
         lines.append(f"\n**Channels:** {', '.join(plan_data['channels'])}\n")
-    
+
     if 'posting_schedule' in plan_data:
-        lines.append(f"\n**Posting Schedule:**\n{plan_data['posting_schedule']}\n")
-    
+        lines.append(
+            f"\n**Posting Schedule:**\n{plan_data['posting_schedule']}\n")
+
     if 'budget_allocation' in plan_data:
         lines.append(f"\n**Budget:** {plan_data['budget_allocation']}\n")
-    
+
     return '\n'.join(lines)
 
 
 def _extract_media_assets(creative_data: Dict[str, Any]) -> list:
     """Extract media assets from CreativePackage data."""
     media_assets = []
-    
+
     creatives = creative_data.get('creatives', [])
     logger.debug(f"Found {len(creatives)} creatives in data")
-    
+
     for idx, creative in enumerate(creatives):
         # Handle both dict and object formats
         if hasattr(creative, 'model_dump'):
@@ -141,15 +151,15 @@ def _extract_media_assets(creative_data: Dict[str, Any]) -> list:
             creative_dict = vars(creative)
         else:
             creative_dict = creative
-        
+
         image_path = creative_dict.get('image_path', '')
         caption = creative_dict.get('caption', '')
         hashtags = creative_dict.get('hashtags', [])
         version = creative_dict.get('version', idx + 1)
-        
+
         if image_path:
             filename = os.path.basename(image_path)
-            
+
             media_asset = {
                 'type': 'image',
                 'url': f'http://localhost:8091/api/marketing/images/{filename}',
@@ -162,7 +172,7 @@ def _extract_media_assets(creative_data: Dict[str, Any]) -> list:
             logger.info(f"Added media asset {len(media_assets)}: {filename}")
         else:
             logger.warning(f"Skipping creative {idx+1} - no image_path")
-    
+
     return media_assets
 
 
@@ -175,7 +185,7 @@ async def _broadcast(message: Dict[str, Any]):
         except Exception as e:
             logger.error(f"Error broadcasting to WebSocket: {e}")
             disconnected.append(ws)
-    
+
     for ws in disconnected:
         if ws in active_connections:
             active_connections.remove(ws)
@@ -183,35 +193,29 @@ async def _broadcast(message: Dict[str, Any]):
 
 async def _process_agent_framework_event(event):
     """Process Agent Framework event objects from run_stream()."""
-    from agent_framework import (
-        RequestInfoEvent,
-        ExecutorFailedEvent,
-        WorkflowStatusEvent,
-        WorkflowRunState,
-        AgentExecutorResponse,
-    )
-    
+
     global pending_requests
     global waiting_for_campaign_info
-    
+
     # Check for custom events by class name
     event_type_name = type(event).__name__
-    
+
     if isinstance(event, CampaignPlannerResponseEvent):
         logger.info("Campaign Planner Response Event received")
         response_text = event.response_text
-        
+
         try:
             cleaned_text = response_text.strip()
             if cleaned_text.startswith('```'):
                 lines = cleaned_text.split('\n')
-                cleaned_text = '\n'.join(lines[1:-1] if len(lines) > 2 else lines)
-            
+                cleaned_text = '\n'.join(
+                    lines[1:-1] if len(lines) > 2 else lines)
+
             response_data = json.loads(cleaned_text)
             agent_response = response_data.get('agent_response', '')
             final_plan = response_data.get('final_plan', False)
             campaign_title = response_data.get('campaign_title', '')
-            
+
             if final_plan:
                 # Send to campaign brief window
                 await _broadcast({
@@ -240,14 +244,14 @@ async def _process_agent_framework_event(event):
                 'awaiting_input': True
             })
         return
-    
+
     elif isinstance(event, CreativeAssetsGeneratedEvent):
         logger.info(f"Creative Assets Generated: {len(event.assets)} assets")
         return
-    
+
     elif isinstance(event, MarketSelectionQuestionEvent):
         question_text = event.question_text
-        
+
         await _broadcast({
             'type': 'workflow',
             'content': question_text,
@@ -255,7 +259,7 @@ async def _process_agent_framework_event(event):
             'sender': 'workflow',
             'agent_name': 'Localization Agent'
         })
-        
+
         await _broadcast({
             'type': 'campaign_data',
             'timestamp': datetime.now().isoformat(),
@@ -264,23 +268,24 @@ async def _process_agent_framework_event(event):
             }
         })
         return
-    
+
     elif isinstance(event, LocalizationResponseEvent):
         logger.info("Localization Response Event received")
         response_text = event.response_text
-        
+
         try:
             cleaned_text = response_text.strip()
             if cleaned_text.startswith('```'):
                 lines = cleaned_text.split('\n')
-                cleaned_text = '\n'.join(lines[1:-1] if len(lines) > 2 else lines)
-            
+                cleaned_text = '\n'.join(
+                    lines[1:-1] if len(lines) > 2 else lines)
+
             translations = json.loads(cleaned_text)
-            
+
             localizations = []
             # Process translations and combine with media assets if available
             # (Implementation details omitted for brevity)
-            
+
             await _broadcast({
                 'type': 'campaign_data',
                 'content': f'Localized {len(localizations)} items',
@@ -297,19 +302,20 @@ async def _process_agent_framework_event(event):
                 'timestamp': datetime.now().isoformat()
             })
         return
-    
+
     elif isinstance(event, PublishingScheduleResponseEvent):
         logger.info("Publishing Schedule Response Event received")
         response_text = event.response_text
-        
+
         try:
             cleaned_text = response_text.strip()
             if cleaned_text.startswith('```'):
                 lines = cleaned_text.split('\n')
-                cleaned_text = '\n'.join(lines[1:-1] if len(lines) > 2 else lines)
-            
+                cleaned_text = '\n'.join(
+                    lines[1:-1] if len(lines) > 2 else lines)
+
             schedule_items = json.loads(cleaned_text)
-            
+
             await _broadcast({
                 'type': 'campaign_data',
                 'content': f'Generated schedule with {len(schedule_items)} items',
@@ -326,7 +332,7 @@ async def _process_agent_framework_event(event):
                 'timestamp': datetime.now().isoformat()
             })
         return
-    
+
     # Handle standard Agent Framework events
     elif isinstance(event, AgentExecutorResponse):
         executor_name = event.executor_id.replace('_', ' ').title()
@@ -335,38 +341,50 @@ async def _process_agent_framework_event(event):
             if hasattr(event.agent_run_response, 'text')
             else str(event.agent_run_response)
         )
-        
+
         await _broadcast({
             'type': 'assistant',
             'content': f"**{executor_name}:**\n\n{agent_text}",
             'timestamp': datetime.now().isoformat()
         })
-    
+
+    # TODO: This will be noisy, only use for debugging
+    elif isinstance(event, AgentRunUpdateEvent):
+        executor_name = event.executor_id.replace('_', ' ').title()
+        update_text = event.data
+
+        await _broadcast({
+            'type': 'assistant',
+            'content': f"**{executor_name} Update:**\n\n{update_text}",
+            'timestamp': datetime.now().isoformat(),
+            'debug': True
+        })
+
     elif isinstance(event, RequestInfoEvent):
         pending_requests['is_pending'] = True
         pending_requests['request_id'] = event.request_id
         pending_requests['request_data'] = event.data
-        
+
         # Handle different request types
         if hasattr(event.data, 'draft_text') and hasattr(event.data, 'prompt'):
             pending_requests['request_type'] = 'draft_feedback'
-            
+
             draft_text = getattr(event.data, 'draft_text', '')
             prompt_text = getattr(event.data, 'prompt', '')
-            
+
             await _broadcast({
                 'type': 'creative_approval_required',
                 'request_id': event.request_id,
                 'prompt': prompt_text,
                 'draft': draft_text
             })
-    
+
     elif isinstance(event, ExecutorFailedEvent):
         await _broadcast({
             'type': 'system',
             'content': f"❌ Error in {event.executor_id}: {event.details}"
         })
-    
+
     elif isinstance(event, WorkflowStatusEvent):
         if event.state == WorkflowRunState.IDLE_WITH_PENDING_REQUESTS:
             logger.info("Workflow paused - waiting for human input")
@@ -382,7 +400,8 @@ async def _process_agent_framework_event(event):
         await _broadcast({
             'type': 'system',
             'content': f"Unhandled event type: {event_type_name}",
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'debug': True
         })
 
 
@@ -391,27 +410,28 @@ async def _send_to_workflow(content: str):
     global workflow_instance, pending_requests
     try:
         if pending_requests['is_pending'] and pending_requests['request_id']:
-            logger.info(f"Responding to HITL request: {pending_requests['request_id']}")
-            
+            logger.info(
+                f"Responding to HITL request: {pending_requests['request_id']}")
+
             old_request_id = pending_requests['request_id']
             responses = {old_request_id: content}
-            
+
             async for event in workflow_instance.send_responses_streaming(responses):
                 await _process_agent_framework_event(event)
-            
+
             if pending_requests['request_id'] == old_request_id:
                 pending_requests['is_pending'] = False
                 pending_requests['request_id'] = None
                 pending_requests['request_data'] = None
-            
+
             return
-        
+
         # Start new workflow run
         global waiting_for_campaign_info
         waiting_for_campaign_info = False
-        
+
         logger.info("Starting new workflow")
-        
+
         start_message = {
             'type': 'system',
             'content': 'Starting Marketing Campaign Workflow...',
@@ -419,12 +439,12 @@ async def _send_to_workflow(content: str):
         }
         conversation_history.append(start_message)
         await _broadcast(start_message)
-        
+
         message = ChatMessage(role="user", text=content)
-        
+
         async for event in workflow_instance.run_stream(message):
             await _process_agent_framework_event(event)
-            
+
     except Exception as e:
         logger.error(f"Error in _send_to_workflow: {e}")
 
@@ -495,7 +515,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 content = message_data.get('content', '').strip()
                 if content:
                     await process_user_input(content)
-    
+
     except WebSocketDisconnect:
         if websocket in active_connections:
             active_connections.remove(websocket)
@@ -550,14 +570,14 @@ async def serve_image(filename: str):
     """Serve generated images from the generated_images folder."""
     if not re.match(r'^[a-zA-Z0-9_\-\.]+$', filename):
         raise HTTPException(status_code=400, detail="Invalid filename")
-    
+
     # Construct path to generated image
     image_path = Path(__file__).parent.parent.parent.parent.parent / \
-                 'generated_images' / filename
-    
+        'generated_images' / filename
+
     if not image_path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
-    
+
     return FileResponse(image_path)
 
 

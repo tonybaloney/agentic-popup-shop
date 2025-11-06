@@ -81,6 +81,7 @@ export function useWebSocket() {
         const message = JSON.parse(event.data);
         console.log('Received message:', message);
 
+        if (message.debug) return;
         // If this is campaign_data type, don't add to chat messages - just update state
         if (message.type === 'campaign_data') {
           console.log(
@@ -155,7 +156,8 @@ export function useWebSocket() {
   };
 
   const sendMessage = async (content) => {
-    if (wsRef.value && wsRef.value.readyState === WebSocket.OPEN) {
+    // TODO: Connect up the websocket receive logic
+    if (wsRef.value && wsRef.value.readyState === WebSocket.OPEN && false) {
       wsRef.value.send(JSON.stringify({ content }));
     } else {
       // Fallback to HTTP POST if WebSocket is not connected
