@@ -1,20 +1,11 @@
 {
 	"servers": {
-		// "github-sales-analysis-headoffice": {
-		// 	"url": "http://127.0.0.1:8000/mcp",
-		// 	"type": "http",
-		// 	"headers": {"x-rls-user-id": "00000000-0000-0000-0000-000000000000"}
-		// },
-		"github-supplier-agent": {
-			"url": "https://ashaw-ignite-aca2.internal.ambitiousforest-3ae02ae4.australiaeast.azurecontainerapps.io:8092/mcp",
+		"zava-supplier-agent": {
+			"url": "http://localhost:32881/mcp",
 			"type": "http",
-			// "headers": {"x-rls-user-id": "00000000-0000-0000-0000-000000000000"}
+			"headers": {"Authorization": "Bearer dev-guest-token"}
 		},
-		// "github-finance-agent": {
-		// 	"url": "http://127.0.0.1:8002/mcp",
-		// 	"type": "http",
-		// 	"headers": {"x-rls-user-id": "00000000-0000-0000-0000-000000000000"}
-		// }
+
 	},
 	"inputs": []
 }

@@ -33,13 +33,8 @@ from zava_shop_shared.models.sqlite import (
     SupplierContract,
     SupplierPerformance,
     ProcurementRequest,
-    Store,
-    Order,
-    OrderItem,
     Product,
     Category,
-    ProductType,
-    Inventory,
 )
 from zava_shop_mcp.models import (
     CompanySupplierPolicyResult,
@@ -72,27 +67,18 @@ verifier = LoggingStaticTokenVerifier(
     required_scopes=["read:data"]
 )
 
-db: SupplierSQLiteProvider | None = None
+db: SupplierSQLiteProvider = SupplierSQLiteProvider()
 
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator:
-    global db
-    db = SupplierSQLiteProvider()
-    try:
-        await db.create_pool()
-        yield
-    finally:
-        # Cleanup on shutdown
-        if db:
-            await db.close_engine()
+    yield
+    await db.close_engine()
 
 # Create MCP server with lifespan support
 mcp = FastMCP("mcp-zava-supplier", auth=verifier, lifespan=app_lifespan)
 
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(request: Request) -> Response:
-    if not db:
-        return JSONResponse({"status": "error", "message": "Server not initialized"}, status_code=500)
     return JSONResponse({"status": "ok"})
 
 @mcp.tool()
@@ -155,7 +141,7 @@ async def find_suppliers_for_request(
                 product_category, esg_required, min_rating)
 
     try:
-        assert db, "Server not initialized"  # noqa: S101
+        await db.create_pool()
         async with db.get_session() as session:
             # Calculate average performance score
             avg_performance = func.coalesce(
@@ -293,7 +279,7 @@ async def get_supplier_history_and_performance(
                 supplier_id, months_back)
 
     try:
-        assert db, "Server not initialized"  # noqa: S101
+        await db.create_pool()
         async with db.get_session() as session:
 
             # Calculate cutoff date
@@ -375,7 +361,7 @@ async def get_supplier_contract(
     logger.info("Getting supplier contract - ID: %d", supplier_id)
 
     try:
-        assert db, "Server not initialized"  # noqa: S101
+        await db.create_pool()
         async with db.get_session() as session:
 
             # Calculate days until expiry
@@ -471,7 +457,7 @@ async def get_company_supplier_policy(
                 policy_type, department)
 
     try:
-        assert db, "Server not initialized"  # noqa: S101
+        await db.create_pool()
         async with db.get_session() as session:
             # Build policy description
             policy_description = case(
@@ -560,4 +546,4 @@ if __name__ == "__main__":
     )
     logger.info("Guest token is '%s******%s'", GUEST_TOKEN[0:1], GUEST_TOKEN[-2:])
 
-    mcp.run(transport="http", host=host, port=port, path="/mcp", log_level="DEBUG")
+    mcp.run(transport="http", host=host, port=port, path="/mcp")
