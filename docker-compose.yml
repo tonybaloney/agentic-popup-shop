@@ -28,7 +28,7 @@ services:
   supplier-mcp:
     build:
       context: ./app
-      dockerfile: Dockerfile.mcp
+      dockerfile: Dockerfile.suppliermcp
     container_name: zava-supplier-mcp
     ports:
       - "8002:8002"
