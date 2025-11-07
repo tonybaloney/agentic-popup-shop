@@ -1,3 +1,4 @@
+import os
 from locust import HttpUser, task, between
 import random
 
@@ -55,13 +56,13 @@ TEST_INPUTS = [
 ]
 
 class ChatUser(HttpUser):
-    wait_time = between(1, 3)
+    wait_time = between(2, 10)
 
     @task
     def chat_with_bot(self):
         # Login
         login_response = self.client.post(
-            "/api/login", json={"username": "stacey", "password": "stacey123"})
+            "/api/login", json={"username": "stacey", "password": os.environ.get("TEST_USER_PASSWORD", "stacey123")})
         access_token = login_response.json()['access_token']
 
         payload = {
