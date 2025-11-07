@@ -209,6 +209,10 @@ app.add_middleware(
 from zava_shop_api.chatkit_router import router as chatkit_router
 app.include_router(chatkit_router)
 
+from zava_shop_api.routers.marketing import router as marketing_router, ws_router as marketing_ws_router
+app.include_router(marketing_router)
+app.include_router(marketing_ws_router)
+
 # Health check endpoint
 @app.get("/health")
 async def health_check():

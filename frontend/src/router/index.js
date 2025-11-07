@@ -83,6 +83,18 @@ const routes = [
         component: () => import('../views/management/AIAgentPage.vue')
       }
     ]
+  },
+  {
+    path: '/marketing',
+    component: () => import('../views/MarketingLayout.vue'),
+    meta: { requiresAuth: true, requiresRole: 'marketing' },
+    children: [
+      {
+        path: '',
+        name: 'MarketingDashboard',
+        component: () => import('../views/MarketingDashboard.vue')
+      }
+    ]
   }
 ];
 
@@ -119,6 +131,8 @@ router.beforeEach((to, from, next) => {
             next('/customer/dashboard');
           } else if (userRole === 'admin' || userRole === 'store_manager') {
             next('/management');
+          } else if (userRole === 'marketing') {
+            next('/marketing');
           } else {
             next('/');
           }

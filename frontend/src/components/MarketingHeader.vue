@@ -1,30 +1,22 @@
 <template>
   <header class="app-header">
     <div class="header-branding">
-      <router-link to="/management" class="branding-link">
+      <router-link to="/marketing" class="branding-link">
         <img src="/zava-z-logo.png" alt="Zava Logo" class="header-logo" />
         <div class="branding-text">
-          <h1 class="header-title">Zava Management</h1>
-          <p class="header-subtitle">Store operations dashboard</p>
+          <h1 class="header-title">Zava Marketing</h1>
+          <p class="header-subtitle">Campaign planning tool</p>
         </div>
       </router-link>
     </div>
 
-    <nav class="main-nav">
-      <router-link to="/management" class="nav-link" exact exact-active-class="router-link-active">Dashboard</router-link>
-      <router-link to="/management/suppliers" class="nav-link" exact-active-class="router-link-active">Suppliers</router-link>
-      <router-link to="/management/inventory" class="nav-link" exact-active-class="router-link-active">Inventory</router-link>
-      <router-link to="/management/products" class="nav-link" exact-active-class="router-link-active">Products</router-link>
-      <router-link to="/management/policies" class="nav-link" exact-active-class="router-link-active">Policies</router-link>
-    </nav>
-
     <div class="header-user">
       <div class="user-info">
         <span class="user-name">{{ userName }}</span>
-        <span class="user-role">{{ userRole }}</span>
+        <span class="user-role">Marketing Manager</span>
       </div>
       <div class="user-avatar" @click="handleUserMenu">
-        <vibe-icon name="person"></vibe-icon>
+       <vibe-icon name="person"></vibe-icon>
       </div>
     </div>
   </header>
@@ -34,19 +26,15 @@
 import { authStore } from '../stores/auth';
 
 export default {
-  name: 'ManagementHeader',
+  name: 'MarketingHeader',
   computed: {
     userName() {
-      return authStore.user?.username || authStore.user?.store_name || authStore.user?.name || 'Manager';
-    },
-    userRole() {
-      const role = authStore.user?.role;
-      return role === 'admin' ? 'Administrator' : 'Store Manager';
+      return authStore.user?.name || authStore.user?.username || 'Marketing User';
     }
   },
   methods: {
     handleUserMenu() {
-      // Simple user menu for management dashboard
+      // Simple user menu for marketing dashboard
       this.handleLogout();
     },
     handleLogout() {
@@ -118,7 +106,7 @@ export default {
 .main-nav {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 2rem;
   flex: 1;
   justify-content: center;
 }
@@ -129,27 +117,14 @@ export default {
   font-weight: 500;
   padding: 0.5rem 1rem;
   border-radius: 6px;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   font-size: 0.875rem;
   position: relative;
 }
 
-.nav-link::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%) scaleX(0);
-  width: 80%;
-  height: 2px;
-  background-color: #9EC9D9;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-  opacity: 0;
-}
-
 .nav-link:hover {
-  color: #9EC9D9;
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.1);
+  color: #f0f6fc;
 }
 
 .nav-link.router-link-active {
@@ -157,8 +132,14 @@ export default {
 }
 
 .nav-link.router-link-active::after {
-  transform: translateX(-50%) scaleX(1);
-  opacity: 1;
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 2px;
+  background-color: #9EC9D9;
 }
 
 .header-user {

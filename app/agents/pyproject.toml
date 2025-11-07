@@ -12,9 +12,22 @@ dependencies = [
     "azure-monitor-opentelemetry",
     "azure-monitor-opentelemetry-exporter",
     "opentelemetry-distro",
-
+    "pillow>=12.0.0",
+    "requests",
+    # Azure AI preview
+    "azure-ai-projects==2.0.0a20251103001",
+    "agent-framework-azure-ai@git+https://github.com/microsoft/agent-framework.git@feature-python-foundry-agents#egg=agent-framework-azure-ai&subdirectory=python/packages/azure-ai",
+    "aiohttp",
 ]
 
 [build-system]
 requires = ["uv_build>=0.9.3,<0.10.0"]
 build-backend = "uv_build"
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple/"
+
+[[tool.uv.index]]
+name = "azure-sdk-for-python"
+url = "https://pkgs.dev.azure.com/azure-sdk/public/_packaging/azure-sdk-for-python/pypi/simple/"
