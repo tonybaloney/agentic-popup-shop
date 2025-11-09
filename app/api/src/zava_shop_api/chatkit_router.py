@@ -41,10 +41,14 @@ from azure.identity.aio import DefaultAzureCredential
 from zava_shop_shared.finance_sqlite import FinanceSQLiteProvider
 from .customers import get_customer_orders
 
+agent_version = os.environ.get("AZURE_AI_PROJECT_AGENT_VERSION", None)
+if agent_version is not None and not agent_version.strip():
+    agent_version = None
+
 chat_client = AzureAIClient(
     async_credential=DefaultAzureCredential(),
     agent_name=os.environ.get("AZURE_AI_PROJECT_AGENT_ID", "zava-customer-agent"),
-    agent_version=os.environ.get("AZURE_AI_PROJECT_AGENT_VERSION", None),
+    agent_version=agent_version,
     model_deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5", "gpt-5-mini")
 )
 
