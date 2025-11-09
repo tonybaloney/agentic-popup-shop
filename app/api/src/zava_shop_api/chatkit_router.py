@@ -165,9 +165,10 @@ class ZavaShopChatKitServer(ChatKitServer):
         self.client = chat_client
         self.agent = ChatAgent(
             chat_client,
+            name="zava-customer-agent",
             instructions=(
-                "You are a helpful assistant."
-                "Provide concise answers to user questions."
+                "You are a helpful assistant. "
+                "Provide concise answers to user questions. "
                 "If you don't know the answer, say 'I don't know'."
             )
         )
