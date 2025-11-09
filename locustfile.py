@@ -1,6 +1,9 @@
 import os
-from locust import HttpUser, task, between
+from locust import HttpUser, task
 import random
+from datetime import datetime
+import math
+from zoneinfo import ZoneInfo
 
 TEST_INPUTS = [
     "Where is my order?",
@@ -53,10 +56,47 @@ TEST_INPUTS = [
     "Can you check if my order has been dispatched?",
     "I need an update on my order please",
     "Where can I see my order tracking details?",
+    "What are your store hours?",
+    "Do you offer gift wrapping services?",
+    "Can I change my password?",
+    "How do I create an account on your website?",
+    "What payment methods do you accept?",
+    "Do you have a loyalty program?",
+    "Can you tell me about your return policy?",
+    "Are there any current promotions or sales?",
+    "How can I contact customer support?",
+    "Do you ship internationally?",
 ]
 
+def peak_between(min_wait, max_wait):
+    """Custom wait time function to simulate peak usage periods.
+
+    Wait times are shorter (min_wait) at midday (12:00 PST) and longer (max_wait) at midnight (00:00 PST).
+    Uses a cosine wave to smoothly transition between peak and off-peak times.
+    """
+    def wait_time():
+        # Get current hour in US Pacific Time (0-23)
+        pst_timezone = ZoneInfo("America/Los_Angeles")
+        current_hour = datetime.now(pst_timezone).hour
+
+        # Convert hour to radians (0 at midnight, π at noon, 2π at next midnight)
+        # Shift by π so that cos(0) = 1 at midnight and cos(π) = -1 at noon
+        hour_radians = (current_hour / 12.0) * math.pi
+
+        # Calculate wait time using cosine wave
+        # cos(0) = 1 (midnight, max wait), cos(π) = -1 (noon, min wait)
+        # Normalize from [-1, 1] to [min_wait, max_wait]
+        normalized_factor = (math.cos(hour_radians) + 1) / 2  # Converts to [0, 1]
+        calculated_wait = min_wait + (max_wait - min_wait) * normalized_factor
+
+        # Add some randomness (±10%) to make it more realistic
+        jitter = calculated_wait * 0.1
+        return random.uniform(calculated_wait - jitter, calculated_wait + jitter)
+
+    return wait_time
+
 class ChatUser(HttpUser):
-    wait_time = between(2, 10)
+    wait_time = peak_between(5, 60)
 
     @task
     def chat_with_bot(self):
