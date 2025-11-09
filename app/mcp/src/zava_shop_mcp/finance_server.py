@@ -542,4 +542,4 @@ if __name__ == "__main__":
         port,
     )
     logger.info("Guest token is '%s******%s'", GUEST_TOKEN[0:1], GUEST_TOKEN[-2:])
-    mcp.run(transport="http", host=host, port=port, path="/mcp")
+    mcp.run(transport="http", host=host, port=port, path="/mcp", stateless_http=True)
