@@ -9,8 +9,8 @@ class CompanyPolicyResult(BaseModel):
     policy_name: str
     policy_type: str
     policy_content: str
-    department: Optional[str]
-    minimum_order_threshold: Optional[Decimal]
+    department: str
+    minimum_order_threshold: Decimal
     approval_required: bool
     is_active: bool
     policy_description: str
@@ -19,19 +19,19 @@ class CompanyPolicyResult(BaseModel):
 class SupplierContractResult(BaseModel):
     supplier_name: str
     supplier_code: str
-    contact_email: Optional[str]
-    contact_phone: Optional[str]
+    contact_email: str
+    contact_phone: str
     contract_id: int
     contract_number: str
     contract_status: str
     start_date: datetime
-    end_date: Optional[datetime]
-    contract_value: Optional[Decimal]
-    payment_terms: Optional[str]
+    end_date: datetime
+    contract_value: Decimal
+    payment_terms: str
     auto_renew: bool
     contract_created: datetime
-    days_until_expiry: Optional[int]
-    renewal_due_soon: bool
+    days_until_expiry: int = 0
+    renewal_due_soon: bool = False
 
 class SalesDataResult(BaseModel):
     month: str
@@ -69,22 +69,22 @@ class FindSuppliersResult(BaseModel):
     supplier_id: int
     supplier_name: str
     supplier_code: str
-    contact_email: Optional[str]
-    contact_phone: Optional[str]
+    contact_email: str
+    contact_phone: str
     supplier_rating: float
     esg_compliant: bool
     preferred_vendor: bool
     approved_vendor: bool
     lead_time_days: int
     minimum_order_amount: Decimal
-    bulk_discount_threshold: Optional[Decimal]
-    bulk_discount_percent: Optional[Decimal]
-    payment_terms: Optional[str]
-    available_products: int
-    avg_performance_score: float
-    contract_status: Optional[str]
-    contract_number: Optional[str]
-    category_name: Optional[str]
+    bulk_discount_threshold: Decimal = 0 
+    bulk_discount_percent: Decimal = 0
+    payment_terms: str = ""
+    available_products: int = 0
+    avg_performance_score: float = 0.0
+    contract_status: str = ""
+    contract_number: str = ""
+    category_name: str = ""
 
 class SupplierHistoryAndPerformanceResult(BaseModel):
     supplier_name: str
@@ -100,9 +100,9 @@ class SupplierHistoryAndPerformanceResult(BaseModel):
     delivery_score: float
     compliance_score: float
     overall_score: float
-    performance_notes: Optional[str]
-    total_requests: int
-    total_value: Decimal
+    performance_notes: str = ""
+    total_requests: int = 0
+    total_value: Decimal = Decimal(0)
 
 
 class CompanySupplierPolicyResult(BaseModel):
@@ -110,9 +110,9 @@ class CompanySupplierPolicyResult(BaseModel):
     policy_name: str
     policy_type: str
     policy_content: str
-    department: Optional[str]
-    minimum_order_threshold: Optional[Decimal]
-    approval_required: bool
-    is_active: bool
-    policy_description: str
-    content_length: int
+    department: str
+    minimum_order_threshold: Decimal = Decimal(0)
+    approval_required: bool = False
+    is_active: bool = False
+    policy_description: str = ""
+    content_length: int = 0
