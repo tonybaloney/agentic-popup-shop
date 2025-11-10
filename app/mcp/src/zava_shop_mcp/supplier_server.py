@@ -84,11 +84,11 @@ async def health_check(request: Request) -> Response:
 @mcp.tool()
 async def find_suppliers_for_request(
     product_category: Annotated[
-        Optional[str],
+        str,
         Field(
             description="Product category to filter suppliers by (e.g., 'Tools', 'Hardware', 'Building Materials'). Leave empty to search all categories."
         ),
-    ] = None,
+    ] = "",
     esg_required: Annotated[
         bool,
         Field(
@@ -108,17 +108,17 @@ async def find_suppliers_for_request(
         ),
     ] = 30,
     budget_min: Annotated[
-        Optional[float],
+        float,
         Field(
             description="Minimum budget amount to consider suppliers with appropriate minimum order amounts."
         ),
-    ] = None,
+    ] = float('nan'),
     budget_max: Annotated[
-        Optional[float],
+        float,
         Field(
             description="Maximum budget amount to filter suppliers by bulk discount thresholds."
         ),
-    ] = None,
+    ] = float('nan'),
     limit: Annotated[
         int,
         Field(
@@ -208,10 +208,10 @@ async def find_suppliers_for_request(
                 )
 
             # Add budget filters if specified
-            if budget_min is not None:
+            if budget_min != float('nan'):
                 stmt = stmt.where(Supplier.minimum_order_amount <= budget_min)
 
-            if budget_max is not None:
+            if budget_max != float('nan'):
                 stmt = stmt.where(Supplier.bulk_discount_threshold <= budget_max)
 
             # Group by all non-aggregated columns
@@ -430,17 +430,17 @@ async def get_supplier_contract(
 @mcp.tool()
 async def get_company_supplier_policy(
     policy_type: Annotated[
-        Optional[str],
+        str,
         Field(
             description="Type of policy to retrieve. Options: 'procurement', 'vendor_approval', 'budget_authorization', 'order_processing'. Leave empty to get all supplier-related policies."
         ),
-    ] = None,
+    ] = "",
     department: Annotated[
-        Optional[str],
+        str,
         Field(
             description="Department-specific policies to retrieve. Leave empty to get company-wide policies."
         ),
-    ] = None,
+    ] = "",
 ) -> list[CompanySupplierPolicyResult]:
     """
     Get company policies related to supplier management.

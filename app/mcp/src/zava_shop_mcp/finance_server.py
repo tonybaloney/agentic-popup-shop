@@ -89,7 +89,7 @@ async def health_check(request: Request) -> Response:
 
 @mcp.tool()
 async def get_company_order_policy(
-    department: Annotated[Optional[str], Field(description="Department name to filter policies")] = None
+    department: Annotated[str, Field(description="Department name to filter policies")] = ""
 ) -> list[CompanyPolicyResult]:
     """
     Get company order processing policies and budget authorization rules.
@@ -270,8 +270,8 @@ async def get_supplier_contract(
 @mcp.tool()
 async def get_historical_sales_data(
     days_back: Annotated[int, Field(description="Number of days to look back")] = 30,
-    store_id: Annotated[Optional[int], Field(description="Store ID to filter results")] = None,
-    category_name: Annotated[Optional[str], Field(description="Category name to filter results")] = None
+    store_id: Annotated[int, Field(description="Store ID to filter results")] = -1,
+    category_name: Annotated[str, Field(description="Category name to filter results")] = ""
 ) -> list[SalesDataResult]:
     """
     Get historical sales data with revenue, order counts, and customer metrics.
@@ -332,7 +332,7 @@ async def get_historical_sales_data(
                 Order.order_date >= cutoff_date.date()
             )
 
-            if store_id is not None:
+            if store_id != -1 and store_id != 0:
                 stmt = stmt.where(Order.store_id == store_id)
 
             if category_name:
@@ -357,8 +357,8 @@ async def get_historical_sales_data(
 
 @mcp.tool()
 async def get_current_inventory_status(
-    store_id: Annotated[Optional[int], Field(description="Store ID to filter results")] = None,
-    category_name: Annotated[Optional[str], Field(description="Category name to filter results")] = None,
+    store_id: Annotated[int, Field(description="Store ID to filter results")] = -1,
+    category_name: Annotated[str, Field(description="Category name to filter results")] = "",
     low_stock_threshold: Annotated[int, Field(description="Low stock threshold")] = 10
 ) -> list[InventoryStatusResult]:
     """
@@ -434,7 +434,7 @@ async def get_current_inventory_status(
                 Product.discontinued.is_(False)
             )
 
-            if store_id is not None:
+            if store_id != -1 and store_id != 0:
                 stmt = stmt.where(Inventory.store_id == store_id)
 
             if category_name:
@@ -458,7 +458,7 @@ async def get_current_inventory_status(
 
 @mcp.tool()
 async def get_stores(
-    store_name: Annotated[Optional[str], Field(description="Store name to filter results")] = None
+    store_name: Annotated[str, Field(description="Store name to filter results")] = ""
 ) -> list[StoreResult]:
     """
     Get store information with optional filtering by name.
