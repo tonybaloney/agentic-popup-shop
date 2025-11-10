@@ -44,6 +44,14 @@ class SalesDataResult(BaseModel):
     total_units_sold: int
     unique_customers: int
 
+class TopProductSalesResult(BaseModel):
+    product_name: str
+    sku: str
+    category_name: str
+    order_count: int
+    total_revenue: Decimal
+    total_units_sold: int
+
 class InventoryStatusResult(BaseModel):
     store_name: str
     is_online: bool

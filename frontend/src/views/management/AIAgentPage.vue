@@ -305,9 +305,12 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { apiClient, config } from '../../config/api'
 import { authStore } from '../../stores/auth'
+
+const router = useRouter()
 
 // Configure marked options
 marked.setOptions({
@@ -316,7 +319,7 @@ marked.setOptions({
 })
 
 // State
-const userInstructions = ref('Analyze inventory and recommend restocking priorities')
+const userInstructions = ref('')
 const selectedStoreId = ref(null)
 const stores = ref([])
 const loadingStores = ref(false)
@@ -976,6 +979,15 @@ const resetAnalysis = () => {
 onMounted(() => {
   // Fetch stores on component mount
   fetchStores()
+  
+  // Check for instructions in URL query parameters
+  const route = router.currentRoute.value
+  if (route.query.instructions) {
+    userInstructions.value = route.query.instructions
+  } else {
+    // Set default only if no query param
+    userInstructions.value = 'Analyze inventory and recommend restocking priorities'
+  }
   
   // Update currentTime every second to trigger reactive time updates
   timeUpdateInterval = setInterval(() => {

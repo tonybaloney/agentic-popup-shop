@@ -12,7 +12,7 @@ initialize()
 from datetime import datetime, timedelta
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 from fastmcp import FastMCP
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator, Optional, Union
 from datetime import datetime, UTC
 import logging
 
@@ -44,6 +44,7 @@ from zava_shop_mcp.models import (
     CompanyPolicyResult,
     SupplierContractResult,
     SalesDataResult,
+    TopProductSalesResult,
     InventoryStatusResult,
     StoreResult,
 )
@@ -352,6 +353,112 @@ async def get_historical_sales_data(
             return [SalesDataResult(**row) for row in rows]
     except Exception as e:
         logger.error(f"Error in get_historical_sales_data: {e}")
+        raise e
+
+
+@mcp.tool()
+async def get_top_selling_products(
+    days_back: Annotated[
+        int,
+        Field(gt=0, le=365, description="Number of days to look back"),
+    ] = 30,
+    store_id: Annotated[
+        Optional[Union[int, str]],
+        Field(description="Store ID to filter results (integer)")
+    ] = None,
+    category_name: Annotated[
+        Optional[str],
+        Field(description="Category name to filter results"),
+    ] = None,
+    limit: Annotated[
+        int,
+        Field(gt=0, le=50, description="Number of top products to return"),
+    ] = 5
+) -> list[TopProductSalesResult]:
+    """
+    Get top-selling products by units sold and revenue.
+
+    Returns product-level sales data showing the best-performing products
+    ranked by units sold (with revenue as a tiebreaker). Results can be
+    filtered by store and category.
+
+    Args:
+        days_back: Number of days to look back (default: 30)
+        store_id: Optional store ID to filter results
+        category_name: Optional category name to filter results
+        limit: Number of top products to return (default: 5)
+
+    Returns:
+        List of top products with product name, SKU, category, order counts,
+        revenue, and units sold.
+
+    Example:
+        >>> # Get top 5 products in Accessories for store 1
+        >>> result = await get_top_selling_products(
+        >>>     days_back=30, store_id=1, category_name="Accessories", limit=5
+        >>> )
+    """
+    try:
+        logger.info(
+            f"Retrieving top selling products for store_id: {store_id}, "
+            f"category_name: {category_name}, days_back: {days_back}, limit: {limit}")
+        await db.create_pool()
+        async with db.get_session() as session:
+            # Normalize store_id input (accept ints or numeric strings)
+            store_filter_id: Optional[int] = None
+            if store_id is not None:
+                try:
+                    store_filter_id = int(store_id)
+                except (TypeError, ValueError) as conversion_error:
+                    raise ValueError("store_id must be an integer value") from conversion_error
+
+                if store_filter_id < 1:
+                    raise ValueError("store_id must be greater than or equal to 1")
+
+            # Calculate cutoff date
+            cutoff_date = datetime.now() - timedelta(days=days_back)
+
+            # Build query using ORM - group by product
+            stmt = select(
+                Product.product_name,
+                Product.sku,
+                Category.category_name,
+                func.count(func.distinct(Order.order_id)).label("order_count"),
+                func.sum(OrderItem.total_amount).label("total_revenue"),
+                func.sum(OrderItem.quantity).label("total_units_sold"),
+            ).select_from(Order).join(
+                OrderItem, Order.order_id == OrderItem.order_id
+            ).join(
+                Product, OrderItem.product_id == Product.product_id
+            ).join(
+                Category, Product.category_id == Category.category_id
+            ).where(
+                Order.order_date >= cutoff_date.date()
+            )
+
+            if store_filter_id is not None:
+                stmt = stmt.join(Store, Order.store_id == Store.store_id)
+                stmt = stmt.where(Order.store_id == store_filter_id)
+
+            if category_name:
+                stmt = stmt.where(
+                    func.upper(Category.category_name) == category_name.upper()
+                )
+
+            stmt = stmt.group_by(
+                Product.product_name,
+                Product.sku,
+                Category.category_name,
+            ).order_by(
+                func.sum(OrderItem.quantity).desc(),
+                func.sum(OrderItem.total_amount).desc(),
+            ).limit(limit)
+
+            result = await session.execute(stmt)
+            rows = result.mappings().all()
+            return [TopProductSalesResult(**row) for row in rows]
+    except Exception as e:
+        logger.error(f"Error in get_top_selling_products: {e}")
         raise e
 
 

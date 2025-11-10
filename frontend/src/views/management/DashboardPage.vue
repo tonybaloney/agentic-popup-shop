@@ -135,7 +135,7 @@
               
               <div class="insights-list">
                 <div 
-                  v-for="(insight, index) in weeklyInsights.insights" 
+                  v-for="(insight, index) in formattedInsights" 
                   :key="index"
                   class="insight-item"
                   :class="'insight-' + insight.type"
@@ -147,19 +147,54 @@
                   </div>
                   <div class="insight-text">
                     <strong>{{ insight.title }}</strong>
-                    <p>{{ insight.description }}</p>
+                    <template v-if="insight.descriptionItems && insight.descriptionItems.length">
+                      <ul class="insight-details-list">
+                        <li
+                          v-for="detail in insight.descriptionItems"
+                          :key="detail.index + detail.title"
+                          class="insight-details-item"
+                        >
+                          <div class="insight-details-header">
+                            <span class="insight-rank">{{ detail.index }}.</span>
+                            <span class="insight-product">{{ detail.title }}</span>
+                          </div>
+                          <ul v-if="detail.details && detail.details.length" class="insight-meta-list">
+                            <li
+                              v-for="meta in detail.details"
+                              :key="meta.label + meta.value"
+                              class="insight-meta-item"
+                            >
+                              <span class="insight-meta-label" v-if="meta.label">{{ meta.label }}:</span>
+                              <span class="insight-meta-value">{{ meta.value }}</span>
+                            </li>
+                          </ul>
+                        </li>
+                      </ul>
+                    </template>
+                    <template v-else-if="insight.bulletItems && insight.bulletItems.length">
+                      <ul class="insight-bullet-list">
+                        <li v-for="(item, bulletIndex) in insight.bulletItems" :key="bulletIndex">
+                          {{ item }}
+                        </li>
+                      </ul>
+                    </template>
+                    <p v-else>{{ insight.descriptionText || insight.description }}</p>
                   </div>
-                  <button
-                    v-if="insight.action"
-                    class="insight-action-btn"
-                    @click="handleInsightAction(insight.action)"
-                  >
-                    {{ insight.action.label }}
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </button>
                 </div>
+              </div>
+              
+              <!-- Unified Action Button -->
+              <div v-if="weeklyInsights.unified_action" class="unified-action-container">
+                <button
+                  class="unified-action-btn"
+                  @click="handleInsightAction(weeklyInsights.unified_action)"
+                >
+                  <vibe-icon name="sparkle" size="20"></vibe-icon>
+                  {{ weeklyInsights.unified_action.label }}
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
               </div>
             </div>
             
@@ -296,6 +331,36 @@ export default {
       };
       
       return imageMap[storeName] || '/images/store.png';
+    },
+    formattedInsights() {
+      const insights = this.weeklyInsights?.insights || [];
+      return insights.map((insight) => {
+        const numberedItems = this.extractNumberedInsightItems(insight.description);
+        if (numberedItems && numberedItems.length) {
+          const descriptionItems = numberedItems.map((itemText, index) => this.parseInsightDetailItem(itemText, index));
+          return {
+            ...insight,
+            descriptionItems,
+            descriptionText: null
+          };
+        }
+
+        const bulletItems = this.extractBulletedInsightItems(insight.description);
+        if (bulletItems && bulletItems.length) {
+          return {
+            ...insight,
+            bulletItems,
+            descriptionText: null
+          };
+        }
+
+        return {
+          ...insight,
+          descriptionItems: null,
+          bulletItems: null,
+          descriptionText: insight.description
+        };
+      });
     }
   },
   async mounted() {
@@ -329,6 +394,55 @@ export default {
         this.loadingInsights = false;
       }
     },
+    extractNumberedInsightItems(description) {
+      if (!description) return null;
+      const parts = description
+        .split(/(?=\d+\.\s)/)
+        .map((part) => part.trim())
+        .filter((part) => /^\d+\./.test(part));
+      return parts.length > 1 ? parts : null;
+    },
+    parseInsightDetailItem(itemText, index) {
+      const withoutNumber = itemText.replace(/^\d+\.\s*/, '').trim();
+      const segments = withoutNumber
+        .split(/\s+-\s+/)
+        .map((segment) => segment.trim())
+        .filter(Boolean);
+
+      if (!segments.length) {
+        return {
+          index: index + 1,
+          title: withoutNumber,
+          details: []
+        };
+      }
+
+      const [title, ...detailSegments] = segments;
+      const details = detailSegments.map((segment) => {
+        const [label, ...valueParts] = segment.split(':');
+        if (!valueParts.length) {
+          return { label: '', value: segment };
+        }
+        return {
+          label: label.trim(),
+          value: valueParts.join(':').trim()
+        };
+      });
+
+      return {
+        index: index + 1,
+        title,
+        details
+      };
+    },
+    extractBulletedInsightItems(description) {
+      if (!description || !description.includes('\n')) return null;
+      const parts = description
+        .split(/\n+/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+      return parts.length > 1 ? parts : null;
+    },
     formatNumber(num) {
       return new Intl.NumberFormat('en-US', {
         minimumFractionDigits: 2,
@@ -347,8 +461,15 @@ export default {
           });
           break;
         case 'navigation':
-          // Direct navigation to specified path
-          this.router.push(action.path);
+          // Direct navigation to specified path with optional instructions
+          if (action.instructions) {
+            this.router.push({
+              path: action.path,
+              query: { instructions: action.instructions }
+            });
+          } else {
+            this.router.push(action.path);
+          }
           break;
         default:
           console.warn('Unknown action type:', action.type);
@@ -788,6 +909,77 @@ export default {
   margin: 0;
 }
 
+.insight-details-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.insight-details-item {
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.insight-details-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.insight-rank {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent-color);
+}
+
+.insight-product {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.insight-meta-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  font-size: 0.8rem;
+  color: var(--text-color);
+}
+
+.insight-meta-item {
+  display: flex;
+  gap: 0.25rem;
+  align-items: baseline;
+}
+
+.insight-meta-label {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.insight-meta-value {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.insight-bullet-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1rem;
+  list-style: disc;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-color);
+}
+
 .insight-action-btn {
   grid-column: 2 / 3;
   grid-row: 2 / 3;
@@ -841,6 +1033,41 @@ export default {
   background: var(--primary-color);
   color: white;
   transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(21, 101, 192, 0.3);
+}
+
+/* Unified Action Button */
+.unified-action-container {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--border-color);
+  display: flex;
+  justify-content: center;
+}
+
+.unified-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3);
+}
+
+.unified-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(21, 101, 192, 0.4);
+}
+
+.unified-action-btn:active {
+  transform: translateY(0);
   box-shadow: 0 2px 8px rgba(21, 101, 192, 0.3);
 }
 
