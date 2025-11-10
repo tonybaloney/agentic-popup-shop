@@ -74,7 +74,7 @@ def peak_between(min_wait, max_wait):
     Wait times are shorter (min_wait) at midday (12:00 PST) and longer (max_wait) at midnight (00:00 PST).
     Uses a cosine wave to smoothly transition between peak and off-peak times.
     """
-    def wait_time():
+    def wait_time(*args):
         # Get current hour in US Pacific Time (0-23)
         pst_timezone = ZoneInfo("America/Los_Angeles")
         current_hour = datetime.now(pst_timezone).hour
