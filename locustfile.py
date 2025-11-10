@@ -1,3 +1,16 @@
+"""
+Load test for ChatKit endpoints using Locust.
+
+Users will become more active during peak hours (midday PST) and less active during off-peak hours (midnight PST).
+This is in the form of a sine-wave pattern for wait times between tasks.
+
+Run using uvx:
+    uvx locust -f locustfile.py --host http://localhost:8000
+
+"""
+
+
+# Needs tzdata package for zoneinfo support in some environments
 import os
 from locust import HttpUser, task
 import random
