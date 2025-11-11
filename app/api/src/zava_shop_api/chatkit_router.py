@@ -175,7 +175,6 @@ class ZavaShopChatKitServer(ChatKitServer):
                 "Provide concise answers to user questions. "
                 "If you don't know the answer, say 'I don't know'."
             ),
-            store=True,
         )
         self.db_provider = FinanceSQLiteProvider()
         self.converter = ThreadItemConverter()
