@@ -16,7 +16,7 @@
     <form class="input-area" @submit.prevent="handleSubmit">
       <textarea
         id="message-input"
-        placeholder="Describe your campaign (e.g., Product: EcoBottle - sustainable water bottle, Goal: Launch on Instagram, Audience: Eco-conscious millennials)"
+        placeholder="Enter your message..."
         v-model="inputValue"
         @keypress="handleKeyPress"
         :disabled="workflowStatus !== 'online'"

@@ -18,7 +18,7 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 
-from zava_shop_agents.marketing import LocalizationResponseEvent, MarketSelectionQuestionEvent, PublishingScheduleResponseEvent, get_workflow, CampaignPlannerResponseEvent, CreativeAssetsGeneratedEvent
+from zava_shop_agents.marketing import LocalizationResponseEvent, MarketSelectionQuestionEvent, PublishingScheduleResponseEvent, get_workflow, CampaignPlannerResponseEvent, CreativeAssetsGeneratedEvent, InstagramPostEvent
 
 from agent_framework import AgentRunUpdateEvent, ChatMessage
 from agent_framework import (
@@ -52,6 +52,9 @@ pending_requests: Dict[str, Any] = {
 
 # Track if we're waiting for campaign planner to gather more info
 waiting_for_campaign_info = False
+
+# Store current media assets for localization
+current_media_assets: List[Dict[str, Any]] = []
 
 # Store the workflow instance
 workflow_instance = None
@@ -196,9 +199,11 @@ async def _process_agent_framework_event(event):
 
     global pending_requests
     global waiting_for_campaign_info
+    global current_media_assets
 
     # Check for custom events by class name
     event_type_name = type(event).__name__
+    logger.info(f"Processing event: {event_type_name}")
 
     if isinstance(event, CampaignPlannerResponseEvent):
         logger.info("Campaign Planner Response Event received")
@@ -247,6 +252,32 @@ async def _process_agent_framework_event(event):
 
     elif isinstance(event, CreativeAssetsGeneratedEvent):
         logger.info(f"Creative Assets Generated: {len(event.assets)} assets")
+
+        # Convert image paths to data URIs for display
+        processed_assets = []
+        for asset in event.assets:
+            processed_asset = asset.copy()
+
+            # Convert image URLs to data URIs if they're file paths
+            if asset.get('type') == 'image' and asset.get('url', '').startswith('file://'):
+                file_path = asset['url'].replace('file://', '')
+                data_uri = convert_file_to_data_uri(file_path)
+                processed_asset['url'] = data_uri
+
+            processed_assets.append(processed_asset)
+
+        # Store media assets globally for localization use
+        current_media_assets = processed_assets.copy()
+
+        # Send assets to frontend via campaign_data
+        await _broadcast({
+            'type': 'campaign_data',
+            'timestamp': datetime.now().isoformat(),
+            'campaign_data': {
+                'media': processed_assets
+            },
+            'silent': True
+        })
         return
 
     elif isinstance(event, MarketSelectionQuestionEvent):
@@ -273,18 +304,122 @@ async def _process_agent_framework_event(event):
         logger.info("Localization Response Event received")
         response_text = event.response_text
 
+        # Add debug logging
+        logger.info(f"Raw localization response: {response_text}")
+
         try:
+            # Parse the localization agent's actual response
             cleaned_text = response_text.strip()
             if cleaned_text.startswith('```'):
                 lines = cleaned_text.split('\n')
                 cleaned_text = '\n'.join(
                     lines[1:-1] if len(lines) > 2 else lines)
 
-            translations = json.loads(cleaned_text)
+            logger.info(f"Cleaned localization text: {cleaned_text}")
 
+            # Try to parse as JSON first
+            try:
+                translations = json.loads(cleaned_text)
+                logger.info(f"Successfully parsed as JSON: {translations}")
+            except json.JSONDecodeError:
+                # If not JSON, parse as raw text response
+                logger.info("Response is not JSON, parsing as raw text")
+                translations = []
+
+                # Parse raw text response - assume the agent returns lines like:
+                # "Asset 1: [translated content]"
+                # "Asset 2: [translated content]"
+                lines = cleaned_text.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line and ('Asset' in line or ':' in line):
+                        # Extract the translated content
+                        if ':' in line:
+                            content = line.split(':', 1)[1].strip()
+                        else:
+                            content = line
+
+                        translations.append({
+                            'translation': content,
+                            'language': 'auto-detected',  # Will be determined from content
+                            'market': 'user-selected'
+                        })
+
+                logger.info(f"Parsed raw text to translations: {translations}")
+
+            # Create localizations for all media assets using the agent's translations
             localizations = []
-            # Process translations and combine with media assets if available
-            # (Implementation details omitted for brevity)
+
+            # If we have translations, use them; otherwise fall back to processing the response as is
+            if isinstance(translations, list) and len(translations) > 0:
+                # Use actual agent translations
+                for idx, asset in enumerate(current_media_assets):
+                    # Get corresponding translation or use the first one if not enough translations
+                    translation_data = translations[idx] if idx < len(
+                        translations) else translations[0]
+
+                    # Extract translation content
+                    if isinstance(translation_data, dict):
+                        translated_caption = translation_data.get(
+                            'translation', translation_data.get('content', str(translation_data)))
+                        language_code = translation_data.get(
+                            'language', 'auto-detected')
+                        market = translation_data.get(
+                            'market', 'user-selected')
+                    else:
+                        translated_caption = str(translation_data)
+                        language_code = 'auto-detected'
+                        market = 'user-selected'
+
+                    # Map language codes to friendly names
+                    language_map = {
+                        'es-ES': 'Spanish (Spain)',
+                        'es-MX': 'Spanish (Mexico)',
+                        'es-LA': 'Spanish (Latin America)',
+                        'fr-FR': 'French',
+                        'de-DE': 'German',
+                        'pt-BR': 'Portuguese (Brazil)',
+                        'es': 'Spanish',
+                        'fr': 'French',
+                        'de': 'German',
+                        'auto-detected': 'Localized'
+                    }
+                    language_name = language_map.get(
+                        language_code, language_code)
+
+                    # Extract just the language code for locale
+                    locale = language_code.split(
+                        '-')[0] if '-' in language_code else language_code
+
+                    localization = {
+                        'type': asset.get('type'),
+                        'image': asset.get('url'),
+                        'caption': translated_caption,
+                        'hashtags': '',  # Hashtags included in caption
+                        'language': language_name,
+                        'locale': locale.upper(),  # For display in pill
+                        'market': market
+                    }
+                    localizations.append(localization)
+            else:
+                # Fallback: treat entire response as single translation for all assets
+                logger.info(
+                    "Using entire response as single translation for all assets")
+
+                for idx, asset in enumerate(current_media_assets):
+                    localization = {
+                        'type': asset.get('type'),
+                        'image': asset.get('url'),
+                        'caption': cleaned_text,  # Use the cleaned response text
+                        'hashtags': '',
+                        'language': 'Localized',
+                        'locale': 'LOC',
+                        'market': 'user-selected'
+                    }
+                    localizations.append(localization)
+
+            logger.info(
+                f"Created {len(localizations)} localized media items from agent response")
 
             await _broadcast({
                 'type': 'campaign_data',
@@ -292,6 +427,143 @@ async def _process_agent_framework_event(event):
                 'timestamp': datetime.now().isoformat(),
                 'campaign_data': {
                     'localizations': localizations
+                }
+            })
+        except Exception as e:
+            logger.error(f"Error processing localization response: {e}")
+            await _broadcast({
+                'type': 'assistant',
+                'content': f'Error processing localization: {str(e)}',
+                'timestamp': datetime.now().isoformat()
+            })
+        return
+
+        try:
+            # The localization agent likely returns text content, not JSON
+            # Let's try to parse it as JSON first, but if that fails, treat it as raw text
+            localizations = []
+
+            cleaned_text = response_text.strip()
+            if cleaned_text.startswith('```'):
+                lines = cleaned_text.split('\n')
+                cleaned_text = '\n'.join(
+                    lines[1:-1] if len(lines) > 2 else lines)
+
+            logger.info(f"Cleaned localization text: {cleaned_text}")
+
+            # Try to parse as JSON first
+            try:
+                translations = json.loads(cleaned_text)
+                logger.info(f"Successfully parsed as JSON: {translations}")
+            except json.JSONDecodeError:
+                # If not JSON, parse as raw text response
+                logger.info("Response is not JSON, parsing as raw text")
+                translations = {}
+
+                # Parse raw text response - common format would be:
+                # French: [caption] [hashtags]
+                # Spanish: [caption] [hashtags]
+                lines = cleaned_text.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if ':' in line and line:
+                        parts = line.split(':', 1)
+                        if len(parts) == 2:
+                            lang = parts[0].strip().lower()
+                            content = parts[1].strip()
+
+                            # Split content into caption and hashtags
+                            # Hashtags usually start with #
+                            hashtag_start = content.find('#')
+                            if hashtag_start != -1:
+                                caption = content[:hashtag_start].strip()
+                                hashtags = content[hashtag_start:].strip()
+                            else:
+                                caption = content
+                                hashtags = ''
+
+                            translations[lang] = {
+                                'caption': caption,
+                                'hashtags': hashtags
+                            }
+
+                logger.info(f"Parsed raw text to translations: {translations}")
+
+            # First, collect all translations by language
+            all_translations = {}
+
+            if isinstance(translations, list):
+                logger.info("Processing translations as list")
+                # If translations is a list of localized items
+                for translation_item in translations:
+                    if isinstance(translation_item, dict):
+                        language = translation_item.get('language', 'Unknown')
+                        caption = translation_item.get(
+                            'caption', translation_item.get('content', ''))
+                        hashtags = translation_item.get('hashtags', '')
+                        logger.info(
+                            f"List item - Language: {language}, Caption: {caption}, Hashtags: {hashtags}")
+                        all_translations[language] = {
+                            'caption': caption,
+                            'hashtags': hashtags
+                        }
+
+            elif isinstance(translations, dict):
+                logger.info("Processing translations as dict")
+                # If translations is a dict with language keys
+                for lang, content in translations.items():
+                    logger.info(
+                        f"Dict processing - Lang: {lang}, Content: {content}")
+                    if isinstance(content, dict):
+                        caption = content.get(
+                            'caption', content.get('content', str(content)))
+                        hashtags = content.get('hashtags', '')
+                    else:
+                        caption = str(content)
+                        hashtags = ''
+
+                    logger.info(
+                        f"Dict result - Lang: {lang}, Caption: {caption}, Hashtags: {hashtags}")
+                    all_translations[lang] = {
+                        'caption': caption,
+                        'hashtags': hashtags
+                    }
+
+            logger.info(f"Final all_translations: {all_translations}")
+
+            # Now create one localized media item per original media asset
+            for media_asset in current_media_assets:
+                # For each media asset, create a localized version with all translations
+                localization = {
+                    # Copy media properties to match the Social Media structure
+                    'url': media_asset.get('url'),
+                    'type': media_asset.get('type'),
+                    'thumbnail': media_asset.get('thumbnail'),
+                    # Add all language translations
+                    'translations': all_translations,
+                    # Keep original caption for reference
+                    'original_caption': media_asset.get('caption', ''),
+                    # Keep original image property for backward compatibility
+                    'image': media_asset.get('url') if media_asset.get('type') == 'image' else ''
+                }
+                localizations.append(localization)
+
+            logger.info(
+                f"Created {len(localizations)} localized media items from {len(current_media_assets)} media assets")
+
+            # Count unique languages across all localizations
+            unique_languages = set()
+            for loc in localizations:
+                if 'translations' in loc:
+                    unique_languages.update(loc['translations'].keys())
+
+            await _broadcast({
+                'type': 'campaign_data',
+                'content': f'Localized content for {len(unique_languages)} languages',
+                'timestamp': datetime.now().isoformat(),
+                'campaign_data': {
+                    'localizations': localizations
+                    # No approval needed for localizations - they go directly to publishing
                 }
             })
         except json.JSONDecodeError as e:
@@ -321,11 +593,59 @@ async def _process_agent_framework_event(event):
                 'content': f'Generated schedule with {len(schedule_items)} items',
                 'timestamp': datetime.now().isoformat(),
                 'campaign_data': {
-                    'schedule': schedule_items
+                    'schedule': schedule_items,
+                    'needsScheduleApproval': True  # NEW: Trigger schedule approval HITL
                 }
             })
         except json.JSONDecodeError as e:
             logger.warning(f"Schedule response is not valid JSON: {e}")
+            await _broadcast({
+                'type': 'assistant',
+                'content': response_text,
+                'timestamp': datetime.now().isoformat()
+            })
+        return
+
+    elif isinstance(event, InstagramPostEvent):
+        logger.info("Instagram Post Event received")
+        response_text = event.response_text
+
+        try:
+            cleaned_text = response_text.strip()
+            if cleaned_text.startswith('```'):
+                lines = cleaned_text.split('\n')
+                cleaned_text = '\n'.join(
+                    lines[1:-1] if len(lines) > 2 else lines)
+
+            instagram_data = json.loads(cleaned_text)
+
+            # Check if the post was successfully published
+            success = instagram_data.get('success', False)
+
+            if success:
+                await _broadcast({
+                    'type': 'campaign_data',
+                    'content': f'✅ Instagram post published successfully! Post ID: {instagram_data.get("post_id", "Unknown")}',
+                    'timestamp': datetime.now().isoformat(),
+                    'campaign_data': {
+                        'instagram_post': instagram_data,
+                        'published': True
+                    }
+                })
+            else:
+                error_message = instagram_data.get('error', 'Unknown error')
+                await _broadcast({
+                    'type': 'campaign_data',
+                    'content': f'❌ Instagram post failed: {error_message}',
+                    'timestamp': datetime.now().isoformat(),
+                    'campaign_data': {
+                        'instagram_post': instagram_data,
+                        'published': False,
+                        'error': error_message
+                    }
+                })
+        except json.JSONDecodeError as e:
+            logger.warning(f"Instagram post response is not valid JSON: {e}")
             await _broadcast({
                 'type': 'assistant',
                 'content': response_text,
@@ -365,8 +685,23 @@ async def _process_agent_framework_event(event):
         pending_requests['request_id'] = event.request_id
         pending_requests['request_data'] = event.data
 
-        # Handle different request types
-        if hasattr(event.data, 'draft_text') and hasattr(event.data, 'prompt'):
+        # Handle different request types based on their attributes
+        from zava_shop_agents.marketing import CampaignFollowupRequest, DraftFeedbackRequest, MarketSelectionRequest, ScheduleApprovalRequest
+
+        if isinstance(event.data, CampaignFollowupRequest):
+            pending_requests['request_type'] = 'campaign_followup'
+
+            questions_text = getattr(event.data, 'questions', '')
+            prompt_text = getattr(event.data, 'prompt', '')
+
+            await _broadcast({
+                'type': 'campaign_followup_required',
+                'request_id': event.request_id,
+                'prompt': prompt_text,
+                'questions': questions_text
+            })
+
+        elif isinstance(event.data, DraftFeedbackRequest):
             pending_requests['request_type'] = 'draft_feedback'
 
             draft_text = getattr(event.data, 'draft_text', '')
@@ -379,11 +714,54 @@ async def _process_agent_framework_event(event):
                 'draft': draft_text
             })
 
+        elif isinstance(event.data, MarketSelectionRequest):
+            pending_requests['request_type'] = 'market_selection'
+
+            prompt_text = getattr(event.data, 'prompt', '')
+
+            await _broadcast({
+                'type': 'market_selection_required',
+                'request_id': event.request_id,
+                'prompt': prompt_text
+            })
+
+        elif isinstance(event.data, ScheduleApprovalRequest):
+            pending_requests['request_type'] = 'schedule_approval'
+
+            schedule_text = getattr(event.data, 'schedule_text', '')
+            prompt_text = getattr(event.data, 'prompt', '')
+
+            await _broadcast({
+                'type': 'schedule_approval_required',
+                'request_id': event.request_id,
+                'prompt': prompt_text,
+                'schedule': schedule_text
+            })
+        else:
+            # Fallback for unknown request types
+            logger.warning(f"Unknown request type: {type(event.data)}")
+            await _broadcast({
+                'type': 'unknown_request',
+                'request_id': event.request_id,
+                'data': str(event.data)
+            })
+
     elif isinstance(event, ExecutorFailedEvent):
         await _broadcast({
             'type': 'system',
             'content': f"❌ Error in {event.executor_id}: {event.details}"
         })
+
+    # Handle ExecutorInvokedEvent to show loading states
+    elif 'ExecutorInvokedEvent' in event_type_name or 'Invoked' in event_type_name:
+        if hasattr(event, 'executor_id'):
+            executor_name = event.executor_id.replace('_', ' ').title()
+            await _broadcast({
+                'type': 'system',
+                'content': f"{executor_name} is running...",
+                'timestamp': datetime.now().isoformat(),
+                'debug': True
+            })
 
     elif isinstance(event, WorkflowStatusEvent):
         if event.state == WorkflowRunState.IDLE_WITH_PENDING_REQUESTS:
@@ -463,6 +841,50 @@ async def _send_to_workflow(content: str):
 async def process_user_input(content: str):
     """Process user input and send to workflow."""
     if not content:
+        return
+
+    # NEW: Handle schedule approval messages by sending to workflow
+    if content == 'approve_schedule':
+        # Send 'approve' to the workflow to trigger Instagram agent
+        logger.info(
+            "Schedule approved - sending 'approve' to workflow to trigger Instagram agent")
+
+        # Use the same workflow handling pattern as _send_to_workflow
+        global workflow_instance, pending_requests
+
+        if workflow_instance and pending_requests['is_pending'] and pending_requests['request_id']:
+            old_request_id = pending_requests['request_id']
+            responses = {old_request_id: 'approve'}
+
+            try:
+                async for event in workflow_instance.send_responses_streaming(responses):
+                    await _process_agent_framework_event(event)
+
+                if pending_requests['request_id'] == old_request_id:
+                    pending_requests['request_id'] = None
+                    pending_requests['is_pending'] = False
+                return
+            except Exception as e:
+                logger.error(f"Error processing schedule approval: {e}")
+
+        # Fallback: If no pending responses, show completion message
+        completion_message = {
+            'type': 'assistant',
+            'content': '✅ Schedule approved! Triggering Instagram publishing...',
+            'timestamp': datetime.now().isoformat()
+        }
+        conversation_history.append(completion_message)
+        await _broadcast(completion_message)
+        return
+    elif content == 'reject_schedule':
+        # Schedule rejected - could trigger revision workflow
+        rejection_message = {
+            'type': 'assistant',
+            'content': 'Publishing schedule rejected. Please provide feedback on what changes you\'d like to see.',
+            'timestamp': datetime.now().isoformat()
+        }
+        conversation_history.append(rejection_message)
+        await _broadcast(rejection_message)
         return
 
     user_message = {

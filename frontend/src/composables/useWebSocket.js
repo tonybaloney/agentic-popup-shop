@@ -16,6 +16,15 @@ export function useWebSocket() {
         approvalFlag: 'needsApproval',
         extraData: { isFormattedBrief: true }
       },
+      campaign_followup_required: {
+        dataKey: 'brief',
+        dataValue: data.questions || 'Please provide campaign information.',
+        approvalFlag: 'needsCampaignFollowup',
+        extraData: { 
+          isFollowupQuestion: true,
+          prompt: data.prompt || ''
+        }
+      },
       creative_approval_required: {
         dataKey: 'media',
         dataValue: data.media || [],
@@ -23,6 +32,20 @@ export function useWebSocket() {
         extraData: {
           creativePrompt: data.prompt || ''
         }
+      },
+      market_selection_required: {
+        dataKey: 'brief',
+        dataValue: data.prompt || 'Which markets would you like to target?',
+        approvalFlag: 'needsMarketSelection',
+        extraData: {
+          isMarketSelection: true
+        }
+      },
+      schedule_approval_required: {
+        dataKey: 'schedule',
+        dataValue: data.schedule || [],
+        approvalFlag: 'needsScheduleApproval',
+        extraData: {}
       },
       publishing_approval_required: {
         dataKey: 'schedule',
@@ -101,7 +124,10 @@ export function useWebSocket() {
         // Handle all approval-required message types with unified logic
         const approvalTypes = [
           'approval_required',
+          'campaign_followup_required',
           'creative_approval_required',
+          'market_selection_required',
+          'schedule_approval_required',
           'publishing_approval_required',
           'localization_approval_required'
         ];
