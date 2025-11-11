@@ -248,6 +248,29 @@ async def _process_agent_framework_event(event):
 
     elif isinstance(event, CreativeAssetsGeneratedEvent):
         logger.info(f"Creative Assets Generated: {len(event.assets)} assets")
+
+        # Convert image paths to data URIs for display
+        processed_assets = []
+        for asset in event.assets:
+            processed_asset = asset.copy()
+
+            # Convert image URLs to data URIs if they're file paths
+            if asset.get('type') == 'image' and asset.get('url', '').startswith('file://'):
+                file_path = asset['url'].replace('file://', '')
+                data_uri = convert_file_to_data_uri(file_path)
+                processed_asset['url'] = data_uri
+
+            processed_assets.append(processed_asset)
+
+        # Send assets to frontend via campaign_data
+        await _broadcast({
+            'type': 'campaign_data',
+            'timestamp': datetime.now().isoformat(),
+            'campaign_data': {
+                'media': processed_assets
+            },
+            'silent': True
+        })
         return
 
     elif isinstance(event, MarketSelectionQuestionEvent):

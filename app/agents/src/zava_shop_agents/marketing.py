@@ -1,12 +1,16 @@
 # Copyright (c) Microsoft. All rights reserved.
 
-from pydantic import Field
-from PIL import Image
-from openai import AzureOpenAI
-from dotenv import load_dotenv
-import requests
-# from azure.identity import AzureCliCredential
-# from agent_framework.azure import AzureOpenAIChatClient
+from typing import Annotated
+from pathlib import Path
+from io import BytesIO
+from dataclasses import dataclass
+import os
+import logging
+import json
+import base64
+import asyncio
+from azure.identity.aio import DefaultAzureCredential
+from agent_framework_azure_ai import AzureAIAgentClient
 from agent_framework import (
     AgentExecutor,
     AgentExecutorRequest,
@@ -27,17 +31,15 @@ from agent_framework import (
     WorkflowOutputEvent,
     handler,
 )
-from agent_framework_azure_ai import AzureAIAgentClient
-from azure.identity.aio import DefaultAzureCredential
-import asyncio
-import base64
-import json
-import logging
-import os
-from dataclasses import dataclass
-from io import BytesIO
-from pathlib import Path
-from typing import Annotated
+import requests
+from dotenv import load_dotenv
+from openai import AzureOpenAI
+from PIL import Image
+from pydantic import Field
+print("🔥 MARKETING.PY MODULE LOADING...")
+
+# from azure.identity import AzureCliCredential
+# from agent_framework.azure import AzureOpenAIChatClient
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -385,24 +387,37 @@ class Coordinator(Executor):
         self.publishing_id = publishing_id
         self.generated_assets = []  # Store generated creative assets
         self.target_markets = ""  # Store user-selected target markets
+        print(f"🏗️  COORDINATOR CREATED: id='{id}', planner_id='{planner_id}'")
 
     @handler
-    async def handle_initial_request(
+    async def dispatch(
         self,
-        request: AgentExecutorRequest,
-        ctx: WorkflowContext[CampaignFollowupRequest | DraftFeedbackRequest | MarketSelectionRequest | ScheduleApprovalRequest | AgentExecutorRequest, str],
+        message: ChatMessage,
+        ctx: WorkflowContext[AgentExecutorRequest],
     ) -> None:
-        """Initial execution handler to route the first user message to campaign planner."""
-        print("\n🚀 Coordinator: Initial request received, routing to campaign planner")
+        """Handle initial campaign message and dispatch to campaign planner."""
+        print("\n🚀 COORDINATOR DISPATCH METHOD CALLED!")
+        print(f"🚀 Message type: {type(message)}")
+        print(f"🚀 Message role: {message.role}")
+        print(f"🚀 Message text: '{message.text[:100]}...'")
+        print(f"🚀 Routing to planner_id: '{self.planner_id}'")
 
-        # Route the initial user message to the campaign planner agent
-        await ctx.send_message(
-            AgentExecutorRequest(
-                messages=request.messages,
-                should_respond=True,
-            ),
-            target_id=self.planner_id,
-        )
+        # Send the message directly to campaign planner
+        try:
+            print(f"🚀 About to send message to target_id: '{self.planner_id}'")
+            await ctx.send_message(
+                AgentExecutorRequest(
+                    messages=[message],
+                    should_respond=True,
+                ),
+                target_id=self.planner_id,
+            )
+            print("🚀 Message sent to campaign planner successfully")
+            print("🚀 Coordinator dispatch completed - now waiting for planner response")
+        except Exception as e:
+            print(f"❌ ERROR sending prompt to campaign planner: {e}")
+            print(f"❌ Exception type: {type(e).__name__}")
+            raise
 
     @handler
     async def on_agent_update(
@@ -499,7 +514,26 @@ class Coordinator(Executor):
         """Handle responses from agents - route to next agent or yield output."""
 
         print(
-            f"\n🔍 DEBUG: on_agent_response called for executor_id: {draft.executor_id}")
+            f"\n🔍 DEBUG: on_agent_response called for executor_id: '{draft.executor_id}'")
+        print("🔍 DEBUG: Expected IDs:")
+        print(f"   - planner: '{self.planner_id}'")
+        print(f"   - creative: '{self.creative_id}'")
+        print(f"   - localization: '{self.localization_id}'")
+        print(f"   - publishing: '{self.publishing_id}'")
+
+        # Check if we have the agent run response
+        if hasattr(draft, 'agent_run_response') and draft.agent_run_response:
+            response_text_preview = draft.agent_run_response.text[:100] if hasattr(
+                draft.agent_run_response, 'text') else "No text"
+            print(f"🔍 DEBUG: Response preview: {response_text_preview}...")
+        else:
+            print("🔍 DEBUG: No agent_run_response found")
+
+        # Add safety check to prevent infinite routing
+        if draft.executor_id == "coordinator":
+            print(
+                "⚠️ WARNING: Ignoring response from coordinator itself to prevent loops")
+            return
 
         # CAPTURE TOOL OUTPUTS FROM CREATIVE AGENT - WORKAROUND
         if draft.executor_id == self.creative_id:
@@ -621,6 +655,9 @@ class Coordinator(Executor):
             for idx, asset in enumerate(self.generated_assets):
                 print(
                     f"   {idx+1}. {asset.get('type')} - {asset.get('filename')}")
+
+            # Emit event to send creative assets to frontend
+            await ctx.add_event(CreativeAssetsGeneratedEvent(self.generated_assets))
 
             # Now send to HITL for review - do this explicitly here instead of falling through
             draft_text = draft.agent_run_response.text.strip()
@@ -764,7 +801,12 @@ class Coordinator(Executor):
             return
 
         # If we reach here, it's an unexpected executor - log and ignore
-        print(f"⚠️ WARNING: Unexpected executor response: {draft.executor_id}")
+        print(
+            f"⚠️ WARNING: Unexpected executor response from '{draft.executor_id}'")
+        print("⚠️ This might indicate incorrect workflow routing or missing handler logic")
+        print(
+            f"⚠️ Expected one of: {self.planner_id}, {self.creative_id}, {self.localization_id}, {self.publishing_id}")
+        return
 
     @response_handler
     async def handle_campaign_followup(
@@ -914,6 +956,8 @@ def get_workflow():
     The campaign planner creates a brief, the creative agent generates social media assets (images, video, captions),
     a human reviews and provides feedback, then the localization agent translates the approved content to Spanish.
     """
+
+    print("🏗️  GET_WORKFLOW: Creating marketing workflow...")
 
     # from agent_framework import Workflow
 
@@ -1120,6 +1164,7 @@ All responses MUST be valid JSON using this exact structure:
     )
 
     # No longer need RequestInfoExecutor nodes - using ctx.request_info() instead
+    print("🏗️  GET_WORKFLOW: Creating Coordinator instance...")
     coordinator = Coordinator(
         id="coordinator",
         planner_id=campaign_planner_agent.id,
@@ -1127,18 +1172,21 @@ All responses MUST be valid JSON using this exact structure:
         localization_id=localization_agent.id,
         publishing_id=publishing_agent.id,
     )
+    print("🏗️  GET_WORKFLOW: Coordinator instance created!")
 
     # Build the workflow with name and description for DevUI
     # Note: HITL interactions now handled via ctx.request_info() in Coordinator
+    print("🏗️  GET_WORKFLOW: Building workflow with start_executor...")
     workflow: Workflow = (
         WorkflowBuilder(
             name="Marketing Campaign with Creative Tools and HITL",
-            description="Campaign planner → creative agent (images/video) → "
+            description="Coordinator routes initial request to campaign planner → creative agent (images/video) → "
             "human review → market selection → localization → "
             "publishing schedule → human approval. Multi-stage "
             "HITL workflow using ctx.request_info() pattern."
         )
-        .set_start_executor(campaign_planner_agent)
+        .set_start_executor(coordinator)
+        .add_edge(coordinator, campaign_planner_agent)
         .add_edge(campaign_planner_agent, coordinator)
         .add_edge(coordinator, creative_agent)
         .add_edge(creative_agent, coordinator)
@@ -1148,6 +1196,7 @@ All responses MUST be valid JSON using this exact structure:
         .add_edge(publishing_agent, coordinator)
         .build()
     )
+    print("🏗️  GET_WORKFLOW: Workflow built successfully!")
 
     return workflow
 

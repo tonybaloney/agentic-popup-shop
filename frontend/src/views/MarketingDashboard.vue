@@ -133,10 +133,46 @@ export default {
         .find(msg => msg.content)
         ?.content?.match(/^(.+?)\s+is running\.\.\.$/)?.[1]?.toLowerCase();
 
+      // Alternative detection specifically for creative agent
+      const creativeAgentMessages = newMessages.filter(msg => 
+        msg.content && msg.content.toLowerCase().includes('creative agent is running')
+      );
+
+      // Check for streaming creative content updates
+      const creativeUpdateMessages = newMessages.filter(msg =>
+        msg.content && (
+          msg.content.includes('Creative Agent Update') ||
+          msg.content.includes('**Creative Agent Update:**')
+        )
+      );
+
+      // Check recent messages (last 10) for any creative activity
+      const recentMessages = newMessages.slice(-10);
+      const hasRecentCreativeActivity = recentMessages.some(msg =>
+        msg.content && (
+          msg.content.toLowerCase().includes('creative') ||
+          msg.content.toLowerCase().includes('generating') ||
+          msg.content.toLowerCase().includes('image') ||
+          msg.content.toLowerCase().includes('assets')
+        )
+      );
+
       console.log('🔍 Executor Detection Debug:', {
         totalMessages: newMessages.length,
-        executorMessages: executorMessages.map(m => ({ content: m.content, debug: m.debug })),
-        debugMessages: debugMessages.map(m => ({ content: m.content?.substring(0, 50) })),
+        executorMessages: executorMessages.map(m => ({ 
+          content: m.content, 
+          debug: m.debug,
+          type: m.type 
+        })),
+        creativeAgentMessages: creativeAgentMessages.map(m => ({ 
+          content: m.content, 
+          debug: m.debug,
+          type: m.type 
+        })),
+        debugMessages: debugMessages.map(m => ({ 
+          content: m.content?.substring(0, 50),
+          hasCreative: m.content?.toLowerCase().includes('creative')
+        })),
         statusMessages: statusMessages.map(m => ({ content: m.content?.substring(0, 50) })),
         extractedExecutor: currentlyRunningExecutor
       });
@@ -178,8 +214,12 @@ export default {
       // Enhanced detection for creative agent running
       const isCreativeAgentActive = currentlyRunningExecutor === 'creative agent' ||
         currentlyRunningExecutor === 'creative' ||
+        creativeAgentMessages.length > 0 ||
+        creativeUpdateMessages.length > 0 ||
+        hasRecentCreativeActivity ||
         debugMessages.some(msg => 
           msg.content && (
+            msg.content.toLowerCase().includes('creative agent') ||
             msg.content.toLowerCase().includes('creative') ||
             msg.content.toLowerCase().includes('generating')
           )
@@ -193,10 +233,53 @@ export default {
           )
         );
 
-      const shouldShowMediaLoading = hasReceivedBrief && 
+      console.log('🔍 Creative Agent Detection Debug:', {
+        currentlyRunningExecutor,
+        creativeAgentMessagesCount: creativeAgentMessages.length,
+        creativeUpdateMessagesCount: creativeUpdateMessages.length,
+        hasRecentCreativeActivity,
+        recentMessagesContent: recentMessages.map(m => m.content?.substring(0, 30)),
+        executorMessages: executorMessages.map(m => ({ 
+          content: m.content?.substring(0, 100),
+          debug: m.debug,
+          type: m.type,
+          matchesPattern: /^(.+?)\s+is running\.\.\.$/i.test(m.content || '')
+        })),
+        debugMessages: debugMessages.map(m => ({ 
+          content: m.content?.substring(0, 50),
+          hasCreative: m.content?.toLowerCase().includes('creative'),
+          hasGenerating: m.content?.toLowerCase().includes('generating')
+        })),
+        statusMessages: statusMessages.map(m => ({ 
+          content: m.content?.substring(0, 50),
+          hasCreative: m.content?.toLowerCase().includes('creative'),
+          hasMedia: m.content?.toLowerCase().includes('media')
+        })),
+        isCreativeAgentActive
+      });
+
+      const shouldShowMediaLoading = (
+        hasReceivedBrief && 
         !hasReceivedMedia && 
         !needsCreativeApproval && 
-        isCreativeAgentActive;
+        isCreativeAgentActive
+      ) || (
+        // Also show loading if we detect creative agent running regardless of brief status
+        isCreativeAgentActive && 
+        !hasReceivedMedia && 
+        !needsCreativeApproval
+      );
+
+      console.log('🎨 Media Loading Debug:', {
+        hasReceivedBrief,
+        hasReceivedMedia,
+        needsCreativeApproval,
+        isCreativeAgentActive,
+        shouldShowMediaLoading,
+        'newMedia.length': newMedia ? newMedia.length : 'null',
+        'brief exists': !!newBrief,
+        'isFormattedBrief': accumulatedCampaignData.isFormattedBrief
+      });
 
       console.log('🎬 Enhanced loading state calculation:', {
         currentlyRunningExecutor,

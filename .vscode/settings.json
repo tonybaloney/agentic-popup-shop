@@ -1,5 +1,11 @@
 {
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
     "python.useEnvironmentsExtension": true,
+    "python.terminal.useEnvFile": true,
     "python-envs.pythonProjects": [
         {
             "path": "app/agents",
