@@ -11,11 +11,11 @@
             <span v-if="needsApproval" class="approval-indicator">⚠</span>
             <span v-else-if="hasBriefContent" class="content-indicator">✓</span>
             <span class="accordion-icon">
-              {{ expandedSection === 'brief' ? '▲' : '▼' }}
+              {{ expandedSections.brief ? '▲' : '▼' }}
             </span>
           </div>
         </div>
-        <div v-if="expandedSection === 'brief'" class="accordion-content">
+        <div v-if="expandedSections.brief" class="accordion-content">
           <div v-if="isBriefLoading" class="loading-container">
             <div class="loading-spinner"></div>
             <p class="loading-text">Generating campaign strategy...</p>
@@ -54,11 +54,11 @@
           <div class="accordion-controls">
             <span v-if="needsCreativeApproval" class="approval-indicator">⚠</span>
             <span class="accordion-icon">
-              {{ expandedSection === 'media' ? '▲' : '▼' }}
+              {{ expandedSections.media ? '▲' : '▼' }}
             </span>
           </div>
         </div>
-        <div v-if="expandedSection === 'media'" class="accordion-content">
+        <div v-if="expandedSections.media" class="accordion-content">
           <div v-if="isMediaLoading" class="loading-container">
             <div class="loading-spinner"></div>
             <p class="loading-text">Creating marketing visuals...</p>
@@ -94,6 +94,9 @@
                 >
                   {{ editedCaptions[index] || item.caption }}
                 </div>
+                <div v-if="item.hashtags" class="media-hashtags">
+                  {{ item.hashtags }}
+                </div>
               </div>
             </div>
           </template>
@@ -115,72 +118,61 @@
       </div>
 
       <!-- Localization Accordion -->
-      <div
-        :class="['accordion-section', { 'needs-approval': needsLocalizationApproval }]"
-      >
+      <div class="accordion-section">
         <div class="accordion-header" @click="toggleSection('localization')">
           <h3>Localized Content</h3>
           <div class="accordion-controls">
-            <span v-if="needsLocalizationApproval" class="approval-indicator">⚠</span>
-            <span v-else-if="localizations.length > 0" class="content-indicator">✓</span>
+            <span v-if="localizations.length > 0" class="content-indicator">✓</span>
             <span class="accordion-icon">
-              {{ expandedSection === 'localization' ? '▲' : '▼' }}
+              {{ expandedSections.localization ? '▲' : '▼' }}
             </span>
           </div>
         </div>
-        <div v-if="expandedSection === 'localization'" class="accordion-content">
+        <div v-if="expandedSections.localization" class="accordion-content">
           <div v-if="isLocalizationLoading" class="loading-container">
             <div class="loading-spinner"></div>
             <p class="loading-text">Generating localized content...</p>
           </div>
           <template v-else-if="localizations.length > 0">
-            <div
-              :class="['media-grid', { 'pending-approval': needsLocalizationApproval }]"
-            >
+            <div class="media-grid">
               <div
                 v-for="(item, index) in localizations"
                 :key="index"
                 class="media-item"
               >
-                <img
-                  v-if="item.image"
-                  :src="item.image"
-                  :alt="`${item.language} localization`"
-                  class="media-image"
-                />
-                <div
-                  v-if="item.caption"
-                  :contenteditable="needsLocalizationApproval"
-                  :class="needsLocalizationApproval ? 'editable-caption' : 'media-caption'"
-                  @input="(e) => handleLocalizationEdit(index, e)"
-                  @blur="(e) => handleLocalizationEdit(index, e)"
-                >
-                  {{ editedLocalizations[index]?.caption || item.caption }}
+                <div class="media-container">
+                  <img
+                    v-if="item.type === 'image'"
+                    :src="item.image"
+                    :alt="`Localized media ${index + 1}`"
+                    class="media-image"
+                  />
+                  <video
+                    v-if="item.type === 'video'"
+                    :src="item.image"
+                    :poster="item.thumbnail"
+                    controls
+                    class="media-video"
+                  />
+                  <!-- Language pill as overlay on the media -->
+                  <div class="language-pills">
+                    <span class="language-pill">
+                      {{ item.locale ? item.locale.toUpperCase() : item.language }}
+                    </span>
+                  </div>
                 </div>
-                <div class="localization-meta">
-                  <span class="localization-language">
-                    {{ item.language || 'Unknown' }}
-                  </span>
-                  <span v-if="item.hashtags" class="localization-hashtags">
-                    {{ item.hashtags }}
-                  </span>
+                
+                <!-- Show translated caption (includes hashtags) -->
+                <div class="localized-caption">
+                  <div class="media-caption">
+                    {{ item.caption }}
+                  </div>
                 </div>
               </div>
             </div>
           </template>
           <div v-else class="media-placeholder">
             <span>Localized content will appear here...</span>
-          </div>
-          <div
-            v-if="needsLocalizationApproval && localizations.length > 0 && !isLocalizationLoading"
-            class="approval-actions"
-          >
-            <button class="approve-btn" @click="handleApproval(true)">
-              ✓ Approve
-            </button>
-            <button class="reject-btn" @click="handleApproval(false)">
-              ✗ Reject
-            </button>
           </div>
         </div>
       </div>
@@ -195,39 +187,86 @@
             <span v-if="needsPublishingApproval" class="approval-indicator">⚠</span>
             <span v-else-if="hasScheduleContent" class="content-indicator">✓</span>
             <span class="accordion-icon">
-              {{ expandedSection === 'schedule' ? '▲' : '▼' }}
+              {{ expandedSections.schedule ? '▲' : '▼' }}
             </span>
           </div>
         </div>
-        <div v-if="expandedSection === 'schedule'" class="accordion-content">
-          <template v-if="schedule.length > 0">
-            <div
-              :class="['schedule-list', { 'pending-approval': needsPublishingApproval }]"
+        <div v-if="expandedSections.schedule" class="accordion-content">
+          <div v-if="isPublishingLoading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Generating publishing schedule...</p>
+          </div>
+          <template v-else-if="schedule.length > 0">
+            <!-- Publishing Schedule Table -->
+            <div 
+              :class="['schedule-table-container', { 'pending-approval': needsScheduleApproval }]"
             >
-              <div
-                v-for="(item, index) in schedule.slice(0, 3)"
-                :key="index"
-                class="schedule-item"
-              >
-                <div class="schedule-channel">
-                  <span class="channel-icon">{{ item.icon || '📱' }}</span>
-                  <strong>{{ item.channel }}</strong>
-                </div>
-                <div class="schedule-time">{{ item.datetime }}</div>
-                <div
-                  v-if="item.status"
-                  :class="['schedule-status', item.status]"
-                >
-                  {{ item.status }}
-                </div>
-              </div>
+              <table class="schedule-table">
+                <thead>
+                  <tr>
+                    <th>Platform</th>
+                    <th>Language</th>
+                    <th>Media</th>
+                    <th>Post Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="(item, index) in schedule"
+                    :key="index"
+                    class="schedule-row"
+                  >
+                    <td class="platform-cell">
+                      <div class="platform-info">
+                        <span class="platform-icon">{{ item.icon || item.platform_icon || '📱' }}</span>
+                        <span class="platform-name">{{ item.platform || item.channel || 'Social Media' }}</span>
+                      </div>
+                    </td>
+                    <td class="language-cell">
+                      <span 
+                        :class="['language-badge', getLanguageClass(item.language || item.locale || 'EN')]"
+                      >
+                        {{ getLanguageFlag(item.language || item.locale || 'EN') }} 
+                        {{ (item.language || item.locale || 'EN').toUpperCase() }}
+                      </span>
+                    </td>
+                    <td class="media-cell">
+                      <div class="media-preview">
+                        <img 
+                          v-if="(item.media_type || item.type || 'image') === 'image' && (item.media_url || item.image)"
+                          :src="item.media_url || item.image"
+                          :alt="'Media preview'"
+                          class="media-thumbnail"
+                        />
+                        <video 
+                          v-else-if="(item.media_type || item.type) === 'video' && (item.media_url || item.image)"
+                          :src="item.media_url || item.image"
+                          class="media-thumbnail video-thumbnail"
+                          muted
+                        >
+                        </video>
+                        <span v-else class="media-type">
+                          {{ (item.media_type || item.type || 'Image').charAt(0).toUpperCase() + (item.media_type || item.type || 'Image').slice(1) }}
+                        </span>
+                      </div>
+                    </td>
+                    <td class="time-cell">
+                      <div class="schedule-time">
+                        <div class="date">{{ formatDate(item.datetime || item.post_time || item.time) }}</div>
+                        <div class="time">{{ formatTime(item.datetime || item.post_time || item.time) }}</div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <div v-if="needsPublishingApproval" class="approval-actions">
-              <button class="approve-btn" @click="handleApproval(true)">
-                ✓ Approve
+            
+            <div v-if="needsScheduleApproval" class="approval-actions">
+              <button class="approve-btn" @click="handleScheduleApproval(true)">
+                ✓ Approve Schedule
               </button>
-              <button class="reject-btn" @click="handleApproval(false)">
-                ✗ Reject
+              <button class="reject-btn" @click="handleScheduleApproval(false)">
+                ✗ Reject Schedule
               </button>
             </div>
           </template>
@@ -259,7 +298,13 @@ export default {
   },
   emits: ['send-message'],
   setup(props, { emit }) {
-    const expandedSection = ref('brief');
+    // Track which sections are expanded (multiple can be open)
+    const expandedSections = ref({
+      brief: true,
+      media: false,
+      localization: false,
+      schedule: false
+    });
     const editedCaptions = ref({});
     const editedLocalizations = ref({});
 
@@ -270,6 +315,8 @@ export default {
     const needsCreativeApproval = computed(() => props.campaignData?.needsCreativeApproval || false);
     const needsPublishingApproval = computed(() => props.campaignData?.needsPublishingApproval || false);
     const needsLocalizationApproval = computed(() => props.campaignData?.needsLocalizationApproval || false);
+    // NEW: Separate variable for publishing schedule approval to avoid conflicts
+    const needsScheduleApproval = computed(() => props.campaignData?.needsScheduleApproval || false);
     const media = computed(() => props.campaignData?.media || []);
     const schedule = computed(() => props.campaignData?.schedule || []);
     const localizations = computed(() => props.campaignData?.localizations || []);
@@ -278,6 +325,7 @@ export default {
     const isBriefLoading = computed(() => props.loadingStates.campaignBrief || false);
     const isMediaLoading = computed(() => props.loadingStates.socialMedia || false);
     const isLocalizationLoading = computed(() => props.loadingStates.localization || false);
+    const isPublishingLoading = computed(() => props.loadingStates.publishing || false);
 
     // Content flags
     const hasBriefContent = computed(() => brief.value && isFormattedBrief.value && !isBriefLoading.value);
@@ -305,29 +353,34 @@ export default {
       }
     }, { deep: true });
 
-    // Auto-expand the section that needs attention
+    // Auto-expand sections when their workflow stage starts (only opening, no closing)
     watch(
       () => [
         needsApproval.value,
         needsCreativeApproval.value,
         needsPublishingApproval.value,
         needsLocalizationApproval.value,
-        brief.value,
-        media.value.length,
-        schedule.value.length,
-        localizations.value.length
+        isBriefLoading.value,
+        isMediaLoading.value,
+        isLocalizationLoading.value,
+        isPublishingLoading.value
       ],
       () => {
-        if (needsCreativeApproval.value || (media.value.length > 0 && !needsApproval.value)) {
-          expandedSection.value = 'media';
-        } else if (needsPublishingApproval.value || schedule.value.length > 0) {
-          expandedSection.value = 'schedule';
-        } else if (needsLocalizationApproval.value || localizations.value.length > 0) {
-          expandedSection.value = 'localization';
-        } else if (needsApproval.value || brief.value) {
-          expandedSection.value = 'brief';
+        // Open sections when their step starts (approvals or loading states)
+        if (needsApproval.value || isBriefLoading.value) {
+          expandedSections.value.brief = true;
         }
-      }
+        if (needsCreativeApproval.value || isMediaLoading.value) {
+          expandedSections.value.media = true;
+        }
+        if (needsLocalizationApproval.value || isLocalizationLoading.value) {
+          expandedSections.value.localization = true;
+        }
+        if (needsPublishingApproval.value || isPublishingLoading.value) {
+          expandedSections.value.schedule = true;
+        }
+      },
+      { immediate: true }
     );
 
     const renderMarkdown = (content) => {
@@ -340,7 +393,7 @@ export default {
     };
 
     const toggleSection = (section) => {
-      expandedSection.value = expandedSection.value === section ? null : section;
+      expandedSections.value[section] = !expandedSections.value[section];
     };
 
     const handleCaptionEdit = (index, e) => {
@@ -400,8 +453,82 @@ export default {
       }
     };
 
+    // NEW: Separate approval handler for publishing schedule to avoid conflicts
+    const handleScheduleApproval = (approved) => {
+      if (approved) {
+        emit('send-message', 'approve_schedule');
+      } else {
+        emit('send-message', 'reject_schedule');
+      }
+    };
+
+    // Helper methods for schedule table
+    const getLanguageFlag = (language) => {
+      const langCode = (language || '').toLowerCase();
+      const flagMap = {
+        'en': '🇺🇸',
+        'es': '🇪🇸', 
+        'es-es': '🇪🇸',
+        'es-mx': '🇲🇽',
+        'es-la': '🇲🇽',
+        'fr': '🇫🇷',
+        'fr-fr': '🇫🇷',
+        'de': '🇩🇪',
+        'de-de': '🇩🇪',
+        'pt': '🇧🇷',
+        'pt-br': '🇧🇷',
+        'it': '🇮🇹',
+        'zh': '🇨🇳',
+        'ja': '🇯🇵',
+        'ko': '🇰🇷'
+      };
+      return flagMap[langCode] || '🌐';
+    };
+
+    const getLanguageClass = (language) => {
+      const langCode = (language || '').toLowerCase();
+      if (langCode.includes('en')) return 'lang-english';
+      if (langCode.includes('es')) return 'lang-spanish';
+      if (langCode.includes('fr')) return 'lang-french';
+      if (langCode.includes('de')) return 'lang-german';
+      if (langCode.includes('pt')) return 'lang-portuguese';
+      if (langCode.includes('it')) return 'lang-italian';
+      if (langCode.includes('zh')) return 'lang-chinese';
+      if (langCode.includes('ja')) return 'lang-japanese';
+      if (langCode.includes('ko')) return 'lang-korean';
+      return 'lang-default';
+    };
+
+    const formatDate = (dateString) => {
+      if (!dateString) return 'TBD';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: 'numeric'
+        });
+      } catch {
+        return dateString.split(' ')[0] || 'TBD';
+      }
+    };
+
+    const formatTime = (dateString) => {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit',
+          hour12: true
+        });
+      } catch {
+        return dateString.split(' ')[1] || '';
+      }
+    };
+
     return {
-      expandedSection,
+      expandedSections,
       editedCaptions,
       editedLocalizations,
       brief,
@@ -410,19 +537,26 @@ export default {
       needsCreativeApproval,
       needsPublishingApproval,
       needsLocalizationApproval,
+      needsScheduleApproval,
       media,
       schedule,
       localizations,
       isBriefLoading,
       isMediaLoading,
       isLocalizationLoading,
+      isPublishingLoading,
       hasBriefContent,
       hasScheduleContent,
       renderMarkdown,
       toggleSection,
       handleCaptionEdit,
       handleLocalizationEdit,
-      handleApproval
+      handleApproval,
+      handleScheduleApproval,
+      getLanguageFlag,
+      getLanguageClass,
+      formatDate,
+      formatTime
     };
   }
 };
@@ -718,5 +852,253 @@ export default {
 
 .reject-btn:hover {
   background: #a40e26;
+}
+
+/* Localized content styling */
+.media-container {
+  position: relative;
+}
+
+.language-pills {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  max-width: calc(100% - 16px);
+}
+
+.language-pill {
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.original-caption {
+  background: #f6f8fa;
+  border-left: 3px solid #0969da;
+  margin-bottom: 0.5rem;
+}
+
+.localized-caption {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.localized-caption:last-child {
+  margin-bottom: 0;
+}
+
+.localized-caption .localization-meta {
+  margin-bottom: 0.25rem;
+}
+
+.localized-caption .media-caption {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.media-hashtags {
+  margin-top: 0.5rem;
+  color: #0969da;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* Publishing Schedule Table */
+.schedule-table-container {
+  margin: 1rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #d0d7de;
+  background: white;
+}
+
+.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.schedule-table th {
+  background: #f6f8fa;
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #24292f;
+  border-bottom: 2px solid #d0d7de;
+}
+
+.schedule-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #d0d7de;
+  vertical-align: middle;
+}
+
+.schedule-row:hover {
+  background: #f6f8fa;
+}
+
+.platform-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.platform-icon {
+  font-size: 1.1rem;
+}
+
+.platform-name {
+  font-weight: 500;
+}
+
+.language-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Language-specific colors */
+.language-badge.lang-english {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.language-badge.lang-spanish {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.language-badge.lang-french {
+  background: #e0e7ff;
+  color: #5b21b6;
+}
+
+.language-badge.lang-german {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.language-badge.lang-portuguese {
+  background: #fecaca;
+  color: #dc2626;
+}
+
+.language-badge.lang-italian {
+  background: #fed7d7;
+  color: #c53030;
+}
+
+.language-badge.lang-chinese {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.language-badge.lang-japanese {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.language-badge.lang-korean {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.language-badge.lang-default {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.media-preview {
+  display: flex;
+  align-items: center;
+}
+
+.media-thumbnail {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #d0d7de;
+}
+
+.video-thumbnail {
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.video-thumbnail::after {
+  content: '▶️';
+  position: absolute;
+  font-size: 0.8rem;
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+}
+
+.media-type {
+  padding: 0.5rem;
+  background: #f6f8fa;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #656d76;
+}
+
+.schedule-time {
+  text-align: left;
+}
+
+.schedule-time .date {
+  font-weight: 500;
+  color: #24292f;
+}
+
+.schedule-time .time {
+  font-size: 0.8rem;
+  color: #656d76;
+  margin-top: 0.1rem;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-badge.ready {
+  background: #ddf4ff;
+  color: #0969da;
+}
+
+.status-badge.published {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.failed {
+  background: #ffe4e6;
+  color: #dc2626;
 }
 </style>

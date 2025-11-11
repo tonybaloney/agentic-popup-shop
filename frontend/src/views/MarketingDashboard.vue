@@ -52,7 +52,8 @@ export default {
     const loadingStates = ref({
       campaignBrief: false,
       socialMedia: false,
-      localization: false
+      localization: false,
+      publishing: false
     });
 
     const { messages, sendMessage, isConnected } = useWebSocket();
@@ -83,7 +84,7 @@ export default {
         };
       } else {
         // For new campaign requests, show loading
-        loadingStates.value = { campaignBrief: true, socialMedia: false };
+        loadingStates.value = { campaignBrief: true, socialMedia: false, localization: false, publishing: false };
       }
 
       sendMessage(message);
@@ -178,7 +179,13 @@ export default {
       });
 
       // Use accumulated data but preserve existing content if new data is empty
-      const newBrief = accumulatedCampaignData.brief || currentBrief;
+      // IMPORTANT: Preserve the original campaign brief once it's formatted to prevent
+      // subsequent agent messages from overwriting it
+      const currentBriefIsFormatted = campaignData.value.isFormattedBrief;
+      const newBrief = currentBriefIsFormatted 
+        ? currentBrief  // Keep existing brief if it's already formatted
+        : (accumulatedCampaignData.brief || currentBrief);  // Otherwise, update as normal
+      
       const newMedia = Array.isArray(accumulatedCampaignData.media) && accumulatedCampaignData.media.length > 0
         ? accumulatedCampaignData.media
         : currentMedia;
@@ -207,6 +214,7 @@ export default {
       // More precise loading state logic using multiple detection methods
       const shouldShowBriefLoading = !hasReceivedBrief && (
         currentlyRunningExecutor === 'campaign planner' ||
+        currentlyRunningExecutor === 'campaign_planner_agent' ||
         accumulatedCampaignData.needsCampaignFollowup ||
         accumulatedCampaignData.needsMarketSelection
       );
@@ -214,6 +222,7 @@ export default {
       // Enhanced detection for creative agent running
       const isCreativeAgentActive = currentlyRunningExecutor === 'creative agent' ||
         currentlyRunningExecutor === 'creative' ||
+        currentlyRunningExecutor === 'creative_agent' ||
         creativeAgentMessages.length > 0 ||
         creativeUpdateMessages.length > 0 ||
         hasRecentCreativeActivity ||
@@ -281,31 +290,88 @@ export default {
         'isFormattedBrief': accumulatedCampaignData.isFormattedBrief
       });
 
+      // Detection for localization agent running
+      const isLocalizationAgentActive = currentlyRunningExecutor === 'localization_agent' ||
+        currentlyRunningExecutor === 'localization agent' ||
+        debugMessages.some(msg => 
+          msg.content && (
+            msg.content.toLowerCase().includes('localization agent') ||
+            msg.content.toLowerCase().includes('translating') ||
+            msg.content.toLowerCase().includes('localization')
+          )
+        );
+
+      const hasReceivedLocalizations = Array.isArray(newLocalizations) && newLocalizations.length > 0;
+      const shouldShowLocalizationLoading = (
+        hasReceivedMedia && 
+        !hasReceivedLocalizations && 
+        isLocalizationAgentActive
+      ) || (
+        // Also show if localization agent is detected running regardless
+        isLocalizationAgentActive && 
+        !hasReceivedLocalizations
+      );
+
+      // Detection for publishing agent running
+      const isPublishingAgentActive = currentlyRunningExecutor === 'publishing_agent' ||
+        currentlyRunningExecutor === 'publishing agent' ||
+        debugMessages.some(msg => 
+          msg.content && (
+            msg.content.toLowerCase().includes('publishing agent') ||
+            msg.content.toLowerCase().includes('publishing') ||
+            msg.content.toLowerCase().includes('scheduling')
+          )
+        );
+
+      const hasReceivedSchedule = Array.isArray(newSchedule) && newSchedule.length > 0;
+      const shouldShowPublishingLoading = (
+        hasReceivedLocalizations && 
+        !hasReceivedSchedule && 
+        isPublishingAgentActive
+      ) || (
+        // Also show if publishing agent is detected running regardless
+        isPublishingAgentActive && 
+        !hasReceivedSchedule
+      );
+
       console.log('🎬 Enhanced loading state calculation:', {
         currentlyRunningExecutor,
         isCreativeAgentActive,
+        isLocalizationAgentActive,
+        isPublishingAgentActive,
         hasReceivedBrief,
         hasReceivedMedia,
+        hasReceivedLocalizations,
+        hasReceivedSchedule,
         needsCreativeApproval,
         shouldShowBriefLoading,
         shouldShowMediaLoading,
+        shouldShowLocalizationLoading,
+        shouldShowPublishingLoading,
         executorMessages: executorMessages.length,
         debugMessages: debugMessages.length,
         statusMessages: statusMessages.length
       });
 
-      if (shouldShowBriefLoading && !shouldShowMediaLoading) {
+      if (shouldShowBriefLoading && !shouldShowMediaLoading && !shouldShowLocalizationLoading && !shouldShowPublishingLoading) {
         console.log('📋 Setting brief loading to true');
-        loadingStates.value = { campaignBrief: true, socialMedia: false };
-      } else if (shouldShowMediaLoading) {
+        loadingStates.value = { campaignBrief: true, socialMedia: false, localization: false, publishing: false };
+      } else if (shouldShowMediaLoading && !shouldShowLocalizationLoading && !shouldShowPublishingLoading) {
         console.log('🎨 Setting media loading to true');
-        loadingStates.value = { campaignBrief: false, socialMedia: true };
-      } else if (hasReceivedBrief || hasReceivedMedia) {
+        loadingStates.value = { campaignBrief: false, socialMedia: true, localization: false, publishing: false };
+      } else if (shouldShowLocalizationLoading && !shouldShowPublishingLoading) {
+        console.log('🌍 Setting localization loading to true');
+        loadingStates.value = { campaignBrief: false, socialMedia: false, localization: true, publishing: false };
+      } else if (shouldShowPublishingLoading) {
+        console.log('📅 Setting publishing loading to true');
+        loadingStates.value = { campaignBrief: false, socialMedia: false, localization: false, publishing: true };
+      } else if (hasReceivedBrief || hasReceivedMedia || hasReceivedLocalizations || hasReceivedSchedule) {
         console.log('✅ Setting all loading to false');
         loadingStates.value = {
           campaignBrief: false,
           socialMedia: false,
-          localization: false
+          localization: false,
+          publishing: false
         };
       }
     };
@@ -353,9 +419,6 @@ export default {
   display: flex;
   flex: 1;
   overflow: hidden;
-  margin: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   background: white;
   min-height: 0;
 }

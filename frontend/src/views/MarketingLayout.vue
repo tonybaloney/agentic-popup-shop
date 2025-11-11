@@ -20,7 +20,7 @@ export default {
 
 <style scoped>
 #marketing-app {
-  height: 90vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: #f5f7fa;
