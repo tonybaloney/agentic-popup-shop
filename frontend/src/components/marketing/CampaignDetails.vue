@@ -8,8 +8,8 @@
         <div class="accordion-header" @click="toggleSection('brief')">
           <h3>Campaign Brief</h3>
           <div class="accordion-controls">
-            <span v-if="needsApproval" class="approval-indicator">⚠</span>
-            <span v-else-if="hasBriefContent" class="content-indicator">✓</span>
+            <span v-if="needsApproval && !isBriefLoading" class="approval-indicator">⚠</span>
+            <span v-else-if="hasBriefContent && !isBriefLoading" class="content-indicator">✓</span>
             <span class="accordion-icon">
               {{ expandedSections.brief ? '▲' : '▼' }}
             </span>
@@ -32,7 +32,7 @@
             Campaign brief will appear here...
           </span>
           <div
-            v-if="needsApproval && brief && !isBriefLoading"
+            v-if="needsApproval && brief && !isBriefLoading && activeAgent === 'campaign_planner'"
             class="approval-actions"
           >
             <button class="approve-btn" @click="handleApproval(true)">
@@ -52,8 +52,8 @@
         <div class="accordion-header" @click="toggleSection('media')">
           <h3>Social Media Assets</h3>
           <div class="accordion-controls">
-            <span v-if="needsCreativeApproval" class="approval-indicator">⚠</span>
-            <span v-else-if="media.length > 0" class="content-indicator">✓</span>
+            <span v-if="needsCreativeApproval && !isMediaLoading" class="approval-indicator">⚠</span>
+            <span v-else-if="media.length > 0 && !isMediaLoading" class="content-indicator">✓</span>
             <span class="accordion-icon">
               {{ expandedSections.media ? '▲' : '▼' }}
             </span>
@@ -124,8 +124,8 @@
         <div class="accordion-header" @click="toggleSection('localization')">
           <h3>Localized Content</h3>
           <div class="accordion-controls">
-            <span v-if="needsMarketSelection" class="approval-indicator">⚠</span>
-            <span v-else-if="localizations.length > 0" class="content-indicator">✓</span>
+            <span v-if="needsMarketSelection && !isLocalizationLoading" class="approval-indicator">⚠</span>
+            <span v-else-if="localizations.length > 0 && !isLocalizationLoading" class="content-indicator">✓</span>
             <span class="accordion-icon">
               {{ expandedSections.localization ? '▲' : '▼' }}
             </span>
@@ -188,8 +188,8 @@
         <div class="accordion-header" @click="toggleSection('schedule')">
           <h3>Publish Schedule</h3>
           <div class="accordion-controls">
-            <span v-if="needsScheduleApproval" class="approval-indicator">⚠</span>
-            <span v-else-if="hasScheduleContent" class="content-indicator">✓</span>
+            <span v-if="needsScheduleApproval && !isPublishingLoading" class="approval-indicator">⚠</span>
+            <span v-else-if="hasScheduleContent && !isPublishingLoading" class="content-indicator">✓</span>
             <span class="accordion-icon">
               {{ expandedSections.schedule ? '▲' : '▼' }}
             </span>
@@ -265,7 +265,7 @@
               </table>
             </div>
             
-            <div v-if="needsScheduleApproval" class="approval-actions">
+            <div v-if="needsScheduleApproval && activeAgent !== 'instagram' && !campaignData?.published" class="approval-actions">
               <button class="approve-btn" @click="handleScheduleApproval(true)">
                 ✓ Approve & Publish to Instagram
               </button>
@@ -285,7 +285,7 @@
         <div class="accordion-header" @click="toggleSection('instagram')">
           <h3>Instagram Publish</h3>
           <div class="accordion-controls">
-            <span v-if="hasInstagramContent" class="content-indicator">✓</span>
+            <span v-if="hasInstagramContent && !isInstagramLoading" class="content-indicator">✓</span>
             <span class="accordion-icon">
               {{ expandedSections.instagram ? '▲' : '▼' }}
             </span>
@@ -363,6 +363,11 @@
                   <div v-if="campaignData?.published === true" class="success-message">
                     <div class="detail-label">✅ Publishing Status:</div>
                     <div class="success-text">Successfully posted to Instagram!</div>
+                    <div class="instagram-link">
+                      <a href="https://www.instagram.com/zavapopupshop/" target="_blank" rel="noopener noreferrer" class="instagram-url">
+                        📸 View on Instagram
+                      </a>
+                    </div>
                     <div v-if="instagramPost.ayrshare_response?.id" class="post-link">
                       Post ID: {{ instagramPost.ayrshare_response.id }}
                     </div>
@@ -610,9 +615,6 @@ export default {
     // NEW: Separate approval handler for publishing schedule to avoid conflicts
     const handleScheduleApproval = (approved) => {
       if (approved) {
-        // Send confirmation message to chat
-        emit('send-message', 'Campaign approved! Scheduling first Instagram post...');
-        
         // Auto-expand Instagram section
         expandedSections.value.instagram = true;
         
@@ -622,6 +624,17 @@ export default {
         emit('send-message', 'reject_schedule');
       }
     };
+
+    // Watch for successful Instagram posting
+    watch(() => props.campaignData?.published, (published, previousPublished) => {
+      if (published === true && previousPublished !== true) {
+        // Post was successful, send success message and open Instagram
+        emit('send-message', '🎉 Successfully posted to Instagram! Click the "View on Instagram" link in the campaign details to see your post.');
+        
+        // Open Instagram in new window
+        window.open('https://www.instagram.com/zavapopupshop/', '_blank');
+      }
+    });
 
     // Helper methods for schedule table
     const getLanguageFlag = (language) => {
@@ -1483,6 +1496,30 @@ export default {
   color: #166534;
   font-weight: 600;
   margin-top: 0.25rem;
+}
+
+.instagram-link {
+  margin-top: 0.75rem;
+}
+
+.instagram-url {
+  display: inline-block;
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  color: white;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.instagram-url:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  text-decoration: none;
+  color: white;
 }
 
 .post-link {
