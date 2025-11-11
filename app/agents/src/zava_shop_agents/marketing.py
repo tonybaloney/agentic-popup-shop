@@ -1,5 +1,7 @@
 # Copyright (c) Microsoft. All rights reserved.
 
+from azure.identity import DefaultAzureCredential as SyncDefaultAzureCredential
+from azure.identity import DefaultAzureCredential
 from typing import Annotated
 from pathlib import Path
 from io import BytesIO
@@ -9,7 +11,7 @@ import logging
 import json
 import base64
 import asyncio
-from azure.identity.aio import DefaultAzureCredential
+from azure.identity.aio import DefaultAzureCredential  # For async agents
 from agent_framework_azure_ai import AzureAIAgentClient
 from agent_framework import (
     AgentExecutor,
@@ -33,17 +35,13 @@ from agent_framework import (
 )
 import requests
 from dotenv import load_dotenv
-from openai import AzureOpenAI
+from openai import AzureOpenAI, OpenAI
 from PIL import Image
 from pydantic import Field
 print("🔥 MARKETING.PY MODULE LOADING...")
 
-# from azure.identity import AzureCliCredential
-# from agent_framework.azure import AzureOpenAIChatClient
-
 # Configure logger
 logger = logging.getLogger(__name__)
-
 
 # Load environment variables
 # Load from parent directory first (root .env), then local
@@ -53,50 +51,52 @@ if root_env.exists():
 else:
     load_dotenv()
 
-# Configuration for image generation
-# Try new env var names first, fall back to old ones
-IMAGE_ENDPOINT = os.getenv("IMAGE_ENDPOINT") or os.getenv(
-    "AZURE_OPENAI_ENDPOINT", "")
-IMAGE_API_KEY = os.getenv("IMAGE_API_KEY") or os.getenv(
-    "AZURE_OPENAI_API_KEY", "")
+# Configuration for image generation - use same endpoint as other agents
+IMAGE_ENDPOINT = os.environ.get("AZURE_AI_PROJECT_ENDPOINT", "")
 IMAGE_MODEL_DEPLOYMENT = os.getenv("IMAGE_MODEL") or os.getenv(
-    "AZURE_OPENAI_IMAGE_DEPLOYMENT_NAME", "dall-e-3")
+    "AZURE_OPENAI_IMAGE_DEPLOYMENT_NAME", "gpt-image-1-mini")
 DEBUG_SKIP_IMAGES = os.getenv("DEBUG_SKIP_IMAGES", "false").lower() == "true"
 
-
+# Model deployment for agents - same as other agents use
 model_deployment_name = os.environ.get(
     "AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5", "gpt-4.1")
 
-# Agent version handling - same pattern as chatkit_router.py
+# Agent version handling - same pattern as other agents
 agent_version = os.environ.get("AZURE_AI_PROJECT_AGENT_VERSION", None)
 if agent_version is not None and not agent_version.strip():
     agent_version = None
-
-# # Helper function to get agent name with proper fallback
-# def get_agent_name(fallback_name: str) -> str:
-#     agent_id = os.environ.get("AZURE_AI_PROJECT_AGENT_ID", "")
-#     return agent_id if agent_id.strip() else fallback_name
-
-
-# chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
-#                                     endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
-#                                     deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
-#                                     api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
 
 print("🔧 Image Generation Config:")
 print(
     f"   Endpoint: {IMAGE_ENDPOINT[:50]}..." if IMAGE_ENDPOINT else "   Endpoint: NOT SET")
 print(f"   Model: {IMAGE_MODEL_DEPLOYMENT}")
-print(
-    f"   API Key: {'***' + IMAGE_API_KEY[-4:] if IMAGE_API_KEY else 'NOT SET'}")
+print("   Auth: DefaultAzureCredential (same as other agents)")
 print(f"   Debug Mode: {DEBUG_SKIP_IMAGES}")
 
-# Setup image client and directory
-image_client = AzureOpenAI(
-    api_version="2024-02-01",
-    api_key=IMAGE_API_KEY,
-    azure_endpoint=IMAGE_ENDPOINT,
-)
+# Create credential - use synchronous version for image generation
+sync_credential = SyncDefaultAzureCredential()
+
+# Setup image client using the OpenAI client pattern (like your example)
+
+
+def create_image_client():
+    token = sync_credential.get_token("https://ai.azure.com/.default")
+    # Extract the base hostname from the AI Studio endpoint
+    if IMAGE_ENDPOINT.endswith('/api/projects/zava-ignite'):
+        # Convert Azure AI Studio endpoint to OpenAI format
+        base_host = IMAGE_ENDPOINT.replace('/api/projects/zava-ignite', '')
+        azure_endpoint_base = base_host + "/openai/v1/"
+    else:
+        azure_endpoint_base = IMAGE_ENDPOINT.rstrip('/') + "/openai/v1/"
+
+    return OpenAI(
+        base_url=azure_endpoint_base,
+        api_key=token.token  # Use the token as API key
+    )
+
+
+# For now, create a client (but we'll refresh it in the function)
+image_client = create_image_client()
 
 images_directory = Path(__file__).parent / "generated_images"
 images_directory.mkdir(exist_ok=True)
@@ -190,7 +190,7 @@ def create_social_media_image(
     caption: Annotated[str, Field(description="Compelling caption for this image (50-100 words).")],
     hashtags: Annotated[str, Field(description="3-5 relevant hashtags, e.g. '#innovation #tech #future'")],
 ) -> str:
-    """Generate a social media image for the campaign using DALL-E."""
+    """Generate a social media image for the campaign using GPT-Image-1-Mini."""
     import time
 
     timestamp = int(time.time())
@@ -222,60 +222,48 @@ def create_social_media_image(
         }
         return json.dumps(result_data)
 
-    # Create detailed DALL-E prompt
+    # Create detailed GPT-Image-1-Mini prompt
     image_prompt = f"Professional social media marketing image for {campaign_theme}. Style: {style}. High quality, engaging, suitable for Instagram/TikTok. No text overlay."
 
     print(f"🎨 Generating image with gpt-image-1-mini: {image_prompt[:100]}...")
     print(f"🎨 Using model: {IMAGE_MODEL_DEPLOYMENT}")
     print(f"🎨 Using endpoint: {IMAGE_ENDPOINT[:50]}...")
+    print("🎨 Auth: DefaultAzureCredential")
 
     try:
-        # Generate image using DALL-E
-        # Note: gpt-image-1-mini uses 'high'/'medium'/'low'/'auto' for quality, not 'standard'
-        result = image_client.images.generate(
-            model=IMAGE_MODEL_DEPLOYMENT,
+        # Generate image using GPT-Image-1-Mini - refresh client for new token
+        print("🎨 Making API call to Azure OpenAI...")
+        fresh_client = create_image_client()  # Get fresh token
+        print(f"🎨 Client endpoint: {fresh_client.base_url}")
+        print(f"🎨 Model deployment: gpt-image-1-mini")
+
+        result = fresh_client.images.generate(
+            model="gpt-image-1-mini",  # Use deployment name directly
             prompt=image_prompt,
-            size="1024x1024",
-            quality="high",
             n=1,
+            size="1024x1024",
         )
 
         print("🎨 Image generation API call successful")
 
-        # Extract and save the image
-        json_response = json.loads(result.model_dump_json())
+        # Extract and save the image (following your example pattern)
         image_path = images_directory / filename
 
-        print(
-            f"🎨 Response keys: {json_response.get('data', [{}])[0].keys() if json_response.get('data') else 'No data'}")
-
-        # Handle b64_json response format (preferred)
-        if "b64_json" in json_response["data"][0]:
-            b64_data = json_response["data"][0]["b64_json"]
-            image_data = base64.b64decode(b64_data)
-            image = Image.open(BytesIO(image_data))
-            image.save(image_path)
+        # Check if we have the b64_json in the response
+        if result.data and len(result.data) > 0 and hasattr(result.data[0], 'b64_json') and result.data[0].b64_json:
+            # Use the b64_json from the response directly (like your example)
+            image_bytes = base64.b64decode(result.data[0].b64_json)
+            with open(image_path, "wb") as f:
+                f.write(image_bytes)
             print(f"✅ Image saved to {image_path}")
-        elif "url" in json_response["data"][0]:
-            # Fallback to URL format (requires requests library)
-            try:
-                image_url = json_response["data"][0]["url"]
-                print(f"🎨 Downloading image from URL: {image_url[:50]}...")
-                response = requests.get(image_url)
-                if response.status_code == 200:
-                    with open(image_path, "wb") as f:
-                        f.write(response.content)
-                    print(f"✅ Image downloaded and saved to {image_path}")
-                else:
-                    raise Exception(
-                        f"Failed to download image from URL: {response.status_code}")
-            except ImportError:
-                raise Exception(
-                    "requests library not installed - cannot download image from URL")
         else:
-            raise Exception("No b64_json or url in API response")
-
-        # Return structured JSON with real image path
+            print(
+                f"Response data: {result.data if result.data else 'No data'}")
+            if result.data and len(result.data) > 0:
+                print(f"First item attributes: {dir(result.data[0])}")
+            # Return structured JSON with real image path
+            raise Exception(
+                "No b64_json in API response - check response format")
         result_data = {
             "type": "image",
             "filename": str(image_path.name),
