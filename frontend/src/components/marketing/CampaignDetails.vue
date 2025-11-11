@@ -53,6 +53,7 @@
           <h3>Social Media Assets</h3>
           <div class="accordion-controls">
             <span v-if="needsCreativeApproval" class="approval-indicator">⚠</span>
+            <span v-else-if="media.length > 0" class="content-indicator">✓</span>
             <span class="accordion-icon">
               {{ expandedSections.media ? '▲' : '▼' }}
             </span>
@@ -86,16 +87,15 @@
                   class="media-video"
                 />
                 <div
-                  v-if="item.caption"
+                  v-if="item.caption || item.hashtags"
                   :contenteditable="needsCreativeApproval"
                   :class="needsCreativeApproval ? 'editable-caption' : 'media-caption'"
                   @input="(e) => handleCaptionEdit(index, e)"
                   @blur="(e) => handleCaptionEdit(index, e)"
                 >
-                  {{ editedCaptions[index] || item.caption }}
-                </div>
-                <div v-if="item.hashtags" class="media-hashtags">
-                  {{ item.hashtags }}
+                  <span v-if="item.caption">{{ editedCaptions[index] || item.caption }}</span>
+                  <span v-if="item.caption && item.hashtags"> </span>
+                  <span v-if="item.hashtags">{{ Array.isArray(item.hashtags) ? item.hashtags.join(' ') : item.hashtags }}</span>
                 </div>
               </div>
             </div>
@@ -118,11 +118,14 @@
       </div>
 
       <!-- Localization Accordion -->
-      <div class="accordion-section">
+      <div
+        :class="['accordion-section', { 'needs-approval': needsMarketSelection }]"
+      >
         <div class="accordion-header" @click="toggleSection('localization')">
           <h3>Localized Content</h3>
           <div class="accordion-controls">
-            <span v-if="localizations.length > 0" class="content-indicator">✓</span>
+            <span v-if="needsMarketSelection" class="approval-indicator">⚠</span>
+            <span v-else-if="localizations.length > 0" class="content-indicator">✓</span>
             <span class="accordion-icon">
               {{ expandedSections.localization ? '▲' : '▼' }}
             </span>
@@ -172,19 +175,20 @@
             </div>
           </template>
           <div v-else class="media-placeholder">
-            <span>Localized content will appear here...</span>
+            <span v-if="needsMarketSelection">Waiting for response...</span>
+            <span v-else>Localized content will appear here...</span>
           </div>
         </div>
       </div>
 
       <!-- Schedule Accordion -->
       <div
-        :class="['accordion-section', { 'needs-approval': needsPublishingApproval }]"
+        :class="['accordion-section', { 'needs-approval': needsScheduleApproval }]"
       >
         <div class="accordion-header" @click="toggleSection('schedule')">
           <h3>Publish Schedule</h3>
           <div class="accordion-controls">
-            <span v-if="needsPublishingApproval" class="approval-indicator">⚠</span>
+            <span v-if="needsScheduleApproval" class="approval-indicator">⚠</span>
             <span v-else-if="hasScheduleContent" class="content-indicator">✓</span>
             <span class="accordion-icon">
               {{ expandedSections.schedule ? '▲' : '▼' }}
@@ -372,19 +376,13 @@
                     </div>
                   </div>
                   
-                  <!-- Caption -->
+                  <!-- Caption and Hashtags -->
                   <div class="caption-section">
                     <div class="detail-label">Caption:</div>
                     <div class="instagram-caption">
-                      {{ instagramPost.caption || 'No caption' }}
-                    </div>
-                  </div>
-
-                  <!-- Hashtags -->
-                  <div v-if="instagramPost.hashtags" class="hashtags-section">
-                    <div class="detail-label">Hashtags:</div>
-                    <div class="instagram-hashtags">
-                      {{ instagramPost.hashtags }}
+                      <span v-if="instagramPost.caption">{{ instagramPost.caption || 'No caption' }}</span>
+                      <span v-if="instagramPost.caption && instagramPost.hashtags"> </span>
+                      <span v-if="instagramPost.hashtags">{{ Array.isArray(instagramPost.hashtags) ? instagramPost.hashtags.join(' ') : instagramPost.hashtags }}</span>
                     </div>
                   </div>
 
@@ -418,9 +416,9 @@ export default {
       type: Object,
       default: () => ({})
     },
-    loadingStates: {
-      type: Object,
-      default: () => ({})
+    activeAgent: {
+      type: String,
+      default: ''
     }
   },
   emits: ['send-message'],
@@ -443,6 +441,7 @@ export default {
     const needsCreativeApproval = computed(() => props.campaignData?.needsCreativeApproval || false);
     const needsPublishingApproval = computed(() => props.campaignData?.needsPublishingApproval || false);
     const needsLocalizationApproval = computed(() => props.campaignData?.needsLocalizationApproval || false);
+    const needsMarketSelection = computed(() => props.campaignData?.needsMarketSelection || false);
     // NEW: Separate variable for publishing schedule approval to avoid conflicts
     const needsScheduleApproval = computed(() => props.campaignData?.needsScheduleApproval || false);
     const media = computed(() => props.campaignData?.media || []);
@@ -450,12 +449,35 @@ export default {
     const localizations = computed(() => props.campaignData?.localizations || []);
     const instagramPost = computed(() => props.campaignData?.instagram_post || null);
 
-    // Loading states
-    const isBriefLoading = computed(() => props.loadingStates.campaignBrief || false);
-    const isMediaLoading = computed(() => props.loadingStates.socialMedia || false);
-    const isLocalizationLoading = computed(() => props.loadingStates.localization || false);
-    const isPublishingLoading = computed(() => props.loadingStates.publishing || false);
-    const isInstagramLoading = computed(() => props.loadingStates.instagram || false);
+    // Smart loading states - show loading only when agent is active AND we don't have content yet
+    const isBriefLoading = computed(() => {
+      return props.activeAgent === 'campaign_planner' && !brief.value;
+    });
+    const isMediaLoading = computed(() => {
+      return props.activeAgent === 'creative' && media.value.length === 0;
+    });
+    const isLocalizationLoading = computed(() => {
+      return props.activeAgent === 'localization' && localizations.value.length === 0;
+    });
+    const isPublishingLoading = computed(() => {
+      return props.activeAgent === 'publishing' && schedule.value.length === 0;
+    });
+    const isInstagramLoading = computed(() => {
+      return props.activeAgent === 'instagram' && !instagramPost.value;
+    });
+
+    // Debug: Watch activeAgent changes
+    watch(() => props.activeAgent, (newActiveAgent, oldActiveAgent) => {
+      console.log('🎯 ActiveAgent changed:', { 
+        old: oldActiveAgent, 
+        new: newActiveAgent,
+        isBriefLoading: isBriefLoading.value,
+        isMediaLoading: isMediaLoading.value,
+        isLocalizationLoading: isLocalizationLoading.value,
+        isPublishingLoading: isPublishingLoading.value,
+        isInstagramLoading: isInstagramLoading.value
+      });
+    }, { immediate: true });
 
     // Content flags
     const hasBriefContent = computed(() => brief.value && isFormattedBrief.value && !isBriefLoading.value);
@@ -484,35 +506,31 @@ export default {
       }
     }, { deep: true });
 
-    // Auto-expand sections when their workflow stage starts (only opening, no closing)
+    // Auto-expand sections when their workflow stage starts or needs approval
     watch(
       () => [
+        props.activeAgent,
         needsApproval.value,
         needsCreativeApproval.value,
         needsPublishingApproval.value,
         needsLocalizationApproval.value,
-        isBriefLoading.value,
-        isMediaLoading.value,
-        isLocalizationLoading.value,
-        isPublishingLoading.value,
-        isInstagramLoading.value,
         hasInstagramContent.value
       ],
       () => {
-        // Open sections when their step starts (approvals or loading states)
-        if (needsApproval.value || isBriefLoading.value) {
+        // Open sections based on active agent or approval needs
+        if (needsApproval.value || props.activeAgent === 'campaign_planner') {
           expandedSections.value.brief = true;
         }
-        if (needsCreativeApproval.value || isMediaLoading.value) {
+        if (needsCreativeApproval.value || props.activeAgent === 'creative') {
           expandedSections.value.media = true;
         }
-        if (needsLocalizationApproval.value || isLocalizationLoading.value) {
+        if (needsLocalizationApproval.value || props.activeAgent === 'localization') {
           expandedSections.value.localization = true;
         }
-        if (needsPublishingApproval.value || isPublishingLoading.value) {
+        if (needsPublishingApproval.value || props.activeAgent === 'publishing') {
           expandedSections.value.schedule = true;
         }
-        if (isInstagramLoading.value || hasInstagramContent.value) {
+        if (props.activeAgent === 'instagram' || hasInstagramContent.value) {
           expandedSections.value.instagram = true;
         }
       },
@@ -592,6 +610,13 @@ export default {
     // NEW: Separate approval handler for publishing schedule to avoid conflicts
     const handleScheduleApproval = (approved) => {
       if (approved) {
+        // Send confirmation message to chat
+        emit('send-message', 'Campaign approved! Scheduling first Instagram post...');
+        
+        // Auto-expand Instagram section
+        expandedSections.value.instagram = true;
+        
+        // Send the actual approval command
         emit('send-message', 'approve_schedule');
       } else {
         emit('send-message', 'reject_schedule');
@@ -711,6 +736,7 @@ export default {
       needsCreativeApproval,
       needsPublishingApproval,
       needsLocalizationApproval,
+      needsMarketSelection,
       needsScheduleApproval,
       media,
       schedule,
@@ -765,10 +791,10 @@ export default {
   transition: all 0.2s;
 }
 
-.accordion-section.needs-approval {
+/* .accordion-section.needs-approval {
   border-color: #fb8500;
   box-shadow: 0 0 0 3px rgba(251, 133, 0, 0.1);
-}
+} */
 
 .accordion-header {
   padding: 1rem 1.25rem;
@@ -918,8 +944,8 @@ export default {
 }
 
 .editable-caption {
-  background: #fff8dc;
-  border-top: 2px solid #fb8500;
+  /* background: #fff8dc;
+  border-top: 2px solid #fb8500; */
   cursor: text;
   min-height: 50px;
 }
@@ -1090,12 +1116,12 @@ export default {
   border: none;
 }
 
-.media-hashtags {
+/* .media-hashtags {
   margin-top: 0.5rem;
   color: #0969da;
   font-weight: 500;
   font-size: 0.9rem;
-}
+} */
 
 /* Publishing Schedule Table */
 .schedule-table-container {
@@ -1413,7 +1439,7 @@ export default {
   line-height: 1.5;
 }
 
-.instagram-hashtags {
+/* .instagram-hashtags {
   background: #ddf4ff;
   padding: 0.5rem;
   border-radius: 6px;
@@ -1421,7 +1447,7 @@ export default {
   color: #0969da;
   font-family: monospace;
   font-size: 0.9rem;
-}
+} */
 
 .raw-data-section {
   margin-top: 1.5rem;

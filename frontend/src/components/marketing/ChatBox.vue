@@ -6,7 +6,7 @@
     </div>
     <div class="chat-messages" ref="messagesContainer">
       <CampaignMessage
-        v-for="(message, index) in filteredMessages"
+        v-for="(message, index) in allMessages"
         :key="index"
         :message="message"
         @approval-response="handleApprovalResponse"
@@ -75,6 +75,31 @@ export default {
       });
     });
 
+    // Create a permanent welcome message that acts like it came from the agent
+    const welcomeMessage = {
+      type: 'system',
+      content: `Please enter campaign details to get started! 
+
+**Example:** "Holiday sock promotion. The campaign leverages bold, festive visuals and engaging video formats to target the 25-34 age range, driving brand awareness on Instagram and TikTok over a 4-week period with a $10k budget."
+
+I'll help you create a complete marketing campaign with visuals, content, and scheduling!`,
+      timestamp: new Date().toISOString(),
+      sender: 'Marketing Agent'
+    };
+
+    // Combine welcome message with filtered messages
+    const allMessages = computed(() => {
+      return [welcomeMessage, ...filteredMessages.value];
+    });
+
+    const currentTime = computed(() => {
+      return new Date().toLocaleTimeString('en-US', { 
+        hour12: true, 
+        hour: 'numeric', 
+        minute: '2-digit' 
+      });
+    });
+
     const scrollToBottom = () => {
       nextTick(() => {
         messagesEndRef.value?.scrollIntoView({ behavior: 'smooth' });
@@ -107,7 +132,8 @@ export default {
       inputValue,
       messagesContainer,
       messagesEndRef,
-      filteredMessages,
+      allMessages,
+      currentTime,
       handleSubmit,
       handleKeyPress,
       handleApprovalResponse

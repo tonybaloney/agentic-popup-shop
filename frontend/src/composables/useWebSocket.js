@@ -104,6 +104,28 @@ export function useWebSocket() {
         const message = JSON.parse(event.data);
         console.log('Received message:', message);
 
+        // Check for agent status BEFORE filtering debug messages
+        if (message.content && typeof window !== 'undefined' && window.setActiveAgent) {
+          const content = message.content.toLowerCase();
+          
+          if (content.includes('coordinator is running')) {
+            console.log('🎯 WebSocket: Found "coordinator is running" - setting activeAgent to campaign_planner');
+            window.setActiveAgent('campaign_planner');
+          } else if (content.includes('creative agent is running')) {
+            console.log('🎯 WebSocket: Found "creative agent is running" - setting activeAgent to creative');
+            window.setActiveAgent('creative');
+          } else if (content.includes('localization agent is running')) {
+            console.log('🎯 WebSocket: Found "localization agent is running" - setting activeAgent to localization');
+            window.setActiveAgent('localization');
+          } else if (content.includes('publishing agent is running')) {
+            console.log('🎯 WebSocket: Found "publishing agent is running" - setting activeAgent to publishing');
+            window.setActiveAgent('publishing');
+          } else if (content.includes('instagram agent is running')) {
+            console.log('🎯 WebSocket: Found "instagram agent is running" - setting activeAgent to instagram');
+            window.setActiveAgent('instagram');
+          }
+        }
+
         if (message.debug) return;
         // If this is campaign_data type, don't add to chat messages - just update state
         if (message.type === 'campaign_data') {
