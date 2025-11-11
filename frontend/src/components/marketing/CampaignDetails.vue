@@ -218,7 +218,7 @@
                   >
                     <td class="platform-cell">
                       <div class="platform-info">
-                        <span class="platform-icon">{{ item.icon || item.platform_icon || '📱' }}</span>
+                        <span class="platform-icon">{{ item.icon || item.platform_icon || "" }}</span>
                         <span class="platform-name">{{ item.platform || item.channel || 'Social Media' }}</span>
                       </div>
                     </td>
@@ -263,7 +263,7 @@
             
             <div v-if="needsScheduleApproval" class="approval-actions">
               <button class="approve-btn" @click="handleScheduleApproval(true)">
-                ✓ Approve Schedule
+                ✓ Approve & Publish to Instagram
               </button>
               <button class="reject-btn" @click="handleScheduleApproval(false)">
                 ✗ Reject Schedule
@@ -272,6 +272,133 @@
           </template>
           <div v-else class="schedule-placeholder">
             <span>Publish schedule will appear here...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Instagram Publish Accordion -->
+      <div class="accordion-section">
+        <div class="accordion-header" @click="toggleSection('instagram')">
+          <h3>Instagram Publish</h3>
+          <div class="accordion-controls">
+            <span v-if="hasInstagramContent" class="content-indicator">✓</span>
+            <span class="accordion-icon">
+              {{ expandedSections.instagram ? '▲' : '▼' }}
+            </span>
+          </div>
+        </div>
+        <div v-if="expandedSections.instagram" class="accordion-content">
+          <div v-if="isInstagramLoading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">🚀 Publishing to Instagram via Ayrshare...</p>
+          </div>
+          <template v-else-if="instagramPost">
+            <!-- Instagram Post Preview -->
+            <div class="instagram-post-container">
+              <div class="instagram-post-header">
+                <div class="platform-badge">
+                  <span class="platform-name">{{ instagramPost.platform || 'Instagram' }}</span>
+                  <span class="content-type">{{ instagramPost.content_type || 'Post' }}</span>
+                </div>
+                <div class="post-status">
+                  <span v-if="campaignData?.published === true" class="status-badge status-published">
+                    ✅ Published
+                  </span>
+                  <span v-else-if="campaignData?.published === false" class="status-badge status-failed">
+                    ❌ Failed
+                  </span>
+                  <span v-else :class="['status-badge', getStatusClass(instagramPost.status)]">
+                    {{ formatStatus(instagramPost.status) }}
+                  </span>
+                </div>
+              </div>
+              
+              <div class="instagram-post-content">
+                <!-- Media Preview -->
+                <div v-if="instagramPost.media_url" class="media-preview-large">
+                  <img 
+                    v-if="instagramPost.media_type === 'image'"
+                    :src="instagramPost.media_url"
+                    :alt="instagramPost.caption"
+                    class="instagram-media"
+                  />
+                  <video 
+                    v-else-if="instagramPost.media_type === 'video'"
+                    :src="instagramPost.media_url"
+                    controls
+                    class="instagram-media"
+                  >
+                  </video>
+                </div>
+
+                <!-- Post Details -->
+                <div class="post-details">
+                  <div class="detail-row">
+                    <span class="detail-label">Post ID:</span>
+                    <span class="detail-value">{{ instagramPost.post_id || 'N/A' }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Language:</span>
+                    <span 
+                      :class="['language-badge', getLanguageClass(instagramPost.language)]"
+                    >
+                      {{ getLanguageFlag(instagramPost.language) }} 
+                      {{ instagramPost.language || 'N/A' }}
+                    </span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Scheduled:</span>
+                    <span class="detail-value">{{ formatDateTime(instagramPost.scheduled_time) }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Target Audience:</span>
+                    <span class="detail-value">{{ instagramPost.target_audience || 'N/A' }}</span>
+                  </div>
+                  
+                  <!-- Publishing Status Messages -->
+                  <div v-if="campaignData?.published === true" class="success-message">
+                    <div class="detail-label">✅ Publishing Status:</div>
+                    <div class="success-text">Successfully posted to Instagram!</div>
+                    <div v-if="instagramPost.ayrshare_response?.id" class="post-link">
+                      Post ID: {{ instagramPost.ayrshare_response.id }}
+                    </div>
+                  </div>
+                  
+                  <div v-else-if="campaignData?.published === false && campaignData?.error" class="error-message">
+                    <div class="detail-label">❌ Publishing Error:</div>
+                    <div class="error-text">{{ campaignData.error }}</div>
+                    <div v-if="instagramPost.message" class="error-details">
+                      Details: {{ instagramPost.message }}
+                    </div>
+                  </div>
+                  
+                  <!-- Caption -->
+                  <div class="caption-section">
+                    <div class="detail-label">Caption:</div>
+                    <div class="instagram-caption">
+                      {{ instagramPost.caption || 'No caption' }}
+                    </div>
+                  </div>
+
+                  <!-- Hashtags -->
+                  <div v-if="instagramPost.hashtags" class="hashtags-section">
+                    <div class="detail-label">Hashtags:</div>
+                    <div class="instagram-hashtags">
+                      {{ instagramPost.hashtags }}
+                    </div>
+                  </div>
+
+                  <!-- Raw Data (for debugging) -->
+                  <details class="raw-data-section">
+                    <summary>View Raw Data</summary>
+                    <pre class="raw-data">{{ JSON.stringify(instagramPost, null, 2) }}</pre>
+                  </details>
+                </div>
+              </div>
+            </div>
+          </template>
+          <div v-else class="instagram-placeholder">
+            <span>Instagram post preparation will appear here...</span>
           </div>
         </div>
       </div>
@@ -303,7 +430,8 @@ export default {
       brief: true,
       media: false,
       localization: false,
-      schedule: false
+      schedule: false,
+      instagram: false
     });
     const editedCaptions = ref({});
     const editedLocalizations = ref({});
@@ -320,16 +448,19 @@ export default {
     const media = computed(() => props.campaignData?.media || []);
     const schedule = computed(() => props.campaignData?.schedule || []);
     const localizations = computed(() => props.campaignData?.localizations || []);
+    const instagramPost = computed(() => props.campaignData?.instagram_post || null);
 
     // Loading states
     const isBriefLoading = computed(() => props.loadingStates.campaignBrief || false);
     const isMediaLoading = computed(() => props.loadingStates.socialMedia || false);
     const isLocalizationLoading = computed(() => props.loadingStates.localization || false);
     const isPublishingLoading = computed(() => props.loadingStates.publishing || false);
+    const isInstagramLoading = computed(() => props.loadingStates.instagram || false);
 
     // Content flags
     const hasBriefContent = computed(() => brief.value && isFormattedBrief.value && !isBriefLoading.value);
     const hasScheduleContent = computed(() => schedule.value.length > 0);
+    const hasInstagramContent = computed(() => instagramPost.value && !isInstagramLoading.value);
 
     // Watch for media changes
     watch(media, (newMedia) => {
@@ -363,7 +494,9 @@ export default {
         isBriefLoading.value,
         isMediaLoading.value,
         isLocalizationLoading.value,
-        isPublishingLoading.value
+        isPublishingLoading.value,
+        isInstagramLoading.value,
+        hasInstagramContent.value
       ],
       () => {
         // Open sections when their step starts (approvals or loading states)
@@ -378,6 +511,9 @@ export default {
         }
         if (needsPublishingApproval.value || isPublishingLoading.value) {
           expandedSections.value.schedule = true;
+        }
+        if (isInstagramLoading.value || hasInstagramContent.value) {
+          expandedSections.value.instagram = true;
         }
       },
       { immediate: true }
@@ -527,6 +663,44 @@ export default {
       }
     };
 
+    // Instagram helper methods
+    const getStatusClass = (status) => {
+      switch (status) {
+        case 'ready_to_publish': return 'status-ready';
+        case 'scheduled': return 'status-scheduled';
+        case 'draft': return 'status-draft';
+        case 'published': return 'status-published';
+        default: return 'status-unknown';
+      }
+    };
+
+    const formatStatus = (status) => {
+      switch (status) {
+        case 'ready_to_publish': return 'Ready to Publish';
+        case 'scheduled': return 'Scheduled';
+        case 'draft': return 'Draft';
+        case 'published': return 'Published';
+        default: return status || 'Unknown';
+      }
+    };
+
+    const formatDateTime = (dateString) => {
+      if (!dateString) return 'Not scheduled';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      } catch {
+        return dateString;
+      }
+    };
+
     return {
       expandedSections,
       editedCaptions,
@@ -541,12 +715,15 @@ export default {
       media,
       schedule,
       localizations,
+      instagramPost,
       isBriefLoading,
       isMediaLoading,
       isLocalizationLoading,
       isPublishingLoading,
+      isInstagramLoading,
       hasBriefContent,
       hasScheduleContent,
+      hasInstagramContent,
       renderMarkdown,
       toggleSection,
       handleCaptionEdit,
@@ -556,7 +733,10 @@ export default {
       getLanguageFlag,
       getLanguageClass,
       formatDate,
-      formatTime
+      formatTime,
+      getStatusClass,
+      formatStatus,
+      formatDateTime
     };
   }
 };
@@ -1100,5 +1280,216 @@ export default {
 .status-badge.failed {
   background: #ffe4e6;
   color: #dc2626;
+}
+
+/* Instagram Post Styles */
+.instagram-post-container {
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #ffffff;
+}
+
+.instagram-post-header {
+  display: flex;
+  justify-content: between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #eaeef2;
+}
+
+.platform-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.platform-icon {
+  font-size: 1.2rem;
+}
+
+.platform-name {
+  font-weight: 600;
+  color: #1f2328;
+}
+
+.content-type {
+  background: #f6f8fa;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  color: #656d76;
+}
+
+.post-status {
+  margin-left: auto;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-ready {
+  background: #ddf4ff;
+  color: #0969da;
+}
+
+.status-scheduled {
+  background: #fff8c5;
+  color: #b58900;
+}
+
+.status-draft {
+  background: #f6f8fa;
+  color: #656d76;
+}
+
+.status-published {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-unknown {
+  background: #ffe4e6;
+  color: #dc2626;
+}
+
+.instagram-post-content {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.media-preview-large {
+  flex-shrink: 0;
+  width: 200px;
+}
+
+.instagram-media {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #d0d7de;
+}
+
+.post-details {
+  flex: 1;
+}
+
+.detail-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  align-items: center;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #656d76;
+  min-width: 100px;
+}
+
+.detail-value {
+  color: #1f2328;
+  flex: 1;
+}
+
+.caption-section, .hashtags-section {
+  margin-top: 1rem;
+}
+
+.instagram-caption {
+  background: #f6f8fa;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+  color: #1f2328;
+  line-height: 1.5;
+}
+
+.instagram-hashtags {
+  background: #ddf4ff;
+  padding: 0.5rem;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+  color: #0969da;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.raw-data-section {
+  margin-top: 1.5rem;
+  border-top: 1px solid #eaeef2;
+  padding-top: 1rem;
+}
+
+.raw-data-section summary {
+  cursor: pointer;
+  color: #656d76;
+  font-size: 0.9rem;
+}
+
+.raw-data {
+  background: #f6f8fa;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #1f2328;
+  overflow-x: auto;
+}
+
+.success-message {
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-top: 1rem;
+}
+
+.success-text {
+  color: #166534;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.post-link {
+  color: #059669;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+  font-family: monospace;
+}
+
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-top: 1rem;
+}
+
+.error-text {
+  color: #dc2626;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.error-details {
+  color: #991b1b;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+.instagram-placeholder {
+  text-align: center;
+  padding: 2rem;
+  color: #656d76;
+  font-style: italic;
 }
 </style>

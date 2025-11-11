@@ -165,6 +165,16 @@ class PublishingScheduleResponseEvent(WorkflowEvent):
         self.response_text = response_text
 
 
+# Custom event to expose Instagram post preparation
+class InstagramPostEvent(WorkflowEvent):
+    """Event emitted when Instagram agent prepares a post for publishing."""
+
+    def __init__(self, response_text: str):
+        super().__init__(
+            f"Instagram post prepared: {response_text[:100]}...")
+        self.response_text = response_text
+
+
 # Custom event to expose generated creative assets
 class CreativeAssetsGeneratedEvent(WorkflowEvent):
     """Event emitted when creative assets (images/videos) are generated."""
@@ -328,6 +338,161 @@ def create_promotional_video(
     return json.dumps(result_data)
 
 
+def post_to_ayrshare(
+    post_content: Annotated[str, Field(description="The complete post text including caption and hashtags.")],
+    media_urls: Annotated[list[str], Field(description="List of media URLs to include in the post. Can be local file paths (file://) or URLs.")],
+    platforms: Annotated[list[str], Field(description="Target platforms (e.g., ['instagram', 'facebook', 'tiktok']).")],
+    schedule_time: Annotated[str, Field(
+        description="Optional: ISO format time to schedule the post. Leave empty for immediate posting.")] = "",
+) -> str:
+    """Post content to social media platforms using Ayrshare API.
+
+    Automatically handles media upload for local files using Ayrshare's upload API.
+    """
+
+    # Get Ayrshare API key from environment
+    ayrshare_api_key = os.environ.get("AYRSHARE_API_KEY")
+    if not ayrshare_api_key:
+        return json.dumps({
+            "success": False,
+            "error": "AYRSHARE_API_KEY environment variable not found",
+            "message": "Please set your Ayrshare API key in the environment variables"
+        })
+
+    # Process media URLs - upload local files to Ayrshare
+    uploaded_media_urls = []
+
+    if media_urls:
+        print(f"📁 Processing {len(media_urls)} media items...")
+
+        for media_url in media_urls:
+            if media_url.startswith("file://"):
+                # Local file - needs to be uploaded
+                file_path = media_url.replace("file://", "")
+
+                try:
+                    print(f"📤 Uploading local file: {file_path}")
+
+                    # Check if file exists
+                    from pathlib import Path
+                    path = Path(file_path)
+                    if not path.exists():
+                        print(f"❌ File not found: {file_path}")
+                        continue
+
+                    # Prepare file for upload
+                    with open(file_path, 'rb') as file:
+                        files = {
+                            'file': (path.name, file, f'image/{path.suffix[1:]}')
+                        }
+
+                        # Upload to Ayrshare media API
+                        upload_response = requests.post(
+                            "https://app.ayrshare.com/api/upload",
+                            headers={
+                                "Authorization": f"Bearer {ayrshare_api_key}"},
+                            files=files,
+                            timeout=60
+                        )
+
+                    if upload_response.status_code == 200:
+                        upload_result = upload_response.json()
+                        uploaded_url = upload_result.get("url")
+                        if uploaded_url:
+                            uploaded_media_urls.append(uploaded_url)
+                            print(
+                                f"✅ File uploaded successfully: {uploaded_url}")
+                        else:
+                            print(
+                                f"❌ Upload succeeded but no URL returned for {file_path}")
+                    else:
+                        print(
+                            f"❌ Failed to upload {file_path}: {upload_response.status_code}")
+                        print(f"Response: {upload_response.text}")
+
+                except Exception as e:
+                    print(f"❌ Error uploading file {file_path}: {e}")
+                    continue
+
+            else:
+                # Already a URL - use as-is
+                uploaded_media_urls.append(media_url)
+                print(f"🔗 Using existing URL: {media_url}")
+
+    # Prepare the post payload
+    payload = {
+        "post": post_content,
+        "platforms": platforms,
+    }
+
+    # Add media URLs if we have any
+    if uploaded_media_urls:
+        payload["mediaUrls"] = uploaded_media_urls
+        print(f"📸 Including {len(uploaded_media_urls)} media items in post")
+
+    # Add scheduling if provided
+    if schedule_time:
+        payload["scheduleDate"] = schedule_time
+
+    try:
+        print(f"🚀 Posting to Ayrshare API: {platforms}")
+        print(f"📝 Post content: {post_content[:100]}...")
+
+        # Make API request to Ayrshare
+        response = requests.post(
+            "https://app.ayrshare.com/api/post",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {ayrshare_api_key}"
+            },
+            json=payload,
+            timeout=30
+        )
+
+        # Parse response
+        result = response.json()
+
+        if response.status_code == 200:
+            print(f"✅ Successfully posted to {platforms}")
+            return json.dumps({
+                "success": True,
+                "platforms": platforms,
+                "post_id": result.get("id"),
+                "status": result.get("status"),
+                "post_content": post_content,
+                "media_urls": uploaded_media_urls,
+                "media_count": len(uploaded_media_urls),
+                "scheduled_time": schedule_time if schedule_time else "immediate",
+                "ayrshare_response": result
+            })
+        else:
+            print(f"❌ Ayrshare API error: {response.status_code}")
+            return json.dumps({
+                "success": False,
+                "error": f"API request failed with status {response.status_code}",
+                "message": result.get("message", "Unknown error"),
+                "platforms": platforms,
+                "ayrshare_response": result
+            })
+
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Network error posting to Ayrshare: {e}")
+        return json.dumps({
+            "success": False,
+            "error": "Network error",
+            "message": f"Failed to connect to Ayrshare API: {str(e)}",
+            "platforms": platforms
+        })
+    except Exception as e:
+        print(f"❌ Unexpected error posting to Ayrshare: {e}")
+        return json.dumps({
+            "success": False,
+            "error": "Unexpected error",
+            "message": str(e),
+            "platforms": platforms
+        })
+
+
 @dataclass
 class CampaignFollowupRequest:
     """Payload sent for campaign planner follow-up questions."""
@@ -379,12 +544,13 @@ class Coordinator(Executor):
 
     Handles human-in-the-loop approvals using ctx.request_info() and @response_handler."""
 
-    def __init__(self, id: str, planner_id: str, creative_id: str, localization_id: str, publishing_id: str) -> None:
+    def __init__(self, id: str, planner_id: str, creative_id: str, localization_id: str, publishing_id: str, instagram_id: str) -> None:
         super().__init__(id)
         self.planner_id = planner_id
         self.creative_id = creative_id
         self.localization_id = localization_id
         self.publishing_id = publishing_id
+        self.instagram_id = instagram_id
         self.generated_assets = []  # Store generated creative assets
         self.target_markets = ""  # Store user-selected target markets
         print(f"🏗️  COORDINATOR CREATED: id='{id}', planner_id='{planner_id}'")
@@ -690,7 +856,7 @@ class Coordinator(Executor):
 
             # Request human approval for the schedule using new request_info API
             prompt = (
-                "Review the publishing schedule. Type 'approve' to accept or provide feedback for adjustments."
+                "Review the publishing schedule. Type 'approve' to accept and trigger Instagram publishing, or provide feedback for adjustments."
             )
 
             await ctx.request_info(
@@ -700,6 +866,18 @@ class Coordinator(Executor):
                 ),
                 response_type=str
             )
+            return
+
+        if draft.executor_id == self.instagram_id:
+            # Instagram agent response; complete workflow
+            instagram_response = draft.agent_run_response.text
+
+            # Emit custom event so UI can capture the Instagram post data
+            await ctx.add_event(InstagramPostEvent(instagram_response))
+
+            # Complete the workflow
+            print("📱 Instagram post prepared - workflow complete!")
+            await ctx.yield_output(f"Campaign completed! Instagram post prepared:\n{instagram_response}")
             return
 
         if draft.executor_id == self.localization_id:
@@ -876,8 +1054,43 @@ class Coordinator(Executor):
         note = (response or "").strip()
 
         if note.lower() == "approve":
-            print("✅ Publishing schedule approved - workflow complete!")
-            await ctx.yield_output(original_request.schedule_text)
+            print("✅ Publishing schedule approved - triggering Instagram agent!")
+
+            # Prepare detailed asset information for Instagram agent
+            assets_info = []
+            for asset in self.generated_assets:
+                asset_info = {
+                    "type": asset.get("type"),
+                    "url": asset.get("url"),
+                    "caption": asset.get("caption"),
+                    "hashtags": asset.get("hashtags"),
+                    "filename": asset.get("filename")
+                }
+                assets_info.append(asset_info)
+
+            # Trigger Instagram agent with complete asset and schedule information
+            instagram_input = (
+                f"Campaign Assets ({len(self.generated_assets)} total):\n"
+                + json.dumps(assets_info, indent=2) + "\n\n"
+                f"Publishing Schedule:\n{original_request.schedule_text}\n\n"
+                f"Target Markets: {self.target_markets}\n\n"
+                "TASK: Select the FIRST Instagram post from the schedule and publish it using the post_to_ayrshare tool.\n\n"
+                "INSTRUCTIONS:\n"
+                "1. Find the first Instagram entry in the publishing schedule\n"
+                "2. Extract the file paths (URLs starting with 'file://') from the campaign assets above\n"
+                "3. Combine the asset captions and hashtags into complete post content\n"
+                "4. Call post_to_ayrshare with the post content, file paths, and platform ['instagram']\n"
+                "5. Return the publishing results as JSON\n\n"
+                "The post_to_ayrshare tool will automatically upload the local image files and post to Instagram."
+            )
+
+            await ctx.send_message(
+                AgentExecutorRequest(
+                    messages=[ChatMessage(Role.USER, text=instagram_input)],
+                    should_respond=True,
+                ),
+                target_id=self.instagram_id,
+            )
         else:
             # User provided feedback on schedule - revise
             instruction = (
@@ -1163,6 +1376,65 @@ All responses MUST be valid JSON using this exact structure:
         id="publishing_agent",
     )
 
+    instagram_agent = AgentExecutor(
+        agent=AzureAIAgentClient(
+            async_credential=credential,
+            project_endpoint=os.environ.get("AZURE_AI_PROJECT_ENDPOINT"),
+            model_deployment_name=model_deployment_name,
+            agent_version=agent_version
+        ).create_agent(
+            name="instagram_agent",
+            instructions=(
+                "You are an Instagram publishing agent that uses the Ayrshare API to post content to Instagram.\n\n"
+                "WORKFLOW:\n"
+                "1. Extract the FIRST Instagram post from the provided publishing schedule\n"
+                "2. Get the actual media file paths from the campaign assets (look for file:// URLs)\n"
+                "3. Combine caption and hashtags into complete post content\n"
+                "4. Use the post_to_ayrshare tool with the actual file paths (the tool will handle uploading)\n"
+                "5. Return the posting results\n\n"
+                "CRITICAL REQUIREMENTS:\n"
+                "- Always use the post_to_ayrshare tool to publish the content\n"
+                "- Target platform should be ['instagram']\n"
+                "- Combine caption and hashtags into a single post_content string\n"
+                "- Extract REAL file paths from campaign assets (not placeholder URLs)\n"
+                "- Look for assets with 'url' field containing 'file://' paths\n"
+                "- Post immediately (no scheduling)\n\n"
+                "MEDIA URL EXTRACTION:\n"
+                "The campaign assets contain entries like:\n"
+                "{\n"
+                '  "type": "image",\n'
+                '  "url": "file:///path/to/social_image_1.png",\n'
+                '  "caption": "Amazing content!",\n'
+                '  "hashtags": ["#awesome", "#campaign"]\n'
+                "}\n\n"
+                "Extract the 'url' values that start with 'file://' and pass them to post_to_ayrshare.\n"
+                "The tool will automatically upload these local files to Ayrshare and get public URLs.\n\n"
+                "RESPONSE FORMAT:\n"
+                "After posting, return a JSON summary with these fields:\n"
+                "{\n"
+                '  "post_id": "generated_post_id",\n'
+                '  "platform": "Instagram",\n'
+                '  "status": "published" or "failed",\n'
+                '  "post_content": "Full caption with hashtags",\n'
+                '  "media_urls": ["uploaded_url1", "uploaded_url2"],\n'
+                '  "ayrshare_response": {...},\n'
+                '  "published_at": "timestamp",\n'
+                '  "success": true/false\n'
+                "}\n\n"
+                "EXAMPLE WORKFLOW:\n"
+                "1. Find first Instagram post in schedule\n"
+                "2. Extract media file paths: ['file:///workspace/app/agents/src/zava_shop_agents/generated_images/social_image_1.png']\n"
+                "3. Combine: 'Amazing product launch! 🚀 Join the revolution #innovation #tech #launch'\n"
+                "4. Call: post_to_ayrshare(post_content, file_paths, ['instagram'])\n"
+                "5. Return results\n\n"
+                "ALWAYS use the post_to_ayrshare tool - this agent ACTUALLY POSTS to Instagram!"
+            ),
+            tools=[post_to_ayrshare],
+            tool_choice=ToolMode.AUTO,
+        ),
+        id="instagram_agent",
+    )
+
     # No longer need RequestInfoExecutor nodes - using ctx.request_info() instead
     print("🏗️  GET_WORKFLOW: Creating Coordinator instance...")
     coordinator = Coordinator(
@@ -1171,6 +1443,7 @@ All responses MUST be valid JSON using this exact structure:
         creative_id=creative_agent.id,
         localization_id=localization_agent.id,
         publishing_id=publishing_agent.id,
+        instagram_id=instagram_agent.id,
     )
     print("🏗️  GET_WORKFLOW: Coordinator instance created!")
 
@@ -1194,6 +1467,8 @@ All responses MUST be valid JSON using this exact structure:
         .add_edge(localization_agent, coordinator)
         .add_edge(coordinator, publishing_agent)
         .add_edge(publishing_agent, coordinator)
+        .add_edge(coordinator, instagram_agent)
+        .add_edge(instagram_agent, coordinator)
         .build()
     )
     print("🏗️  GET_WORKFLOW: Workflow built successfully!")

@@ -53,7 +53,8 @@ export default {
       campaignBrief: false,
       socialMedia: false,
       localization: false,
-      publishing: false
+      publishing: false,
+      instagram: false
     });
 
     const { messages, sendMessage, isConnected } = useWebSocket();
@@ -84,7 +85,7 @@ export default {
         };
       } else {
         // For new campaign requests, show loading
-        loadingStates.value = { campaignBrief: true, socialMedia: false, localization: false, publishing: false };
+        loadingStates.value = { campaignBrief: true, socialMedia: false, localization: false, publishing: false, instagram: false };
       }
 
       sendMessage(message);
@@ -334,44 +335,74 @@ export default {
         !hasReceivedSchedule
       );
 
+      // Detection for Instagram agent running
+      const isInstagramAgentActive = currentlyRunningExecutor === 'instagram_agent' ||
+        currentlyRunningExecutor === 'instagram agent' ||
+        debugMessages.some(msg => 
+          msg.content && (
+            msg.content.toLowerCase().includes('instagram agent') ||
+            msg.content.toLowerCase().includes('instagram post') ||
+            msg.content.toLowerCase().includes('preparing instagram')
+          )
+        );
+
+      const hasReceivedInstagramPost = campaignData.value?.instagram_post != null;
+      const shouldShowInstagramLoading = (
+        hasReceivedSchedule && 
+        !hasReceivedInstagramPost && 
+        isInstagramAgentActive
+      ) || (
+        // Also show if Instagram agent is detected running regardless
+        isInstagramAgentActive && 
+        !hasReceivedInstagramPost
+      );
+
       console.log('🎬 Enhanced loading state calculation:', {
         currentlyRunningExecutor,
         isCreativeAgentActive,
         isLocalizationAgentActive,
         isPublishingAgentActive,
+        isInstagramAgentActive,
         hasReceivedBrief,
         hasReceivedMedia,
         hasReceivedLocalizations,
         hasReceivedSchedule,
+        hasReceivedInstagramPost,
         needsCreativeApproval,
         shouldShowBriefLoading,
         shouldShowMediaLoading,
         shouldShowLocalizationLoading,
+        shouldShowPublishingLoading,
+        shouldShowInstagramLoading,
         shouldShowPublishingLoading,
         executorMessages: executorMessages.length,
         debugMessages: debugMessages.length,
         statusMessages: statusMessages.length
       });
 
-      if (shouldShowBriefLoading && !shouldShowMediaLoading && !shouldShowLocalizationLoading && !shouldShowPublishingLoading) {
+      if (shouldShowBriefLoading && !shouldShowMediaLoading && !shouldShowLocalizationLoading && !shouldShowPublishingLoading && !shouldShowInstagramLoading) {
         console.log('📋 Setting brief loading to true');
-        loadingStates.value = { campaignBrief: true, socialMedia: false, localization: false, publishing: false };
-      } else if (shouldShowMediaLoading && !shouldShowLocalizationLoading && !shouldShowPublishingLoading) {
+        loadingStates.value = { campaignBrief: true, socialMedia: false, localization: false, publishing: false, instagram: false };
+      } else if (shouldShowMediaLoading && !shouldShowLocalizationLoading && !shouldShowPublishingLoading && !shouldShowInstagramLoading) {
         console.log('🎨 Setting media loading to true');
-        loadingStates.value = { campaignBrief: false, socialMedia: true, localization: false, publishing: false };
-      } else if (shouldShowLocalizationLoading && !shouldShowPublishingLoading) {
+        loadingStates.value = { campaignBrief: false, socialMedia: true, localization: false, publishing: false, instagram: false };
+      } else if (shouldShowLocalizationLoading && !shouldShowPublishingLoading && !shouldShowInstagramLoading) {
         console.log('🌍 Setting localization loading to true');
-        loadingStates.value = { campaignBrief: false, socialMedia: false, localization: true, publishing: false };
-      } else if (shouldShowPublishingLoading) {
+        loadingStates.value = { campaignBrief: false, socialMedia: false, localization: true, publishing: false, instagram: false };
+      } else if (shouldShowPublishingLoading && !shouldShowInstagramLoading) {
         console.log('📅 Setting publishing loading to true');
-        loadingStates.value = { campaignBrief: false, socialMedia: false, localization: false, publishing: true };
-      } else if (hasReceivedBrief || hasReceivedMedia || hasReceivedLocalizations || hasReceivedSchedule) {
+        loadingStates.value = { campaignBrief: false, socialMedia: false, localization: false, publishing: true, instagram: false };
+      } else if (shouldShowInstagramLoading) {
+        console.log('📱 Setting Instagram loading to true');
+        loadingStates.value = { campaignBrief: false, socialMedia: false, localization: false, publishing: false, instagram: true };
+      } else if (hasReceivedBrief || hasReceivedMedia || hasReceivedLocalizations || hasReceivedSchedule || hasReceivedInstagramPost) {
         console.log('✅ Setting all loading to false');
         loadingStates.value = {
           campaignBrief: false,
           socialMedia: false,
           localization: false,
-          publishing: false
+          publishing: false,
+          instagram: false
         };
       }
     };

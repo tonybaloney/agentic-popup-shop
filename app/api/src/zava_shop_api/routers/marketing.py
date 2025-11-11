@@ -18,7 +18,7 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 
-from zava_shop_agents.marketing import LocalizationResponseEvent, MarketSelectionQuestionEvent, PublishingScheduleResponseEvent, get_workflow, CampaignPlannerResponseEvent, CreativeAssetsGeneratedEvent
+from zava_shop_agents.marketing import LocalizationResponseEvent, MarketSelectionQuestionEvent, PublishingScheduleResponseEvent, get_workflow, CampaignPlannerResponseEvent, CreativeAssetsGeneratedEvent, InstagramPostEvent
 
 from agent_framework import AgentRunUpdateEvent, ChatMessage
 from agent_framework import (
@@ -606,6 +606,53 @@ async def _process_agent_framework_event(event):
             })
         return
 
+    elif isinstance(event, InstagramPostEvent):
+        logger.info("Instagram Post Event received")
+        response_text = event.response_text
+
+        try:
+            cleaned_text = response_text.strip()
+            if cleaned_text.startswith('```'):
+                lines = cleaned_text.split('\n')
+                cleaned_text = '\n'.join(
+                    lines[1:-1] if len(lines) > 2 else lines)
+
+            instagram_data = json.loads(cleaned_text)
+
+            # Check if the post was successfully published
+            success = instagram_data.get('success', False)
+
+            if success:
+                await _broadcast({
+                    'type': 'campaign_data',
+                    'content': f'✅ Instagram post published successfully! Post ID: {instagram_data.get("post_id", "Unknown")}',
+                    'timestamp': datetime.now().isoformat(),
+                    'campaign_data': {
+                        'instagram_post': instagram_data,
+                        'published': True
+                    }
+                })
+            else:
+                error_message = instagram_data.get('error', 'Unknown error')
+                await _broadcast({
+                    'type': 'campaign_data',
+                    'content': f'❌ Instagram post failed: {error_message}',
+                    'timestamp': datetime.now().isoformat(),
+                    'campaign_data': {
+                        'instagram_post': instagram_data,
+                        'published': False,
+                        'error': error_message
+                    }
+                })
+        except json.JSONDecodeError as e:
+            logger.warning(f"Instagram post response is not valid JSON: {e}")
+            await _broadcast({
+                'type': 'assistant',
+                'content': response_text,
+                'timestamp': datetime.now().isoformat()
+            })
+        return
+
     # Handle standard Agent Framework events
     elif isinstance(event, AgentExecutorResponse):
         executor_name = event.executor_id.replace('_', ' ').title()
@@ -796,12 +843,34 @@ async def process_user_input(content: str):
     if not content:
         return
 
-    # NEW: Handle schedule approval messages specially
+    # NEW: Handle schedule approval messages by sending to workflow
     if content == 'approve_schedule':
-        # Campaign approved and scheduled - show completion message
+        # Send 'approve' to the workflow to trigger Instagram agent
+        logger.info(
+            "Schedule approved - sending 'approve' to workflow to trigger Instagram agent")
+
+        # Use the same workflow handling pattern as _send_to_workflow
+        global workflow_instance, pending_requests
+
+        if workflow_instance and pending_requests['is_pending'] and pending_requests['request_id']:
+            old_request_id = pending_requests['request_id']
+            responses = {old_request_id: 'approve'}
+
+            try:
+                async for event in workflow_instance.send_responses_streaming(responses):
+                    await _process_agent_framework_event(event)
+
+                if pending_requests['request_id'] == old_request_id:
+                    pending_requests['request_id'] = None
+                    pending_requests['is_pending'] = False
+                return
+            except Exception as e:
+                logger.error(f"Error processing schedule approval: {e}")
+
+        # Fallback: If no pending responses, show completion message
         completion_message = {
             'type': 'assistant',
-            'content': 'Your campaign is approved and scheduled! Click here to view your publishing calendar (Demo link: https://example.com/campaign-calendar)',
+            'content': '✅ Schedule approved! Triggering Instagram publishing...',
             'timestamp': datetime.now().isoformat()
         }
         conversation_history.append(completion_message)
