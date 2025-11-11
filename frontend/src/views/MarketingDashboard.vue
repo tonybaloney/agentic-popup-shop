@@ -89,94 +89,136 @@ export default {
       sendMessage(message);
     };
 
-    const extractCampaignData = (messagesList) => {
-      if (messagesList.length === 0) return;
+    // Enhanced campaign data extraction with better data preservation
+    const extractCampaignData = (newMessages) => {
+      if (!newMessages || newMessages.length === 0) return;
 
-      console.log('extractCampaignData called with', messagesList.length, 'messages');
+      // Get current values to avoid overwriting with empty data
+      const currentBrief = campaignData.value.brief;
+      const currentMedia = campaignData.value.media;
+      const currentLocalizations = campaignData.value.localizations;
+      const currentSchedule = campaignData.value.schedule;
 
-      // Check executor status to show loading animations
-      let currentlyRunningExecutor = null;
-
-      for (let i = messagesList.length - 1; i >= Math.max(0, messagesList.length - 10); i--) {
-        const msg = messagesList[i];
-
-        if (msg.type === 'system' && msg.content) {
-          const content = msg.content.toLowerCase();
-
-          if (content.includes('running')) {
-            if (content.includes('campaign kickoff') || content.includes('campaign_kickoff')) {
-              currentlyRunningExecutor = 'campaign_kickoff';
-              break;
-            } else if (content.includes('creative agent') || content.includes('creative_agent')) {
-              currentlyRunningExecutor = 'creative_agent';
-              break;
-            } else if (content.includes('critique agent') || content.includes('critique_agent')) {
-              currentlyRunningExecutor = 'critique_agent';
-              break;
-            }
-          }
+      // Find the latest accumulated campaign data
+      const accumulatedCampaignData = newMessages.reduce((acc, message) => {
+        if (message.campaign_data) {
+          return { ...acc, ...message.campaign_data };
         }
-      }
+        return acc;
+      }, {});
 
-      // Check for messages with embedded campaign_data
-      let hasReceivedBrief = false;
-      let hasReceivedMedia = false;
-      let accumulatedCampaignData = {};
+      // More programmatic ways to detect running agents:
+      
+      // 1. Look for ExecutorInvokedEvent or similar system messages with executor info
+      // Include both debug and non-debug messages
+      const executorMessages = newMessages.filter(msg => 
+        msg.type === 'system' && 
+        msg.content && 
+        msg.content.includes('is running...')
+      );
+      
+      // 2. Check for debug messages from backend about executor status  
+      const debugMessages = newMessages.filter(msg => msg.debug === true);
+      
+      // 3. Look for workflow status indicators
+      const statusMessages = newMessages.filter(msg => 
+        msg.type === 'system' && 
+        (msg.content?.includes('running') || msg.content?.includes('executing'))
+      );
 
-      for (let i = messagesList.length - 1; i >= 0; i--) {
-        const msg = messagesList[i];
+      // Enhanced executor detection - check both regular and debug messages
+      const currentlyRunningExecutor = executorMessages
+        .slice()
+        .reverse()
+        .find(msg => msg.content)
+        ?.content?.match(/^(.+?)\s+is running\.\.\.$/)?.[1]?.toLowerCase();
 
-        if (msg.campaign_data) {
-          console.log(`📨 Found campaign_data in message ${i}:`, msg.campaign_data);
+      console.log('🔍 Executor Detection Debug:', {
+        totalMessages: newMessages.length,
+        executorMessages: executorMessages.map(m => ({ content: m.content, debug: m.debug })),
+        debugMessages: debugMessages.map(m => ({ content: m.content?.substring(0, 50) })),
+        statusMessages: statusMessages.map(m => ({ content: m.content?.substring(0, 50) })),
+        extractedExecutor: currentlyRunningExecutor
+      });
 
-          Object.keys(msg.campaign_data).forEach((key) => {
-            const value = msg.campaign_data[key];
+      // Use accumulated data but preserve existing content if new data is empty
+      const newBrief = accumulatedCampaignData.brief || currentBrief;
+      const newMedia = Array.isArray(accumulatedCampaignData.media) && accumulatedCampaignData.media.length > 0
+        ? accumulatedCampaignData.media
+        : currentMedia;
+      const newLocalizations = Array.isArray(accumulatedCampaignData.localizations) && accumulatedCampaignData.localizations.length > 0
+        ? accumulatedCampaignData.localizations
+        : currentLocalizations;
+      const newSchedule = Array.isArray(accumulatedCampaignData.schedule) && accumulatedCampaignData.schedule.length > 0
+        ? accumulatedCampaignData.schedule
+        : currentSchedule;
 
-            // For approval flags, only set if true
-            if (key.startsWith('needs') && key.includes('Approval')) {
-              if (value === true) {
-                accumulatedCampaignData[key] = true;
-              }
-            } else {
-              // For non-approval fields, use newer values
-              if (accumulatedCampaignData[key] === undefined) {
-                accumulatedCampaignData[key] = value;
-              }
-            }
-          });
+      // Update campaign data with preserved values
+      campaignData.value = {
+        ...campaignData.value,
+        ...accumulatedCampaignData,
+        brief: newBrief,
+        media: newMedia,
+        localizations: newLocalizations,
+        schedule: newSchedule
+      };
 
-          if (msg.campaign_data.brief) {
-            hasReceivedBrief = true;
-          }
-          if (msg.campaign_data.media && msg.campaign_data.media.length > 0) {
-            hasReceivedMedia = true;
-          }
-        }
-      }
+      // Enhanced loading state detection
+      const hasReceivedBrief = newBrief && accumulatedCampaignData.isFormattedBrief;
+      const hasReceivedMedia = Array.isArray(newMedia) && newMedia.length > 0;
+      const needsCreativeApproval = accumulatedCampaignData.needsCreativeApproval;
 
-      // Apply accumulated campaign data
-      if (Object.keys(accumulatedCampaignData).length > 0) {
-        console.log('📦 Applying accumulated campaign_data');
-        campaignData.value = {
-          ...campaignData.value,
-          ...accumulatedCampaignData
-        };
-      }
+      // More precise loading state logic using multiple detection methods
+      const shouldShowBriefLoading = !hasReceivedBrief && (
+        currentlyRunningExecutor === 'campaign planner' ||
+        accumulatedCampaignData.needsCampaignFollowup ||
+        accumulatedCampaignData.needsMarketSelection
+      );
 
-      // Set loading states
-      const shouldShowBriefLoading =
-        (currentlyRunningExecutor !== null && !hasReceivedBrief) ||
-        (!hasReceivedBrief && loadingStates.value.campaignBrief);
-      const shouldShowMediaLoading =
-        (currentlyRunningExecutor === 'creative_agent' ||
-          currentlyRunningExecutor === 'critique_agent') &&
-        !hasReceivedMedia;
+      // Enhanced detection for creative agent running
+      const isCreativeAgentActive = currentlyRunningExecutor === 'creative agent' ||
+        currentlyRunningExecutor === 'creative' ||
+        debugMessages.some(msg => 
+          msg.content && (
+            msg.content.toLowerCase().includes('creative') ||
+            msg.content.toLowerCase().includes('generating')
+          )
+        ) ||
+        // Look for workflow state indicating creative work
+        statusMessages.some(msg => 
+          msg.content && (
+            msg.content.toLowerCase().includes('creative') ||
+            msg.content.toLowerCase().includes('media') ||
+            msg.content.toLowerCase().includes('assets')
+          )
+        );
+
+      const shouldShowMediaLoading = hasReceivedBrief && 
+        !hasReceivedMedia && 
+        !needsCreativeApproval && 
+        isCreativeAgentActive;
+
+      console.log('🎬 Enhanced loading state calculation:', {
+        currentlyRunningExecutor,
+        isCreativeAgentActive,
+        hasReceivedBrief,
+        hasReceivedMedia,
+        needsCreativeApproval,
+        shouldShowBriefLoading,
+        shouldShowMediaLoading,
+        executorMessages: executorMessages.length,
+        debugMessages: debugMessages.length,
+        statusMessages: statusMessages.length
+      });
 
       if (shouldShowBriefLoading && !shouldShowMediaLoading) {
+        console.log('📋 Setting brief loading to true');
         loadingStates.value = { campaignBrief: true, socialMedia: false };
       } else if (shouldShowMediaLoading) {
+        console.log('🎨 Setting media loading to true');
         loadingStates.value = { campaignBrief: false, socialMedia: true };
       } else if (hasReceivedBrief || hasReceivedMedia) {
+        console.log('✅ Setting all loading to false');
         loadingStates.value = {
           campaignBrief: false,
           socialMedia: false,

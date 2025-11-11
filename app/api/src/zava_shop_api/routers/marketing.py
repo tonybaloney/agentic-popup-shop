@@ -199,6 +199,7 @@ async def _process_agent_framework_event(event):
 
     # Check for custom events by class name
     event_type_name = type(event).__name__
+    logger.info(f"Processing event: {event_type_name}")
 
     if isinstance(event, CampaignPlannerResponseEvent):
         logger.info("Campaign Planner Response Event received")
@@ -365,8 +366,23 @@ async def _process_agent_framework_event(event):
         pending_requests['request_id'] = event.request_id
         pending_requests['request_data'] = event.data
 
-        # Handle different request types
-        if hasattr(event.data, 'draft_text') and hasattr(event.data, 'prompt'):
+        # Handle different request types based on their attributes
+        from zava_shop_agents.marketing import CampaignFollowupRequest, DraftFeedbackRequest, MarketSelectionRequest, ScheduleApprovalRequest
+
+        if isinstance(event.data, CampaignFollowupRequest):
+            pending_requests['request_type'] = 'campaign_followup'
+
+            questions_text = getattr(event.data, 'questions', '')
+            prompt_text = getattr(event.data, 'prompt', '')
+
+            await _broadcast({
+                'type': 'campaign_followup_required',
+                'request_id': event.request_id,
+                'prompt': prompt_text,
+                'questions': questions_text
+            })
+
+        elif isinstance(event.data, DraftFeedbackRequest):
             pending_requests['request_type'] = 'draft_feedback'
 
             draft_text = getattr(event.data, 'draft_text', '')
@@ -379,11 +395,54 @@ async def _process_agent_framework_event(event):
                 'draft': draft_text
             })
 
+        elif isinstance(event.data, MarketSelectionRequest):
+            pending_requests['request_type'] = 'market_selection'
+
+            prompt_text = getattr(event.data, 'prompt', '')
+
+            await _broadcast({
+                'type': 'market_selection_required',
+                'request_id': event.request_id,
+                'prompt': prompt_text
+            })
+
+        elif isinstance(event.data, ScheduleApprovalRequest):
+            pending_requests['request_type'] = 'schedule_approval'
+
+            schedule_text = getattr(event.data, 'schedule_text', '')
+            prompt_text = getattr(event.data, 'prompt', '')
+
+            await _broadcast({
+                'type': 'schedule_approval_required',
+                'request_id': event.request_id,
+                'prompt': prompt_text,
+                'schedule': schedule_text
+            })
+        else:
+            # Fallback for unknown request types
+            logger.warning(f"Unknown request type: {type(event.data)}")
+            await _broadcast({
+                'type': 'unknown_request',
+                'request_id': event.request_id,
+                'data': str(event.data)
+            })
+
     elif isinstance(event, ExecutorFailedEvent):
         await _broadcast({
             'type': 'system',
             'content': f"❌ Error in {event.executor_id}: {event.details}"
         })
+
+    # Handle ExecutorInvokedEvent to show loading states
+    elif 'ExecutorInvokedEvent' in event_type_name or 'Invoked' in event_type_name:
+        if hasattr(event, 'executor_id'):
+            executor_name = event.executor_id.replace('_', ' ').title()
+            await _broadcast({
+                'type': 'system',
+                'content': f"{executor_name} is running...",
+                'timestamp': datetime.now().isoformat(),
+                'debug': True
+            })
 
     elif isinstance(event, WorkflowStatusEvent):
         if event.state == WorkflowRunState.IDLE_WITH_PENDING_REQUESTS:

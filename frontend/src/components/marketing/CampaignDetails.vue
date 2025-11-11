@@ -21,13 +21,7 @@
             <p class="loading-text">Generating campaign strategy...</p>
           </div>
           <template v-else-if="brief">
-            <EditableMarkdown
-              v-if="needsApproval"
-              v-model="editedBrief"
-              class="editable-brief-markdown"
-            />
             <div
-              v-else
               :class="['brief-content', { 'markdown-content': isFormattedBrief }]"
             >
               <div v-if="isFormattedBrief" v-html="renderMarkdown(brief)"></div>
@@ -249,13 +243,10 @@
 <script>
 import { ref, computed, watch } from 'vue';
 import { marked } from 'marked';
-import EditableMarkdown from './EditableMarkdown.vue';
 
 export default {
   name: 'CampaignDetails',
-  components: {
-    EditableMarkdown
-  },
+  components: {},
   props: {
     campaignData: {
       type: Object,
@@ -269,7 +260,6 @@ export default {
   emits: ['send-message'],
   setup(props, { emit }) {
     const expandedSection = ref('brief');
-    const editedBrief = ref('');
     const editedCaptions = ref({});
     const editedLocalizations = ref({});
 
@@ -290,15 +280,8 @@ export default {
     const isLocalizationLoading = computed(() => props.loadingStates.localization || false);
 
     // Content flags
-    const hasBriefContent = computed(() => isBriefLoading.value || brief.value);
+    const hasBriefContent = computed(() => brief.value && isFormattedBrief.value && !isBriefLoading.value);
     const hasScheduleContent = computed(() => schedule.value.length > 0);
-
-    // Watch for brief changes
-    watch(brief, (newBrief) => {
-      if (newBrief && newBrief !== editedBrief.value) {
-        editedBrief.value = newBrief;
-      }
-    });
 
     // Watch for media changes
     watch(media, (newMedia) => {
@@ -377,8 +360,8 @@ export default {
       console.log('handleApproval called with approved:', approved);
 
       if (approved) {
-        if (needsApproval.value && editedBrief.value !== brief.value) {
-          emit('send-message', `approve: ${editedBrief.value}`);
+        if (needsApproval.value) {
+          emit('send-message', 'approve');
         } else if (needsCreativeApproval.value) {
           const hasEdits = media.value.some((item, index) => {
             return editedCaptions.value[index] && editedCaptions.value[index] !== item.caption;
@@ -419,7 +402,6 @@ export default {
 
     return {
       expandedSection,
-      editedBrief,
       editedCaptions,
       editedLocalizations,
       brief,
