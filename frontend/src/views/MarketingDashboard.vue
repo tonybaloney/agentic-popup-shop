@@ -21,7 +21,7 @@
       </div>
       <CampaignDetails
         :campaign-data="campaignData"
-        :loading-states="loadingStates"
+        :active-agent="activeAgent"
         @send-message="handleSendMessage"
       />
     </div>
@@ -49,11 +49,9 @@ export default {
       schedule: [],
       localizations: []
     });
-    const loadingStates = ref({
-      campaignBrief: false,
-      socialMedia: false,
-      localization: false
-    });
+    
+    // Simplified loading state: single "active agent" variable
+    const activeAgent = ref('');  // '', 'campaign_planner', 'creative', 'localization', 'publishing', 'instagram'
 
     const { messages, sendMessage, isConnected } = useWebSocket();
 
@@ -70,6 +68,8 @@ export default {
     };
 
     const handleSendMessage = (message) => {
+      console.log(`📤 Sending message: "${message}"`);
+      
       // Check if this is an approval/reject decision
       const lowerMessage = message.toLowerCase().trim();
       if (lowerMessage === 'approve' || lowerMessage.startsWith('reject')) {
@@ -81,108 +81,143 @@ export default {
           needsPublishingApproval: false,
           needsLocalizationApproval: false
         };
+        console.log('🎯 Approval message - not setting activeAgent');
+      } else if (lowerMessage === 'approve_schedule') {
+        // Clear schedule approval state and set Instagram loading
+        campaignData.value = {
+          ...campaignData.value,
+          needsScheduleApproval: false
+        };
+        activeAgent.value = 'instagram';
+        console.log(`🎯 Schedule approved - activeAgent set to: ${activeAgent.value}`);
+      } else if (lowerMessage.includes('campaign approved! scheduling')) {
+        // This is the confirmation message, don't trigger loading
+        // Just send it to chat
+        console.log('🎯 Confirmation message - not setting activeAgent');
       } else {
-        // For new campaign requests, show loading
-        loadingStates.value = { campaignBrief: true, socialMedia: false };
+        // For new campaign requests, show loading for campaign planner
+        activeAgent.value = 'campaign_planner';
+        console.log(`🎯 New campaign request - activeAgent set to: ${activeAgent.value}`);
       }
 
       sendMessage(message);
     };
 
-    const extractCampaignData = (messagesList) => {
-      if (messagesList.length === 0) return;
+    // Enhanced campaign data extraction with better data preservation
+    const extractCampaignData = (newMessages) => {
+      if (!newMessages || newMessages.length === 0) return;
 
-      console.log('extractCampaignData called with', messagesList.length, 'messages');
+      // Get current values to avoid overwriting with empty data
+      const currentBrief = campaignData.value.brief;
+      const currentMedia = campaignData.value.media;
+      const currentLocalizations = campaignData.value.localizations;
+      const currentSchedule = campaignData.value.schedule;
 
-      // Check executor status to show loading animations
-      let currentlyRunningExecutor = null;
-
-      for (let i = messagesList.length - 1; i >= Math.max(0, messagesList.length - 10); i--) {
-        const msg = messagesList[i];
-
-        if (msg.type === 'system' && msg.content) {
-          const content = msg.content.toLowerCase();
-
-          if (content.includes('running')) {
-            if (content.includes('campaign kickoff') || content.includes('campaign_kickoff')) {
-              currentlyRunningExecutor = 'campaign_kickoff';
-              break;
-            } else if (content.includes('creative agent') || content.includes('creative_agent')) {
-              currentlyRunningExecutor = 'creative_agent';
-              break;
-            } else if (content.includes('critique agent') || content.includes('critique_agent')) {
-              currentlyRunningExecutor = 'critique_agent';
-              break;
-            }
-          }
+      // Find the latest accumulated campaign data
+      const accumulatedCampaignData = newMessages.reduce((acc, message) => {
+        if (message.campaign_data) {
+          return { ...acc, ...message.campaign_data };
         }
-      }
+        return acc;
+      }, {});
 
-      // Check for messages with embedded campaign_data
-      let hasReceivedBrief = false;
-      let hasReceivedMedia = false;
-      let accumulatedCampaignData = {};
+      // More programmatic ways to detect running agents:
+      
+      // 1. Look for ExecutorInvokedEvent or similar system messages with executor info
+      // Include both debug and non-debug messages
+      const executorMessages = newMessages.filter(msg => 
+        msg.type === 'system' && 
+        msg.content && 
+        msg.content.includes('is running...')
+      );
+      
+      // 2. Check for debug messages from backend about executor status  
+      const debugMessages = newMessages.filter(msg => msg.debug === true);
+      
+      // 3. Look for workflow status indicators
+      const statusMessages = newMessages.filter(msg => 
+        msg.type === 'system' && 
+        (msg.content?.includes('running') || msg.content?.includes('executing'))
+      );
 
-      for (let i = messagesList.length - 1; i >= 0; i--) {
-        const msg = messagesList[i];
+      // Enhanced executor detection - check both regular and debug messages
+      const currentlyRunningExecutor = executorMessages
+        .slice()
+        .reverse()
+        .find(msg => msg.content)
+        ?.content?.match(/^(.+?)\s+is running\.\.\.$/)?.[1]?.toLowerCase();
 
-        if (msg.campaign_data) {
-          console.log(`📨 Found campaign_data in message ${i}:`, msg.campaign_data);
+      // Alternative detection specifically for creative agent
+      const creativeAgentMessages = newMessages.filter(msg => 
+        msg.content && msg.content.toLowerCase().includes('creative agent is running')
+      );
 
-          Object.keys(msg.campaign_data).forEach((key) => {
-            const value = msg.campaign_data[key];
+      // Check for streaming creative content updates
+      const creativeUpdateMessages = newMessages.filter(msg =>
+        msg.content && (
+          msg.content.includes('Creative Agent Update') ||
+          msg.content.includes('**Creative Agent Update:**')
+        )
+      );
 
-            // For approval flags, only set if true
-            if (key.startsWith('needs') && key.includes('Approval')) {
-              if (value === true) {
-                accumulatedCampaignData[key] = true;
-              }
-            } else {
-              // For non-approval fields, use newer values
-              if (accumulatedCampaignData[key] === undefined) {
-                accumulatedCampaignData[key] = value;
-              }
-            }
-          });
+      // Check recent messages (last 10) for any creative activity
+      const recentMessages = newMessages.slice(-10);
+      const hasRecentCreativeActivity = recentMessages.some(msg =>
+        msg.content && (
+          msg.content.toLowerCase().includes('creative') ||
+          msg.content.toLowerCase().includes('generating') ||
+          msg.content.toLowerCase().includes('image') ||
+          msg.content.toLowerCase().includes('assets')
+        )
+      );
 
-          if (msg.campaign_data.brief) {
-            hasReceivedBrief = true;
-          }
-          if (msg.campaign_data.media && msg.campaign_data.media.length > 0) {
-            hasReceivedMedia = true;
-          }
-        }
-      }
+      console.log('🔍 Executor Detection Debug:', {
+        totalMessages: newMessages.length,
+        executorMessages: executorMessages.map(m => ({ 
+          content: m.content, 
+          debug: m.debug,
+          type: m.type 
+        })),
+        creativeAgentMessages: creativeAgentMessages.map(m => ({ 
+          content: m.content, 
+          debug: m.debug,
+          type: m.type 
+        })),
+        debugMessages: debugMessages.map(m => ({ 
+          content: m.content?.substring(0, 50),
+          hasCreative: m.content?.toLowerCase().includes('creative')
+        })),
+        statusMessages: statusMessages.map(m => ({ content: m.content?.substring(0, 50) })),
+        extractedExecutor: currentlyRunningExecutor
+      });
 
-      // Apply accumulated campaign data
-      if (Object.keys(accumulatedCampaignData).length > 0) {
-        console.log('📦 Applying accumulated campaign_data');
-        campaignData.value = {
-          ...campaignData.value,
-          ...accumulatedCampaignData
-        };
-      }
+      // Use accumulated data but preserve existing content if new data is empty
+      // IMPORTANT: Preserve the original campaign brief once it's formatted to prevent
+      // subsequent agent messages from overwriting it
+      const currentBriefIsFormatted = campaignData.value.isFormattedBrief;
+      const newBrief = currentBriefIsFormatted 
+        ? currentBrief  // Keep existing brief if it's already formatted
+        : (accumulatedCampaignData.brief || currentBrief);  // Otherwise, update as normal
+      
+      const newMedia = Array.isArray(accumulatedCampaignData.media) && accumulatedCampaignData.media.length > 0
+        ? accumulatedCampaignData.media
+        : currentMedia;
+      const newLocalizations = Array.isArray(accumulatedCampaignData.localizations) && accumulatedCampaignData.localizations.length > 0
+        ? accumulatedCampaignData.localizations
+        : currentLocalizations;
+      const newSchedule = Array.isArray(accumulatedCampaignData.schedule) && accumulatedCampaignData.schedule.length > 0
+        ? accumulatedCampaignData.schedule
+        : currentSchedule;
 
-      // Set loading states
-      const shouldShowBriefLoading =
-        (currentlyRunningExecutor !== null && !hasReceivedBrief) ||
-        (!hasReceivedBrief && loadingStates.value.campaignBrief);
-      const shouldShowMediaLoading =
-        (currentlyRunningExecutor === 'creative_agent' ||
-          currentlyRunningExecutor === 'critique_agent') &&
-        !hasReceivedMedia;
-
-      if (shouldShowBriefLoading && !shouldShowMediaLoading) {
-        loadingStates.value = { campaignBrief: true, socialMedia: false };
-      } else if (shouldShowMediaLoading) {
-        loadingStates.value = { campaignBrief: false, socialMedia: true };
-      } else if (hasReceivedBrief || hasReceivedMedia) {
-        loadingStates.value = {
-          campaignBrief: false,
-          socialMedia: false,
-          localization: false
-        };
-      }
+      // Update campaign data with preserved values
+      campaignData.value = {
+        ...campaignData.value,
+        ...accumulatedCampaignData,
+        brief: newBrief,
+        media: newMedia,
+        localizations: newLocalizations,
+        schedule: newSchedule
+      };
     };
 
     // Watch for message changes
@@ -190,13 +225,57 @@ export default {
       extractCampaignData(newMessages);
     }, { deep: true });
 
+    // Separate watcher for agent status detection
+    watch(messages, (newMessages) => {
+      // Check the last 5 messages for any agent status
+      const recentMessages = newMessages.slice(-5);
+      
+      for (const message of recentMessages) {
+        if (message && message.content) {
+          const content = message.content.toLowerCase();
+          
+          if (content.includes('coordinator is running')) {
+            console.log('🎯 Found "coordinator is running" - setting activeAgent to campaign_planner');
+            activeAgent.value = 'campaign_planner';
+            return; // Exit early once we find an agent
+          } else if (content.includes('creative agent is running')) {
+            console.log('🎯 Found "creative agent is running" - setting activeAgent to creative');
+            activeAgent.value = 'creative';
+            return;
+          } else if (content.includes('localization agent is running')) {
+            console.log('🎯 Found "localization agent is running" - setting activeAgent to localization');
+            activeAgent.value = 'localization';
+            return;
+          } else if (content.includes('publishing agent is running')) {
+            console.log('🎯 Found "publishing agent is running" - setting activeAgent to publishing');
+            activeAgent.value = 'publishing';
+            return;
+          } else if (content.includes('instagram agent is running')) {
+            console.log('🎯 Found "instagram agent is running" - setting activeAgent to instagram');
+            activeAgent.value = 'instagram';
+            return;
+          }
+        }
+      }
+    }, { immediate: true });
+
     onMounted(() => {
       checkWorkflowStatus();
       statusCheckInterval = setInterval(checkWorkflowStatus, 10000);
+      
+      // Expose setActiveAgent to window for WebSocket to call
+      window.setActiveAgent = (agent) => {
+        activeAgent.value = agent;
+      };
     });
     onUnmounted(() => {
       if (statusCheckInterval) {
         clearInterval(statusCheckInterval);
+      }
+      
+      // Clean up global function
+      if (window.setActiveAgent) {
+        delete window.setActiveAgent;
       }
     });
 
@@ -204,7 +283,7 @@ export default {
       sidebarCollapsed,
       workflowStatus,
       campaignData,
-      loadingStates,
+      activeAgent,
       messages,
       isConnected,
       handleSendMessage
@@ -228,9 +307,6 @@ export default {
   display: flex;
   flex: 1;
   overflow: hidden;
-  margin: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   background: white;
   min-height: 0;
 }

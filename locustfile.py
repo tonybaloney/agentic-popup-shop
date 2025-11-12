@@ -1,3 +1,14 @@
+"""
+Load test for ChatKit endpoints using Locust.
+
+Users will become more active during peak hours (midday PST) and less active during off-peak hours (midnight PST).
+This is in the form of a sine-wave pattern for wait times between tasks.
+
+Run using uvx:
+    uvx locust -f locustfile.py --host http://localhost:8000
+
+"""
+# Needs tzdata package for zoneinfo support in some environments
 import os
 from locust import HttpUser, task
 import random
@@ -68,13 +79,14 @@ TEST_INPUTS = [
     "Do you ship internationally?",
 ]
 
+
 def peak_between(min_wait, max_wait):
     """Custom wait time function to simulate peak usage periods.
 
     Wait times are shorter (min_wait) at midday (12:00 PST) and longer (max_wait) at midnight (00:00 PST).
     Uses a cosine wave to smoothly transition between peak and off-peak times.
     """
-    def wait_time():
+    def wait_time(*args):
         # Get current hour in US Pacific Time (0-23)
         pst_timezone = ZoneInfo("America/Los_Angeles")
         current_hour = datetime.now(pst_timezone).hour
@@ -86,7 +98,8 @@ def peak_between(min_wait, max_wait):
         # Calculate wait time using cosine wave
         # cos(0) = 1 (midnight, max wait), cos(π) = -1 (noon, min wait)
         # Normalize from [-1, 1] to [min_wait, max_wait]
-        normalized_factor = (math.cos(hour_radians) + 1) / 2  # Converts to [0, 1]
+        normalized_factor = (math.cos(hour_radians) + 1) / \
+            2  # Converts to [0, 1]
         calculated_wait = min_wait + (max_wait - min_wait) * normalized_factor
 
         # Add some randomness (±10%) to make it more realistic
@@ -95,6 +108,7 @@ def peak_between(min_wait, max_wait):
 
     return wait_time
 
+
 class ChatUser(HttpUser):
     wait_time = peak_between(5, 60)
 
@@ -102,22 +116,28 @@ class ChatUser(HttpUser):
     def chat_with_bot(self):
         # Login
         login_response = self.client.post(
-            "/api/login", json={"username": "stacey", "password": os.environ.get("TEST_USER_PASSWORD", "stacey123")})
+            "/api/login", json={"username": "stacey", "password": os.environ.get("TEST_USER_PASSWORD")})
         access_token = login_response.json()['access_token']
 
         payload = {
             "type": "threads.create",
             "params":
-            {"input":
-             {"content": [
-                 {"type": "input_text", "text": random.choice(TEST_INPUTS)}
-             ], "quoted_text": "", "attachments": [], "inference_options": {}}
-             }
+            {
+                "input":
+                {
+                    "content": [
+                        {"type": "input_text", "text": random.choice(TEST_INPUTS)}
+                    ],
+                    "quoted_text": "",
+                    "attachments": [],
+                    "inference_options": {}
+                }
+            }
         }
 
         result = self.client.post(
             "/api/chatkit", json=payload, headers={"Authorization": f"Bearer {access_token}"}
-            )
+        )
 
         # logout
         self.client.post(

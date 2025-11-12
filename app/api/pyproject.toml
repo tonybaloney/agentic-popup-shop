@@ -17,7 +17,7 @@ dependencies = [
     "agent-framework-chatkit@git+https://github.com/microsoft/agent-framework.git@feature-python-foundry-agents#egg=agent-framework-chatkit&subdirectory=python/packages/chatkit",
 
     # Azure AI preview
-    "azure-ai-projects==2.0.0a20251103001",
+    "azure-ai-projects>=2.0.0a20251103001",
     "agent-framework-azure-ai@git+https://github.com/microsoft/agent-framework.git@feature-python-foundry-agents#egg=agent-framework-azure-ai&subdirectory=python/packages/azure-ai",
     "aiohttp",
 
