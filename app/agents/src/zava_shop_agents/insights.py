@@ -23,25 +23,14 @@ from agent_framework_azure_ai import AzureAIAgentClient
 from azure.identity.aio import DefaultAzureCredential
 from zava_shop_agents import MCPStreamableHTTPToolOTEL
 
-from opentelemetry.trace import get_current_span
 
 logger = logging.getLogger(__name__)
-
-
-def _record_span_event(
-    executor_id: str, event_name: str, attributes: dict | None = None
-):
-    """Helper to record OpenTelemetry span events with executor name update."""
-    span = get_current_span()
-    if span.is_recording():
-        span.update_name(f"executor.process ({executor_id})")
-        span.add_event(event_name, attributes=attributes or {})
 
 
 class WeatherAnalysisEvent(WorkflowEvent):
     """Event emitted when weather analysis is complete."""
 
-    def __init__(self, weather_data: "WeatherData"):
+    def __init__(self, weather_data: "WeatherAnalysis"):
         super().__init__(
             f"Weather analysis complete for {weather_data.city}, {weather_data.state}"
         )
@@ -51,7 +40,7 @@ class WeatherAnalysisEvent(WorkflowEvent):
 class EventsAnalysisEvent(WorkflowEvent):
     """Event emitted when events analysis is complete."""
 
-    def __init__(self, event_data: "EventData"):
+    def __init__(self, event_data: "EventsAnalysis"):
         super().__init__(
             f"Events analysis complete for {event_data.city}, {event_data.state}"
         )
@@ -61,7 +50,7 @@ class EventsAnalysisEvent(WorkflowEvent):
 class ProductAnalysisEvent(WorkflowEvent):
     """Event emitted when product analysis is complete."""
 
-    def __init__(self, product_data: "ProductData"):
+    def __init__(self, product_data: "ProductsAnalysis"):
         super().__init__(
             f"Product analysis complete for store {product_data.store_id}"
         )
@@ -153,7 +142,12 @@ STORE_COORDINATES = {
 
 
 class StoreContext(BaseModel):
-    """Store context for insights generation"""
+    """Store information used to initialize the insights workflow.
+
+    Contains geographic coordinates for weather lookups and identification
+    details for filtering product/sales data. Created by DataCollector
+    and sent to all three parallel analyzers (weather, events, products).
+    """
 
     store_id: int
     store_name: str
@@ -165,31 +159,32 @@ class StoreContext(BaseModel):
 
 
 class InsightAction(BaseModel):
-    """Action button for an insight"""
+    """Defines a clickable action button displayed on insight cards in the UI.
+
+    Used to navigate users to the AI agent interface with pre-loaded context
+    from the insights (weather, events, products). The 'instructions' field
+    populates the agent's chat with relevant background information.
+    """
 
     label: str = Field(..., description="Button label text")
     type: str = Field(
         ...,
-        description="Action type: 'product-search', 'navigation', or 'workflow-trigger'",
+        description="Action type: 'navigation'",
     )
-    query: Optional[str] = Field(
-        None, description="Search query for product-search type"
-    )
-    path: Optional[str] = Field(
-        None, description="Navigation path for navigation type"
-    )
-    workflow_message: Optional[str] = Field(
-        None,
-        description="Message to send to workflow for workflow-trigger type",
-    )
+    path: str = Field(..., description="Navigation path")
     instructions: Optional[str] = Field(
-        None,
+        default=None,
         description="Instructions to pre-fill in the AI agent interface",
     )
 
 
 class Insight(BaseModel):
-    """Individual AI-generated insight"""
+    """Represents a single insight card displayed in the management dashboard.
+
+    Each analyzer (weather, events, products) generates one Insight that's
+    shown to store managers. Contains a title, description, visual type
+    (success/warning/info), and optional action button.
+    """
 
     type: str = Field(
         ..., description="Insight type: 'success', 'warning', or 'info'"
@@ -201,17 +196,32 @@ class Insight(BaseModel):
     )
 
 
-class WeatherInsight(BaseModel):
-    """Structured weather insight from LLM."""
+class WeatherAgentResponse(BaseModel):
+    """Structured output schema for the weather analysis LLM agent.
+
+    Forces the agent to return a concise, actionable recommendation about
+    which apparel categories to stock based on the 7-day forecast.
+    """
 
     analysis: str = Field(
         ...,
-        description="Single actionable sentence: 'Over the next 7 days, expect <weather trend>. Increase stock on <categories> because <reason>.'"
+        description=(
+            "Single actionable sentence (under 40 words): "
+            "'Over the next 7 days, expect <concise weather trend>. "
+            "Increase stock on <2-3 apparel categories> because "
+            "<why they match the forecast>.' "
+            "Focus on actionable guidance without extra commentary."
+        ),
     )
 
 
-class WeatherData(BaseModel):
-    """Weather analysis data"""
+class WeatherAnalysis(BaseModel):
+    """Output from WeatherAnalyzer sent to InsightSynthesizer.
+
+    Contains both the raw weather analysis text and a UI-ready Insight
+    object. Sent via workflow context message passing to the synthesizer
+    for aggregation with events and products data.
+    """
 
     city: str
     state: str
@@ -222,8 +232,12 @@ class WeatherData(BaseModel):
     )
 
 
-class EventInsight(BaseModel):
-    """Structured event insight from LLM"""
+class EventDetail(BaseModel):
+    """Represents a single upcoming event that could impact sales.
+
+    Part of structured output from EventsSearchAgent (Bing search).
+    Contains event details and retail relevance explanation.
+    """
 
     event_name: str = Field(..., description="Name of the upcoming event")
     event_date: str = Field(
@@ -244,12 +258,38 @@ class EventInsight(BaseModel):
     )
 
 
-class EventData(BaseModel):
-    """Events information from Bing search"""
+class EventsAgentResponse(BaseModel):
+    """Structured output schema for EventsSearchAgent LLM (Azure AI + Bing).
+
+    Forces the agent to return events in a consistent format with summary.
+    Used as response_format parameter in agent.run() call.
+    """
+
+    events: List[EventDetail] = Field(
+        default_factory=list,
+        description="List of 1-3 major upcoming events in the next 21 days with expected attendance over 5000 people",
+    )
+    summary: str = Field(
+        ...,
+        description=(
+            "Brief 1-2 sentence summary of the events landscape. "
+            "If no major events found, state: "
+            "'No major upcoming events expected in the next 21 days.'"
+        ),
+    )
+
+
+class EventsAnalysis(BaseModel):
+    """Output from EventsAnalyzer sent to InsightSynthesizer.
+
+    Contains structured list of events found via Bing search, summary text,
+    and UI-ready Insight object. Sent via workflow context to synthesizer
+    for aggregation with weather and products data.
+    """
 
     city: str
     state: str
-    events: List[EventInsight] = Field(
+    events: List[EventDetail] = Field(
         default_factory=list, description="List of relevant upcoming events"
     )
     summary: str = Field(
@@ -260,33 +300,28 @@ class EventData(BaseModel):
     )
 
 
-class EventsSearchResult(BaseModel):
-    """Structured output from events search agent"""
+class ProductsAnalysis(BaseModel):
+    """Output from TopSellingProductsAnalyzer sent to InsightSynthesizer.
 
-    events: List[EventInsight] = Field(
-        default_factory=list,
-        description="List of 1-3 major upcoming events in the next 7-14 days with expected attendance over 1000 people",
-    )
-    summary: str = Field(
-        ...,
-        description="Brief 1-2 sentence summary of the events landscape. If no major events found, state: 'No major upcoming events expected in the next two weeks.'",
-    )
-
-
-class ProductData(BaseModel):
-    """Product inventory and sales analysis data from MCP tools"""
+    Contains top 5 products retrieved via Finance MCP server tools, formatted
+    as display strings. Sent via workflow context to synthesizer for
+    aggregation with weather and events data.
+    """
 
     city: str
     state: str
     store_id: int
     analysis_text: str = Field(
-        ..., description="Formatted analysis from MCP tools including inventory levels and sales performance"
+        ...,
+        description="Formatted analysis from MCP tools including inventory levels and sales performance",
     )
     low_stock_items: List[str] = Field(
-        default_factory=list, description="List of low stock items with quantities"
+        default_factory=list,
+        description="List of low stock items with quantities",
     )
     top_products: List[str] = Field(
-        default_factory=list, description="List of top performing products with order counts"
+        default_factory=list,
+        description="List of top performing products with order counts",
     )
     recommendations: List[str] = Field(
         default_factory=list, description="Stock recommendations based on data"
@@ -296,8 +331,12 @@ class ProductData(BaseModel):
     )
 
 
-class TopProduct(BaseModel):
-    """Structured representation of a top-selling product."""
+class ProductDetail(BaseModel):
+    """Represents sales data for a single product over a time period.
+
+    Returned by Finance MCP server tools. Contains product identification
+    (name, SKU, category) and performance metrics (units sold, revenue).
+    """
 
     product_name: str = Field(..., description="Name of the product")
     sku: Optional[str] = Field(
@@ -313,16 +352,30 @@ class TopProduct(BaseModel):
     )
 
 
-class TopProductsResult(BaseModel):
-    """Structured response expected from the finance MCP tool."""
+class ProductsAgentResponse(BaseModel):
+    """Structured output schema for Top Selling Products Analyzer agent.
 
-    products: List[TopProduct] = Field(
-        default_factory=list, description="Ordered list of top products"
+    Forces the agent to return product data in consistent format after
+    calling Finance MCP tools. Used as response_format in agent.run().
+    """
+
+    products: List[ProductDetail] = Field(
+        default_factory=list,
+        description=(
+            "Top 5 selling products from the last 21 days, ordered by "
+            "units sold descending. Each product must include product_name, "
+            "units_sold, revenue, and optionally sku."
+        ),
     )
 
 
 class WeeklyInsights(BaseModel):
-    """Weekly AI insights response"""
+    """Final workflow output returned to the management dashboard UI.
+
+    Aggregates all three insights (weather, events, products) plus a
+    unified action button that navigates to AI agent with full context.
+    Created by InsightSynthesizer after fan-in from all analyzers.
+    """
 
     summary: str = Field(
         ..., description="AI-generated insights disclaimer (shown in italics)"
@@ -347,26 +400,43 @@ class WeeklyInsights(BaseModel):
 
 
 class DataCollector(Executor):
-    """Collects store context and sends to weather and events analyzers."""
+    """Collects store context and sends to all parallel analyzers (fan-out).
+
+    Parses incoming ChatMessage to extract store details, enriches with
+    geographic coordinates from STORE_COORDINATES lookup, and broadcasts
+    StoreContext to weather, events, and products analyzers.
+    """
 
     def __init__(self, id: str | None = None):
         super().__init__(id=id or "data_collector")
 
     @handler
-    async def collect(
+    async def handle(
         self, message: ChatMessage, ctx: WorkflowContext[StoreContext]
     ) -> None:
-        """Extract store context from input message and send to analyzer.
+        """Extract store context from input message and broadcast to analyzers.
+
+        Parses comma-separated key:value format, looks up coordinates,
+        and creates StoreContext for downstream processing.
 
         Expected input format: "store_id:X,user_role:Y,store_name:Z"
         Example: "store_id:1,user_role:manager,store_name:Downtown Seattle"
+
+        Args:
+            message: ChatMessage containing store details
+            ctx: Workflow context for broadcasting StoreContext
+
+        Raises:
+            ValueError: If message format is invalid or store_id cannot be parsed
         """
         try:
+            # Parse key:value pairs from comma-separated input
             parts = message.text.split(",")
             store_id = int(parts[0].split(":")[1].strip())
             user_role = parts[1].split(":")[1].strip()
             store_name = parts[2].split(":")[1].strip()
 
+            # Lookup coordinates, default to NYC (store 1) if not found
             coords = STORE_COORDINATES.get(store_id, STORE_COORDINATES[1])
 
             store_context = StoreContext(
@@ -381,7 +451,7 @@ class DataCollector(Executor):
 
             await ctx.send_message(store_context)
 
-        except Exception as e:
+        except (IndexError, ValueError, KeyError) as e:
             logger.error(
                 "Failed to parse store context: %s", str(e), exc_info=True
             )
@@ -392,70 +462,44 @@ class DataCollector(Executor):
 
 
 class WeatherAnalyzer(Executor):
-    """Analyzes weather conditions and generates weather summaries."""
+    """Fetches weather forecasts and generates apparel stocking recommendations.
+
+    Calls Open-Meteo API for 7-day forecast, then uses LLM to translate
+    weather patterns into actionable retail guidance. Outputs WeatherAnalysis
+    with both raw text and UI-ready Insight for the synthesizer.
+    """
 
     def __init__(self, id: str | None = None):
         super().__init__(id=id or "weather_analyzer")
-        self._cleanup_agents: dict[str, ChatAgent] = {}
         self._weather_agent = chat_client.create_agent(
             instructions=(
                 "You analyze the next 7 days of weather to guide apparel stocking. "
                 "Respond in a single sentence using this structure: "
-                "'Over the next 7 days, expect <concise weather trend>. Increase stock on <2-3 apparel categories> because <why they match the forecast>.' "
+                "'Over the next 7 days, expect <concise weather trend>. "
+                "Increase stock on <2-3 apparel categories> because <why they match the forecast>.' "
                 "Keep it under 40 words, avoid extra commentary, and focus on actionable guidance."
             ),
-            response_format=WeatherInsight,
+            response_format=WeatherAgentResponse,
         )
 
-    def _get_cleanup_agent(self, analysis_type: str) -> ChatAgent:
-        """Return a cached cleanup agent for the given analysis type."""
-        if analysis_type not in self._cleanup_agents:
-            self._cleanup_agents[analysis_type] = chat_client.create_agent(
-                instructions=(
-                    f"Extract ONLY the core {analysis_type} insights from the provided text. "
-                    "Remove any meta-commentary, tool call details, reasoning steps, or conversational elements. "
-                    "Keep only the factual information and actionable recommendations. "
-                    "Return a clean, concise summary (2-4 sentences max)."
-                )
-            )
-        return self._cleanup_agents[analysis_type]
-
-    async def _clean_analysis_text(self, raw_text: str, analysis_type: str) -> str:
-        """Remove any meta-commentary, reasoning, or tool call details from analysis text.
-        
-        Args:
-            raw_text: The raw analysis text from the agent
-            analysis_type: Type of analysis ('weather' or 'events') for context
-        
-        Returns:
-            Cleaned text with only the actionable insights
-        """
-        try:
-            cleanup_agent = self._get_cleanup_agent(analysis_type)
-
-            response = await cleanup_agent.run(
-                f"Clean up this {analysis_type} analysis, keeping only the key insights:\n\n{raw_text}"
-            )
-            
-            cleaned = response.text.strip()
-            # If cleanup made it too short or failed, return original
-            return cleaned if cleaned and len(cleaned) > 20 else raw_text
-            
-        except Exception as e:
-            logger.warning(f"Failed to clean {analysis_type} analysis: {e}")
-            return raw_text
-
     @handler
-    async def analyze(
-        self, context: StoreContext, ctx: WorkflowContext[WeatherData]
+    async def handle(
+        self, context: StoreContext, ctx: WorkflowContext[WeatherAnalysis]
     ) -> None:
         """Fetch weather data from Open-Meteo API and use LLM to generate insights."""
         try:
             params = {
                 "latitude": context.latitude,
                 "longitude": context.longitude,
-                "current": "temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m",
-                "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,wind_speed_10m_max,uv_index_max",
+                "current": (
+                    "temperature_2m,weather_code,relative_humidity_2m,"
+                    "wind_speed_10m"
+                ),
+                "daily": (
+                    "temperature_2m_max,temperature_2m_min,precipitation_sum,"
+                    "precipitation_probability_max,weather_code,"
+                    "wind_speed_10m_max,uv_index_max"
+                ),
                 "temperature_unit": "fahrenheit",
                 "wind_speed_unit": "mph",
                 "precipitation_unit": "inch",
@@ -481,11 +525,11 @@ class WeatherAnalyzer(Executor):
             weather_payload = getattr(llm_response, "value", None)
 
             if weather_payload and getattr(weather_payload, "analysis", None):
-                raw_weather_text = weather_payload.analysis
+                weather_text = weather_payload.analysis
             else:
                 fallback_text = (llm_response.text or "").strip()
                 if fallback_text:
-                    raw_weather_text = fallback_text
+                    weather_text = fallback_text
                 else:
                     logger.warning(
                         "Weather agent returned no structured payload or text for store_id=%s",
@@ -493,33 +537,22 @@ class WeatherAnalyzer(Executor):
                     )
                     raise ValueError("Weather agent returned empty analysis")
 
-            # Clean up the weather analysis text
-            clean_weather_text = await self._clean_analysis_text(raw_weather_text, "weather")
-
             # Create insight for UI
             weather_ui_insight = Insight(
                 type="info",
                 title="🌦️ Weather Forecast",
-                description=f"{clean_weather_text}",
+                description=f"{weather_text}",
                 action=None,
             )
 
-            weather_data = WeatherData(
+            weather_data = WeatherAnalysis(
                 city=context.city,
                 state=context.state,
                 store_id=context.store_id,
-                analysis=clean_weather_text,
+                analysis=weather_text,
                 insight=weather_ui_insight,
             )
 
-            _record_span_event(
-                self.id,
-                "Weather analysis complete",
-                {
-                    "weather.city": weather_data.city,
-                    "weather.state": weather_data.state,
-                },
-            )
             weather_event = WeatherAnalysisEvent(weather_data)
             weather_event.executor_id = self.id
             await ctx.add_event(weather_event)
@@ -547,21 +580,14 @@ class WeatherAnalyzer(Executor):
                 action=None,
             )
 
-            weather_data = WeatherData(
+            weather_data = WeatherAnalysis(
                 city=context.city,
                 state=context.state,
                 store_id=context.store_id,
                 analysis="Weather data unavailable at this time.",
                 insight=fallback_insight,
             )
-            _record_span_event(
-                self.id,
-                "Weather analysis failed - using fallback",
-                {
-                    "weather.city": weather_data.city,
-                    "weather.state": weather_data.state,
-                },
-            )
+
             weather_event = WeatherAnalysisEvent(weather_data)
             weather_event.executor_id = self.id
             await ctx.add_event(weather_event)
@@ -573,120 +599,61 @@ class EventsAnalyzer(Executor):
 
     def __init__(self, id: str | None = None):
         super().__init__(id=id or "events_analyzer")
-        self._cleanup_agents: dict[str, ChatAgent] = {}
         self._events_agent = azure_ai_client.create_agent(
             name="EventsSearchAgent",
             instructions=(
                 "You are helping a retail clothing store manager identify upcoming events that could increase apparel sales. "
-                "Search for major public events in the next 21 days (parades, marathons, outdoor festivals, sporting events, concerts with 5,000+ attendees). "
-                "For each event found, provide: 1) Event name and date, 2) Why it's relevant for clothing/apparel sales (e.g., 'Outdoor parade - expect demand for warm jackets, scarves, hats'). "
-                "Focus ONLY on events that would drive foot traffic and clothing purchases. Exclude indoor entertainment and avoid citations. "
-                "Keep responses concise (2-4 sentences). If no relevant events found, say: 'No major upcoming events expected in the next 21 days.' "
+                "Search for major public events in the next 21 days (parades, marathons, outdoor festivals, "
+                "sporting events, concerts with 5,000+ attendees). "
+                "For each event found, provide: "
+                "1) Event name and date, "
+                "2) Why it's relevant for clothing/apparel sales (e.g., 'Outdoor parade - expect demand "
+                "for warm jackets, scarves, hats'). "
+                "Focus ONLY on events that would drive foot traffic and clothing purchases. "
+                "Exclude indoor entertainment and avoid citations. "
+                "Keep responses concise (2-4 sentences). If no relevant events found, say: " \
+                "'No major upcoming events expected in the next 21 days.' "
                 "Always return your answer as JSON that matches the provided response schema."
             ),
             tools=[HostedWebSearchTool(description="Search for local events")],
         )
 
-    def _get_cleanup_agent(self, analysis_type: str) -> ChatAgent:
-        """Return a cached cleanup agent for the given analysis type."""
-        if analysis_type not in self._cleanup_agents:
-            self._cleanup_agents[analysis_type] = chat_client.create_agent(
-                instructions=(
-                    f"Extract ONLY the core {analysis_type} insights from the provided text. "
-                    "Remove any meta-commentary, tool call details, reasoning steps, or conversational elements. "
-                    "Keep only the factual information and actionable recommendations. "
-                    "Return a clean, concise summary (2-4 sentences max)."
-                )
-            )
-        return self._cleanup_agents[analysis_type]
-
-    async def _clean_analysis_text(self, raw_text: str, analysis_type: str) -> str:
-        """Remove any meta-commentary, reasoning, or tool call details from analysis text.
-        
-        Args:
-            raw_text: The raw analysis text from the agent
-            analysis_type: Type of analysis ('weather' or 'events') for context
-        
-        Returns:
-            Cleaned text with only the actionable insights
-        """
-        try:
-            cleanup_agent = self._get_cleanup_agent(analysis_type)
-
-            response = await cleanup_agent.run(
-                f"Clean up this {analysis_type} analysis, keeping only the key insights:\n\n{raw_text}"
-            )
-            
-            cleaned = response.text.strip()
-            # If cleanup made it too short or failed, return original
-            return cleaned if cleaned and len(cleaned) > 20 else raw_text
-            
-        except Exception as e:
-            logger.warning(f"Failed to clean {analysis_type} analysis: {e}")
-            return raw_text
-
     @handler
-    async def analyze(
-        self, context: StoreContext, ctx: WorkflowContext[EventData]
+    async def handle(
+        self, context: StoreContext, ctx: WorkflowContext[EventsAnalysis]
     ) -> None:
-        """Search for local events using Azure AI Agent with Bing."""
+        """Search for local events using Azure AI Agent with Bing Custom Search."""
         try:
-            # Check configuration
-            if not os.environ.get("BING_CUSTOM_CONNECTION_ID") or not os.environ.get("BING_CUSTOM_INSTANCE_NAME"):
-                config_missing_insight = Insight(
-                    type="info",
-                    title="🎉 Local Events",
-                    description="ℹ️ Events analysis unavailable - configuration missing.",
-                    action=None,
+            if not os.environ.get(
+                "BING_CUSTOM_CONNECTION_ID"
+            ) or not os.environ.get("BING_CUSTOM_INSTANCE_NAME"):
+                raise ValueError(
+                    "Bing Custom Search not configured. Required environment variables: "
+                    "BING_CUSTOM_CONNECTION_ID, BING_CUSTOM_INSTANCE_NAME"
                 )
-                event_data = EventData(
-                    city=context.city,
-                    state=context.state,
-                    events=[],
-                    summary="Events analysis unavailable - configuration missing",
-                    insight=config_missing_insight,
-                )
-                events_event = EventsAnalysisEvent(event_data)
-                events_event.executor_id = self.id
-                await ctx.add_event(events_event)
-                await ctx.send_message(event_data)
-                return
 
-            # Create agent with Bing search
             today = datetime.now().strftime("%B %d, %Y")
-            # Search and parse response
             response = await self._events_agent.run(
-                f"Major outdoor public events after {today} in {context.city}, {context.state} that would increase clothing store sales",
-                response_format=EventsSearchResult,
+                f"Major outdoor public events after {today} in {context.city}, "
+                f"{context.state} that would increase clothing store sales",
+                response_format=EventsAgentResponse,
             )
 
-            events_payload = getattr(response, "value", None)
-            structured_events_raw = events_payload.events if events_payload and events_payload.events else []
-            raw_summary = events_payload.summary if events_payload and events_payload.summary else ""
-
-            # Fall back to free-form text if structured output is unavailable
-            if not raw_summary:
-                raw_summary = (response.text or "").strip()
-
-            clean_event_text = await self._clean_analysis_text(raw_summary, "events") if raw_summary else ""
-
-            structured_events: list[EventInsight] = [
-                EventInsight.model_validate(event) for event in structured_events_raw[:3]
-            ]
-
-            if structured_events and not clean_event_text:
-                summary_lines = [
-                    f"{event.event_name} ({event.event_date}) - {event.relevance}"
-                    for event in structured_events
-                ]
-                events_summary = " ".join(summary_lines)
-            elif clean_event_text:
-                events_summary = clean_event_text
-            else:
-                events_summary = "No major upcoming events expected in the next 21 days."
+            # Structured output guarantees schema compliance
+            events_payload = response.value
+            structured_events = (
+                [EventDetail.model_validate(event) for event in events_payload.events]
+                if events_payload and events_payload.events
+                else []
+            )
+            events_summary = (
+                events_payload.summary
+                if events_payload and events_payload.summary
+                else "No major upcoming events expected in the next 21 days."
+            )
 
             has_events = bool(structured_events) or (
-                events_summary and "no major" not in events_summary.lower()
+                "no major" not in events_summary.lower()
             )
 
             if has_events:
@@ -704,19 +671,16 @@ class EventsAnalyzer(Executor):
                     action=None,
                 )
 
-            event_data = EventData(
+            event_data = EventsAnalysis(
                 city=context.city,
                 state=context.state,
                 events=structured_events,
-                summary=events_summary if has_events else "No major upcoming events expected in the next 21 days.",
+                summary=events_summary
+                if has_events
+                else "No major upcoming events expected in the next 21 days.",
                 insight=events_ui_insight,
             )
 
-            _record_span_event(
-                self.id,
-                "Events analysis complete",
-                {"events.city": event_data.city, "events.state": event_data.state},
-            )
             events_event = EventsAnalysisEvent(event_data)
             events_event.executor_id = self.id
             await ctx.add_event(events_event)
@@ -736,19 +700,15 @@ class EventsAnalyzer(Executor):
                 description="⚠️ Unable to retrieve local events at this time.",
                 action=None,
             )
-            
-            event_data = EventData(
+
+            event_data = EventsAnalysis(
                 city=context.city,
                 state=context.state,
                 events=[],
                 summary="Unable to retrieve local events at this time",
                 insight=fallback_insight,
             )
-            _record_span_event(
-                self.id,
-                "Events analysis failed",
-                {"events.city": event_data.city, "events.state": event_data.state},
-            )
+
             events_event = EventsAnalysisEvent(event_data)
             events_event.executor_id = self.id
             await ctx.add_event(events_event)
@@ -765,7 +725,10 @@ class TopSellingProductsAnalyzer(Executor):
         self.agent = chat_client.create_agent(
             name="Top Selling Products Analyzer",
             instructions=(
-                "You are a retail analyst. Use the available finance MCP tools to retrieve top-selling product data as needed. "
+                "You are a retail analyst analyzing product performance. "
+                "Your task: retrieve the top 5 selling products for a specific store over the last 21 days. "
+                "Use the finance MCP tools to get revenue, units sold, and SKU for each product. "
+                "Limit results to exactly 5 products and order by units sold in descending order. "
                 "Always respond using the provided response schema."
             ),
             tools=[finance_mcp],
@@ -773,8 +736,8 @@ class TopSellingProductsAnalyzer(Executor):
         super().__init__(id=id or "top_selling_products_analyzer")
 
     @handler
-    async def analyze(
-        self, context: StoreContext, ctx: WorkflowContext[ProductData]
+    async def handle(
+        self, context: StoreContext, ctx: WorkflowContext[ProductsAnalysis]
     ) -> None:
         """Fetch top selling products from Finance MCP."""
         try:
@@ -782,11 +745,13 @@ class TopSellingProductsAnalyzer(Executor):
                 f"Top 5 selling products for store_id {context.store_id} over the last 21 days. "
                 f"Use the finance MCP tools to retrieve revenue, units sold, and SKU."
                 f" Limit results to 5 and order by units sold descending.",
-                response_format=TopProductsResult,
+                response_format=ProductsAgentResponse,
             )
 
             products_payload = agent_response.value
-            products = (products_payload.products if products_payload else [])[:5]
+            products = (products_payload.products if products_payload else [])[
+                :5
+            ]
 
             if not products:
                 formatted_summary = (
@@ -821,7 +786,7 @@ class TopSellingProductsAnalyzer(Executor):
                 action=None,
             )
 
-            product_data = ProductData(
+            product_data = ProductsAnalysis(
                 city=context.city,
                 state=context.state,
                 store_id=context.store_id,
@@ -832,11 +797,6 @@ class TopSellingProductsAnalyzer(Executor):
                 insight=product_ui_insight,
             )
 
-            _record_span_event(
-                self.id,
-                "Product analysis complete",
-                {"product.store_id": str(product_data.store_id)},
-            )
             product_event = ProductAnalysisEvent(product_data)
             product_event.executor_id = self.id
             await ctx.add_event(product_event)
@@ -856,8 +816,8 @@ class TopSellingProductsAnalyzer(Executor):
                 description="⚠️ Unable to retrieve product data at this time. Check inventory system availability.",
                 action=None,
             )
-            
-            product_data = ProductData(
+
+            product_data = ProductsAnalysis(
                 city=context.city,
                 state=context.state,
                 store_id=context.store_id,
@@ -867,11 +827,7 @@ class TopSellingProductsAnalyzer(Executor):
                 recommendations=["Check inventory system availability"],
                 insight=fallback_insight,
             )
-            _record_span_event(
-                self.id,
-                "Product analysis failed",
-                {"product.store_id": str(product_data.store_id)},
-            )
+
             product_event = ProductAnalysisEvent(product_data)
             product_event.executor_id = self.id
             await ctx.add_event(product_event)
@@ -885,31 +841,31 @@ class InsightSynthesizer(Executor):
         super().__init__(id=id or "insight_synthesizer")
 
     @handler
-    async def synthesize(
+    async def handle(
         self,
-        data: List[Union[WeatherData, EventData, ProductData]],
+        data: List[Union[WeatherAnalysis, EventsAnalysis, ProductsAnalysis]],
         ctx: WorkflowContext[WeeklyInsights],
     ) -> None:
         """Collect aggregated data from fan-in and synthesize insights."""
-        weather_data: Optional[WeatherData] = None
-        event_data: Optional[EventData] = None
-        product_data: Optional[ProductData] = None
+        weather_data: Optional[WeatherAnalysis] = None
+        event_data: Optional[EventsAnalysis] = None
+        product_data: Optional[ProductsAnalysis] = None
 
         for item in data:
-            if isinstance(item, WeatherData):
+            if isinstance(item, WeatherAnalysis):
                 weather_data = item
-            elif isinstance(item, EventData):
+            elif isinstance(item, EventsAnalysis):
                 event_data = item
-            elif isinstance(item, ProductData):
+            elif isinstance(item, ProductsAnalysis):
                 product_data = item
 
         await self._try_synthesize(weather_data, event_data, product_data, ctx)
 
     async def _try_synthesize(
         self,
-        weather_data: Optional[WeatherData],
-        event_data: Optional[EventData],
-        product_data: Optional[ProductData],
+        weather_data: Optional[WeatherAnalysis],
+        event_data: Optional[EventsAnalysis],
+        product_data: Optional[ProductsAnalysis],
         ctx: WorkflowContext[WeeklyInsights],
     ) -> None:
         """Generate final insights when all data is available."""
@@ -922,116 +878,64 @@ class InsightSynthesizer(Executor):
             )
             return
 
-        try:
-            # Build unified action with comprehensive instructions for AI stock agent
-            events_context = (
-                f"### Upcoming Events\n{event_data.summary}\n\n" 
-                if event_data.summary and "no major" not in event_data.summary.lower() 
-                else ""
-            )
-            
-            top_products_context = f"### Top Selling Products\n{product_data.analysis_text}\n\n"
+        # Build unified action with comprehensive instructions for AI stock agent
+        events_context = (
+            f"### Upcoming Events\n{event_data.summary}\n\n"
+            if event_data.summary
+            and "no major" not in event_data.summary.lower()
+            else ""
+        )
 
-            unified_instructions = (
-                f"Based on the weather conditions, local events, and current sales performance, what items should we restock?\n\n"
-                f"## CONTEXT\n\n"
-                f"Weather Forecast:\n"
-                f"- {weather_data.analysis}\n\n"
-                f"{events_context}"
-                f"{top_products_context}"
-            
-            )
+        top_products_context = (
+            f"### Top Selling Products\n{product_data.analysis_text}\n\n"
+        )
 
-            unified_action = InsightAction(
-                label="Generate Insights-Based Analysis",
-                type="navigation",
-                path="/management/ai-agent",
-                instructions=unified_instructions,
-            )
+        unified_instructions = (
+            f"Based on the weather conditions, local events, and current sales performance, what items should we restock?\n\n"
+            f"## CONTEXT\n\n"
+            f"Weather Forecast:\n"
+            f"- {weather_data.analysis}\n\n"
+            f"{events_context}"
+            f"{top_products_context}"
+        )
 
-            # Collect insights from all analyzers
-            insights_list = [
-                weather_data.insight,
-                product_data.insight,
-                event_data.insight,
-            ]
+        unified_action = InsightAction(
+            label="Generate Insights-Based Analysis",
+            type="navigation",
+            path="/management/ai-agent",
+            instructions=unified_instructions,
+        )
 
-            insights = WeeklyInsights(
-                unified_action=unified_action,
-                summary="AI-generated insights based on weather forecasts, inventory data, and local events",
-                weather_summary=weather_data.analysis,
-                events_summary=event_data.summary if "no major" not in event_data.summary.lower() else None,
-                stock_items=[],
-                insights=insights_list,
-            )
+        # Collect insights from all analyzers
+        insights_list = [
+            weather_data.insight,
+            product_data.insight,
+            event_data.insight,
+        ]
 
-            _record_span_event(
-                self.id,
-                "Unified action created successfully",
-                {
-                    "insights.store_id": str(weather_data.store_id),
-                },
-            )
-            synth_event = InsightsSynthesizedEvent(insights)
-            synth_event.executor_id = self.id
-            await ctx.add_event(synth_event)
-            await ctx.send_message(insights)
-            await ctx.yield_output(insights)
+        insights = WeeklyInsights(
+            unified_action=unified_action,
+            summary="AI-generated insights based on weather forecasts, inventory data, and local events",
+            weather_summary=weather_data.analysis,
+            events_summary=event_data.summary
+            if "no major" not in event_data.summary.lower()
+            else None,
+            stock_items=[],
+            insights=insights_list,
+        )
 
-        except Exception as e:
-            logger.error("Insight synthesis failed: %s", str(e), exc_info=True)
-            insights = WeeklyInsights(
-                summary="AI-generated insights (error occurred during generation)",
-                weather_summary="Unable to fetch complete data at this time.",
-                events_summary=None,
-                stock_items=[],
-                insights=[
-                    Insight(
-                        type="warning",
-                        title="Insight Generation Error",
-                        description="Unable to generate detailed insights at this time. Please try again later.",
-                        action=None,
-                    )
-                ],
-                unified_action=None,
-            )
-            _record_span_event(self.id, "Insights synthesis failed")
-            synth_event = InsightsSynthesizedEvent(insights)
-            synth_event.executor_id = self.id
-            await ctx.add_event(synth_event)
-            await ctx.send_message(insights)
-            await ctx.yield_output(insights)
+        synth_event = InsightsSynthesizedEvent(insights)
+        synth_event.executor_id = self.id
+        await ctx.add_event(synth_event)
+        await ctx.send_message(insights)
+        await ctx.yield_output(insights)
 
 
 def get_workflow():
-    """Create and return the weekly insights workflow for DevUI.
+    """Create and return the weekly insights workflow.
 
-    This workflow generates AI-powered insights for retail store managers by:
-    1. Collecting store context (location, role, store details)
-    2. Analyzing factors in parallel:
-       - Weather conditions via Open-Meteo API
-       - Local events via Bing search (Azure AI Agent)
-       - Top selling products via Finance MCP
-    3. Synthesizing actionable insights combining all three data sources
-
-    Pipeline layout:
-    data_collector -> [weather_analyzer, events_analyzer, top_selling_products_analyzer] -> insight_synthesizer
-
-    The workflow demonstrates:
-    - Fan-out/fan-in pattern for parallel data gathering (3-way)
-    - External API integration (Open-Meteo for weather)
-    - Azure AI Agent with Bing search for event discovery
-    - MCP server integration for product data
-    - LLM-powered insight generation and synthesis
-    - Custom workflow events for observability
-    - Structured output with Pydantic models
-
-    Prerequisites:
-    - Azure OpenAI endpoint configured for chat completions
-    - Azure AI Project endpoint for Bing search
-    - BING_CUSTOM_CONNECTION_ID and BING_CUSTOM_INSTANCE_NAME environment variables
-    - Finance MCP server accessible
-    - Open-Meteo API accessible (no auth required)
+    Fan-out/fan-in pattern: collects store context, analyzes weather/events/products
+    in parallel, then synthesizes actionable retail insights.
 
     Returns:
         Workflow: Configured workflow ready for execution
@@ -1039,7 +943,9 @@ def get_workflow():
     data_collector = DataCollector(id="data_collector")
     weather_analyzer = WeatherAnalyzer(id="weather_analyzer")
     events_analyzer = EventsAnalyzer(id="events_analyzer")
-    top_selling_products_analyzer = TopSellingProductsAnalyzer(id="top_selling_products_analyzer")
+    top_selling_products_analyzer = TopSellingProductsAnalyzer(
+        id="top_selling_products_analyzer"
+    )
     insight_synthesizer = InsightSynthesizer(id="insight_synthesizer")
 
     workflow = (
@@ -1051,9 +957,13 @@ def get_workflow():
             "context-aware stocking recommendations.",
         )
         .set_start_executor(data_collector)
-        .add_fan_out_edges(data_collector, [weather_analyzer, events_analyzer, top_selling_products_analyzer])
+        .add_fan_out_edges(
+            data_collector,
+            [weather_analyzer, events_analyzer, top_selling_products_analyzer],
+        )
         .add_fan_in_edges(
-            [weather_analyzer, events_analyzer, top_selling_products_analyzer], insight_synthesizer
+            [weather_analyzer, events_analyzer, top_selling_products_analyzer],
+            insight_synthesizer,
         )
         .build()
     )
@@ -1061,7 +971,6 @@ def get_workflow():
     return workflow
 
 
-# Create workflow instance at module level for backward compatibility
 workflow = get_workflow()
 
 setup_observability()
