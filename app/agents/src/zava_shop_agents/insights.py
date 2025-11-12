@@ -150,7 +150,6 @@ class StoreContext(BaseModel):
     """
 
     store_id: int
-    store_name: str
     user_role: str
     latitude: float
     longitude: float
@@ -377,6 +376,7 @@ class WeeklyInsights(BaseModel):
     Created by InsightSynthesizer after fan-in from all analyzers.
     """
 
+    store_id: int = Field(..., description="Store identifier for these insights")
     summary: str = Field(
         ..., description="AI-generated insights disclaimer (shown in italics)"
     )
@@ -416,33 +416,47 @@ class DataCollector(Executor):
     ) -> None:
         """Extract store context from input message and broadcast to analyzers.
 
-        Parses comma-separated key:value format, looks up coordinates,
-        and creates StoreContext for downstream processing.
-
-        Expected input format: "store_id:X,user_role:Y,store_name:Z"
-        Example: "store_id:1,user_role:manager,store_name:Downtown Seattle"
+        Uses an LLM agent to flexibly parse store details from natural language
+        input, then enriches with geographic coordinates and broadcasts to
+        weather, events, and products analyzers.
 
         Args:
-            message: ChatMessage containing store details
+            message: ChatMessage containing store details in natural language
             ctx: Workflow context for broadcasting StoreContext
 
         Raises:
-            ValueError: If message format is invalid or store_id cannot be parsed
+            ValueError: If LLM cannot extract required store information
         """
+        # Create a lightweight parsing agent to extract structured data from natural language
+        parser_agent = chat_client.create_agent(
+            name="StoreContextParser",
+            instructions=(
+                "Extract store information from the user's message. "
+                "Look for store ID (number) and user role (text). "
+                "Return the information in the specified format."
+            ),
+        )
+
+        # Define response schema for structured extraction
+        class ParsedStoreInfo(BaseModel):
+            store_id: int
+            user_role: str
+
         try:
-            # Parse key:value pairs from comma-separated input
-            parts = message.text.split(",")
-            store_id = int(parts[0].split(":")[1].strip())
-            user_role = parts[1].split(":")[1].strip()
-            store_name = parts[2].split(":")[1].strip()
+            # Let the LLM extract the information flexibly
+            response = await parser_agent.run(
+                message.text, response_format=ParsedStoreInfo
+            )
+            parsed = response.value
 
             # Lookup coordinates, default to NYC (store 1) if not found
-            coords = STORE_COORDINATES.get(store_id, STORE_COORDINATES[1])
+            coords = STORE_COORDINATES.get(
+                parsed.store_id, STORE_COORDINATES[1]
+            )
 
             store_context = StoreContext(
-                store_id=store_id,
-                store_name=store_name,
-                user_role=user_role,
+                store_id=parsed.store_id,
+                user_role=parsed.user_role,
                 latitude=coords["lat"],
                 longitude=coords["lon"],
                 city=coords["city"],
@@ -451,13 +465,13 @@ class DataCollector(Executor):
 
             await ctx.send_message(store_context)
 
-        except (IndexError, ValueError, KeyError) as e:
+        except Exception as e:
             logger.error(
                 "Failed to parse store context: %s", str(e), exc_info=True
             )
             raise ValueError(
-                f"Failed to parse store context. Expected format: 'store_id:X,user_role:Y,store_name:Z'. "
-                f"Got: {message.text}"
+                f"Failed to extract store information from message. "
+                f"Expected store ID and user role. Got: {message.text}"
             ) from e
 
 
@@ -914,6 +928,7 @@ class InsightSynthesizer(Executor):
         ]
 
         insights = WeeklyInsights(
+            store_id=weather_data.store_id,
             unified_action=unified_action,
             summary="AI-generated insights based on weather forecasts, inventory data, and local events",
             weather_summary=weather_data.analysis,

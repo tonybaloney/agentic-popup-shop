@@ -981,14 +981,11 @@ async def get_weekly_insights(
         # Cache miss or force refresh - generate new insights
         logger.info(f"🔄 Generating fresh insights for store {target_store_id}")
 
-        # Lookup store name when available so the workflow has richer context.
-        store_name = await get_store_name(target_store_id)
-        if not store_name:
-            store_name = "Online" if target_store_id == 16 else "Enterprise"
-
-        sanitized_store_name = store_name.replace(",", " ") if store_name else "Unknown"
+        # Pass store context as natural text (workflow will parse structured format)
         agent_input = (
-            f"store_id:{target_store_id},user_role:{current_user.user_role},store_name:{sanitized_store_name}"
+            f"Generate weekly insights for:\n"
+            f"Store ID: {target_store_id}\n"
+            f"User Role: {current_user.user_role}"
         )
         agent_message = ChatMessage(role="user", text=agent_input)
 
@@ -1032,8 +1029,10 @@ async def get_weekly_insights(
                 fallback_payload,
             )
             return WeeklyInsights(
+                store_id=target_store_id,
                 summary="Dynamic insights are temporarily unavailable.",
                 weather_summary="Weather data unavailable at this time.",
+                events_summary=None,
                 stock_items=[],
                 insights=[
                     Insight(
@@ -1043,6 +1042,7 @@ async def get_weekly_insights(
                         action=None,
                     )
                 ],
+                unified_action=None,
             )
 
         raise HTTPException(
@@ -1103,7 +1103,7 @@ async def invalidate_insights_cache(
             return CacheInvalidationResponse(
                 success=True,
                 message=f"Invalidated {count} cached insights",
-                count=count,
+                store_id=None,
             )
     except Exception as e:
         logger.error(f"❌ Error invalidating cache: {e}")
@@ -1141,12 +1141,13 @@ async def get_insights_cache_info(
             return CacheInfoResponse(
                 success=True,
                 cache_info=info,
+                message=None,
             )
         else:
             return CacheInfoResponse(
                 success=False,
                 message=f"No cache found for store {store_id}",
-                store_id=store_id,
+                cache_info=None,
             )
     except Exception as e:
         logger.error(f"❌ Error getting cache info: {e}")

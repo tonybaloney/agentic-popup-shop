@@ -230,6 +230,7 @@ class Insight(BaseModel):
 
 class WeeklyInsights(BaseModel):
     """Weekly AI insights response"""
+    store_id: int = Field(..., description="Store identifier for these insights")
     summary: str = Field(..., description="AI-generated insights disclaimer (shown in italics)")
     weather_summary: str = Field(..., description="Summary of weather conditions")
     events_summary: Optional[str] = Field(None, description="Summary of local events")
@@ -249,7 +250,6 @@ class CacheInvalidationResponse(BaseModel):
     success: bool = Field(..., description="Whether the operation was successful")
     message: str = Field(..., description="Human-readable message about the operation")
     store_id: Optional[int] = Field(None, description="Store ID if invalidating specific store")
-    count: Optional[int] = Field(None, description="Number of caches invalidated if invalidating all")
 
 
 class CacheInfo(BaseModel):
@@ -267,7 +267,6 @@ class CacheInfoResponse(BaseModel):
     success: bool = Field(..., description="Whether the operation was successful")
     cache_info: Optional[CacheInfo] = Field(None, description="Cache information if found")
     message: Optional[str] = Field(None, description="Error message if cache not found")
-    store_id: Optional[int] = Field(None, description="Store ID queried")
 
 
 # Order models for customer API
