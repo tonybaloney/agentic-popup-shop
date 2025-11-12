@@ -85,6 +85,12 @@
             "request": "launch",
             "command": "npm run dev",
             "cwd": "${workspaceFolder}/frontend"
+        },
+        {
+            "type": "aspire",
+            "request": "launch",
+            "name": "Aspire: Launch Aspire",
+            "program": "${workspaceFolder}/apphost.cs"
         }
     ],
     "compounds": [
