@@ -200,40 +200,48 @@ class AdminContextCollector(Executor):
         """Extract admin context from input message.
 
         Args:
-            message: ChatMessage containing user role and optional days_back
+            message: ChatMessage containing user role and optional days_back in format:
+                    "Generate admin weekly insights:\nUser Role: admin\nDays Back: 30"
             ctx: Workflow context for broadcasting AdminContext
 
         Raises:
             ValueError: If user is not an admin
         """
-        # Create a lightweight parsing agent
-        parser_agent = chat_client.create_agent(
-            name="AdminContextParser",
-            instructions=(
-                "Extract user role from the user's message. "
-                "If days_back is mentioned, extract it as an integer (default: 30). "
-                "Return the information in the specified format."
-            ),
-        )
-
-        class ParsedAdminInfo(BaseModel):
-            user_role: str
-            days_back: int = 30
+        import re
+        
+        text = message.text.strip()
+        user_role = None
+        days_back = 30  # Default value
 
         try:
-            response = await parser_agent.run(
-                message.text, response_format=ParsedAdminInfo
-            )
-            parsed = response.value
+            # Extract user_role using regex
+            # Pattern: "User Role: admin" (case-insensitive)
+            role_match = re.search(r'user[_ ]role\s*:\s*([a-z_]+)', text, re.IGNORECASE)
+            if role_match:
+                user_role = role_match.group(1)
+
+            # Extract days_back if present
+            # Pattern: "Days Back: 30" (case-insensitive)
+            days_match = re.search(r'days[_ ]back\s*:\s*(\d+)', text, re.IGNORECASE)
+            if days_match:
+                days_back = int(days_match.group(1))
+
+            # Validate we got user_role
+            if user_role is None:
+                raise ValueError(
+                    f"Could not parse user_role from message. "
+                    f"Expected format: 'User Role: <role>'. "
+                    f"Got: {text}"
+                )
 
             # Verify admin role
-            if parsed.user_role.lower() != "admin":
+            if user_role.lower() != "admin":
                 raise ValueError(
-                    f"Admin insights require admin role. Got: {parsed.user_role}"
+                    f"Admin insights require admin role. Got: {user_role}"
                 )
 
             admin_context = AdminContext(
-                user_role=parsed.user_role, days_back=parsed.days_back
+                user_role=user_role, days_back=days_back
             )
 
             await ctx.send_message(admin_context)

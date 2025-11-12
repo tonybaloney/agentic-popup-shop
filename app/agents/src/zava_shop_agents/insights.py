@@ -416,47 +416,51 @@ class DataCollector(Executor):
     ) -> None:
         """Extract store context from input message and broadcast to analyzers.
 
-        Uses an LLM agent to flexibly parse store details from natural language
-        input, then enriches with geographic coordinates and broadcasts to
+        Parses store details from natural language input using simple text parsing,
+        then enriches with geographic coordinates and broadcasts to
         weather, events, and products analyzers.
 
         Args:
-            message: ChatMessage containing store details in natural language
+            message: ChatMessage containing store details in natural language format like:
+                    "Generate weekly insights for:\nStore ID: 1\nUser Role: store_manager"
             ctx: Workflow context for broadcasting StoreContext
 
         Raises:
-            ValueError: If LLM cannot extract required store information
+            ValueError: If unable to extract required store information
         """
-        # Create a lightweight parsing agent to extract structured data from natural language
-        parser_agent = chat_client.create_agent(
-            name="StoreContextParser",
-            instructions=(
-                "Extract store information from the user's message. "
-                "Look for store ID (number) and user role (text). "
-                "Return the information in the specified format."
-            ),
-        )
-
-        # Define response schema for structured extraction
-        class ParsedStoreInfo(BaseModel):
-            store_id: int
-            user_role: str
+        import re
+        
+        text = message.text.strip()
+        store_id = None
+        user_role = None
 
         try:
-            # Let the LLM extract the information flexibly
-            response = await parser_agent.run(
-                message.text, response_format=ParsedStoreInfo
-            )
-            parsed = response.value
+            # Extract store_id using regex patterns
+            # Pattern: "Store ID: 1" or "store_id: 1" (case-insensitive)
+            store_id_match = re.search(r'store[_ ]id\s*:\s*(\d+)', text, re.IGNORECASE)
+            if store_id_match:
+                store_id = int(store_id_match.group(1))
+
+            # Extract user_role using regex patterns  
+            # Pattern: "User Role: store_manager" or "user_role: store_manager" (case-insensitive)
+            role_match = re.search(r'user[_ ]role\s*:\s*([a-z_]+)', text, re.IGNORECASE)
+            if role_match:
+                user_role = role_match.group(1)
+
+            # Validate we got both required fields
+            if store_id is None or user_role is None:
+                raise ValueError(
+                    f"Could not parse store_id and user_role from message. "
+                    f"Expected format: 'Store ID: <number>\\nUser Role: <role>'. "
+                    f"Got: {text}"
+                )
 
             # Lookup coordinates, default to NYC (store 1) if not found
-            coords = STORE_COORDINATES.get(
-                parsed.store_id, STORE_COORDINATES[1]
-            )
+            coords = STORE_COORDINATES.get(store_id, STORE_COORDINATES[1])
 
             store_context = StoreContext(
-                store_id=parsed.store_id,
-                user_role=parsed.user_role,
+                store_id=store_id,
+                user_role=user_role,
                 latitude=coords["lat"],
                 longitude=coords["lon"],
                 city=coords["city"],
@@ -471,7 +475,8 @@ class DataCollector(Executor):
             )
             raise ValueError(
                 f"Failed to extract store information from message. "
-                f"Expected store ID and user role. Got: {message.text}"
+                f"Expected format: 'Store ID: <number>\\nUser Role: <role>'. "
+                f"Got: {message.text}"
             ) from e
 
 
