@@ -12,6 +12,9 @@ def main():
     # Launch server with the workflow
     serve(entities=[stock_workflow, magentic_workflow, supplier_review_workflow, get_marketing_workflow()], port=int(port), auto_open=True, tracing_enabled=False)
 
+    #if os.environ.get("VSCODE_EXTENSION_PORT"):
+    from agent_framework.observability import setup_observability
+    setup_observability(vs_code_extension_port=4319)
 
 if __name__ == "__main__":
     main()
