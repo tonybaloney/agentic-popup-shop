@@ -29,6 +29,7 @@ from datetime import datetime, timezone
 from zava_shop_shared.config import Config
 from zava_shop_agents.stock import workflow as stock_workflow
 from zava_shop_agents.insights import workflow as insights_workflow
+from zava_shop_agents.admin_insights import admin_workflow as admin_insights_workflow
 
 # SQLAlchemy imports for SQLite
 from sqlalchemy import select, func, case
@@ -960,6 +961,7 @@ async def get_weekly_insights(
 
         # Determine which store the workflow should focus on.
         if current_user.store_id is not None:
+            # Store manager - use their assigned store
             target_store_id = current_user.store_id
             if store_id and store_id != current_user.store_id:
                 logger.info(
@@ -967,8 +969,12 @@ async def get_weekly_insights(
                     store_id,
                     current_user.store_id,
                 )
+        elif current_user.user_role == "admin":
+            # Admin - use cache key 0 for enterprise-wide insights
+            target_store_id = 0
         else:
-            target_store_id = store_id if store_id is not None else 16  # Online/enterprise default
+            # Fallback for other roles
+            target_store_id = store_id if store_id is not None else 0
 
         # Check cache first unless force refresh is requested
         cache = get_cache()
@@ -981,18 +987,32 @@ async def get_weekly_insights(
         # Cache miss or force refresh - generate new insights
         logger.info(f"🔄 Generating fresh insights for store {target_store_id}")
 
-        # Pass store context as natural text (workflow will parse structured format)
-        agent_input = (
-            f"Generate weekly insights for:\n"
-            f"Store ID: {target_store_id}\n"
-            f"User Role: {current_user.user_role}"
-        )
+        # Select workflow based on user role
+        if current_user.user_role == "admin":
+            # Admin users get enterprise-wide insights
+            logger.info("👔 Using admin insights workflow for enterprise analysis")
+            workflow = admin_insights_workflow
+            agent_input = (
+                f"Generate admin weekly insights:\n"
+                f"User Role: {current_user.user_role}\n"
+                f"Days Back: 30"
+            )
+        else:
+            # Store managers get operational insights for their store
+            logger.info(f"🏪 Using store manager insights workflow for store {target_store_id}")
+            workflow = insights_workflow
+            agent_input = (
+                f"Generate weekly insights for:\n"
+                f"Store ID: {target_store_id}\n"
+                f"User Role: {current_user.user_role}"
+            )
+        
         agent_message = ChatMessage(role="user", text=agent_input)
 
         insights_result: Optional[WeeklyInsights] = None
         fallback_payload: Optional[str] = None
 
-        async for event in insights_workflow.run_stream(agent_message):
+        async for event in workflow.run_stream(agent_message):
             if isinstance(event, ExecutorFailedEvent):
                 logger.error(
                     "❌ Insights workflow failed in executor %s: %s",

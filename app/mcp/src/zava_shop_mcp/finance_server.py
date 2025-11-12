@@ -12,7 +12,7 @@ initialize()
 from datetime import datetime, timedelta
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 from fastmcp import FastMCP
-from typing import AsyncIterator, Optional, Union
+from typing import AsyncIterator, Optional
 from datetime import datetime, UTC
 import logging
 
@@ -47,6 +47,7 @@ from zava_shop_mcp.models import (
     TopProductSalesResult,
     InventoryStatusResult,
     StoreResult,
+    StorePerformanceResult,
 )
 
 GUEST_TOKEN = os.getenv("DEV_GUEST_TOKEN", "dev-guest-token")
@@ -363,8 +364,8 @@ async def get_top_selling_products(
         Field(gt=0, le=365, description="Number of days to look back"),
     ] = 30,
     store_id: Annotated[
-        Optional[Union[int, str]],
-        Field(description="Store ID to filter results (integer)")
+        Optional[int],
+        Field(description="Store ID to filter results")
     ] = None,
     category_name: Annotated[
         Optional[str],
@@ -404,17 +405,6 @@ async def get_top_selling_products(
             f"category_name: {category_name}, days_back: {days_back}, limit: {limit}")
         await db.create_pool()
         async with db.get_session() as session:
-            # Normalize store_id input (accept ints or numeric strings)
-            store_filter_id: Optional[int] = None
-            if store_id is not None:
-                try:
-                    store_filter_id = int(store_id)
-                except (TypeError, ValueError) as conversion_error:
-                    raise ValueError("store_id must be an integer value") from conversion_error
-
-                if store_filter_id < 1:
-                    raise ValueError("store_id must be greater than or equal to 1")
-
             # Calculate cutoff date
             cutoff_date = datetime.now() - timedelta(days=days_back)
 
@@ -436,9 +426,9 @@ async def get_top_selling_products(
                 Order.order_date >= cutoff_date.date()
             )
 
-            if store_filter_id is not None:
+            if store_id is not None:
                 stmt = stmt.join(Store, Order.store_id == Store.store_id)
-                stmt = stmt.where(Order.store_id == store_filter_id)
+                stmt = stmt.where(Order.store_id == store_id)
 
             if category_name:
                 stmt = stmt.where(
@@ -636,6 +626,107 @@ async def get_current_utc_date() -> str:
         return datetime.now(UTC).isoformat()
     except Exception as e:
         logger.error(f"Error getting current UTC date: {e}")
+        raise e
+
+
+@mcp.tool()
+async def get_store_performance_comparison(
+    days_back: Annotated[
+        int,
+        Field(
+            gt=0,
+            le=365,
+            description=(
+                "Number of days to look back for analysis. "
+                "Common values: 7 (week), 30 (month), 90 (quarter), 365 (year). "
+                "Must be between 1 and 365 days."
+            ),
+        ),
+    ] = 30
+) -> list[StorePerformanceResult]:
+    """
+    Compare performance metrics across all stores to identify top and underperforming locations.
+
+    Analyzes store performance over a specified period and ranks stores by revenue per customer
+    (revenue efficiency). This metric normalizes for market size differences, allowing fair
+    comparison between stores with different customer bases.
+
+    Args:
+        days_back: Number of days to analyze (default: 30)
+
+    Returns:
+        List of StorePerformanceResult objects sorted by revenue_per_customer (highest first).
+        Each result includes store_id, store_name, is_online, total_revenue, total_orders,
+        total_units_sold, unique_customers, avg_order_value, revenue_per_customer, and
+        efficiency_rank (1-based where 1 = best). Returns empty list if no sales data exists.
+
+    Example:
+        >>> result = await get_store_performance_comparison(days_back=30)
+        >>> top_stores = result[:3]
+        >>> print(f"Top: {top_stores[0].store_name} - ${top_stores[0].revenue_per_customer:.2f}/customer")
+    """
+    try:
+        logger.info(
+            f"Retrieving store performance comparison for days_back: {days_back}"
+        )
+        await db.create_pool()
+        async with db.get_session() as session:
+            # Calculate cutoff date
+            cutoff_date = datetime.now() - timedelta(days=days_back)
+
+            # Build query to aggregate store performance
+            # Calculate revenue per customer for fair comparison across market sizes
+            total_revenue = func.coalesce(func.sum(OrderItem.total_amount), 0)
+            unique_customers = func.count(func.distinct(Order.customer_id))
+            
+            # Revenue per customer
+            revenue_per_customer = case(
+                (unique_customers > 0, total_revenue / unique_customers),
+                else_=0
+            ).label("revenue_per_customer")
+            
+            stmt = select(
+                Store.store_id,
+                Store.store_name,
+                Store.is_online,
+                total_revenue.label("total_revenue"),
+                func.count(func.distinct(Order.order_id)).label("total_orders"),
+                func.coalesce(func.sum(OrderItem.quantity), 0).label("total_units_sold"),
+                unique_customers.label("unique_customers"),
+                func.coalesce(
+                    func.avg(OrderItem.total_amount), 0
+                ).label("avg_order_value"),
+                revenue_per_customer,
+            ).select_from(Store).outerjoin(
+                Order,
+                and_(
+                    Store.store_id == Order.store_id,
+                    Order.order_date >= cutoff_date.date(),
+                ),
+            ).outerjoin(
+                OrderItem, Order.order_id == OrderItem.order_id
+            ).group_by(
+                Store.store_id,
+                Store.store_name,
+                Store.is_online,
+            ).order_by(
+                revenue_per_customer.desc()
+            )
+
+            result = await session.execute(stmt)
+            rows = result.mappings().all()
+
+            # Add efficiency rank to results (based on revenue per customer)
+            ranked_results = []
+            for rank, row in enumerate(rows, start=1):
+                store_data = dict(row)
+                store_data["efficiency_rank"] = rank
+                ranked_results.append(StorePerformanceResult(**store_data))
+
+            return ranked_results
+
+    except Exception as e:
+        logger.error(f"Error in get_store_performance_comparison: {e}")
         raise e
 
 if __name__ == "__main__":
