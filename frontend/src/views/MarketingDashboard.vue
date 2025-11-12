@@ -21,7 +21,7 @@
       </div>
       <CampaignDetails
         :campaign-data="campaignData"
-        :loading-states="loadingStates"
+        :active-agent="activeAgent"
         @send-message="handleSendMessage"
       />
     </div>
@@ -49,13 +49,9 @@ export default {
       schedule: [],
       localizations: []
     });
-    const loadingStates = ref({
-      campaignBrief: false,
-      socialMedia: false,
-      localization: false,
-      publishing: false,
-      instagram: false
-    });
+    
+    // Simplified loading state: single "active agent" variable
+    const activeAgent = ref('');  // '', 'campaign_planner', 'creative', 'localization', 'publishing', 'instagram'
 
     const { messages, sendMessage, isConnected } = useWebSocket();
 
@@ -72,6 +68,8 @@ export default {
     };
 
     const handleSendMessage = (message) => {
+      console.log(`📤 Sending message: "${message}"`);
+      
       // Check if this is an approval/reject decision
       const lowerMessage = message.toLowerCase().trim();
       if (lowerMessage === 'approve' || lowerMessage.startsWith('reject')) {
@@ -83,9 +81,23 @@ export default {
           needsPublishingApproval: false,
           needsLocalizationApproval: false
         };
+        console.log('🎯 Approval message - not setting activeAgent');
+      } else if (lowerMessage === 'approve_schedule') {
+        // Clear schedule approval state and set Instagram loading
+        campaignData.value = {
+          ...campaignData.value,
+          needsScheduleApproval: false
+        };
+        activeAgent.value = 'instagram';
+        console.log(`🎯 Schedule approved - activeAgent set to: ${activeAgent.value}`);
+      } else if (lowerMessage.includes('campaign approved! scheduling')) {
+        // This is the confirmation message, don't trigger loading
+        // Just send it to chat
+        console.log('🎯 Confirmation message - not setting activeAgent');
       } else {
-        // For new campaign requests, show loading
-        loadingStates.value = { campaignBrief: true, socialMedia: false, localization: false, publishing: false, instagram: false };
+        // For new campaign requests, show loading for campaign planner
+        activeAgent.value = 'campaign_planner';
+        console.log(`🎯 New campaign request - activeAgent set to: ${activeAgent.value}`);
       }
 
       sendMessage(message);
@@ -206,205 +218,6 @@ export default {
         localizations: newLocalizations,
         schedule: newSchedule
       };
-
-      // Enhanced loading state detection
-      const hasReceivedBrief = newBrief && accumulatedCampaignData.isFormattedBrief;
-      const hasReceivedMedia = Array.isArray(newMedia) && newMedia.length > 0;
-      const needsCreativeApproval = accumulatedCampaignData.needsCreativeApproval;
-
-      // More precise loading state logic using multiple detection methods
-      const shouldShowBriefLoading = !hasReceivedBrief && (
-        currentlyRunningExecutor === 'campaign planner' ||
-        currentlyRunningExecutor === 'campaign_planner_agent' ||
-        accumulatedCampaignData.needsCampaignFollowup ||
-        accumulatedCampaignData.needsMarketSelection
-      );
-
-      // Enhanced detection for creative agent running
-      const isCreativeAgentActive = currentlyRunningExecutor === 'creative agent' ||
-        currentlyRunningExecutor === 'creative' ||
-        currentlyRunningExecutor === 'creative_agent' ||
-        creativeAgentMessages.length > 0 ||
-        creativeUpdateMessages.length > 0 ||
-        hasRecentCreativeActivity ||
-        debugMessages.some(msg => 
-          msg.content && (
-            msg.content.toLowerCase().includes('creative agent') ||
-            msg.content.toLowerCase().includes('creative') ||
-            msg.content.toLowerCase().includes('generating')
-          )
-        ) ||
-        // Look for workflow state indicating creative work
-        statusMessages.some(msg => 
-          msg.content && (
-            msg.content.toLowerCase().includes('creative') ||
-            msg.content.toLowerCase().includes('media') ||
-            msg.content.toLowerCase().includes('assets')
-          )
-        );
-
-      console.log('🔍 Creative Agent Detection Debug:', {
-        currentlyRunningExecutor,
-        creativeAgentMessagesCount: creativeAgentMessages.length,
-        creativeUpdateMessagesCount: creativeUpdateMessages.length,
-        hasRecentCreativeActivity,
-        recentMessagesContent: recentMessages.map(m => m.content?.substring(0, 30)),
-        executorMessages: executorMessages.map(m => ({ 
-          content: m.content?.substring(0, 100),
-          debug: m.debug,
-          type: m.type,
-          matchesPattern: /^(.+?)\s+is running\.\.\.$/i.test(m.content || '')
-        })),
-        debugMessages: debugMessages.map(m => ({ 
-          content: m.content?.substring(0, 50),
-          hasCreative: m.content?.toLowerCase().includes('creative'),
-          hasGenerating: m.content?.toLowerCase().includes('generating')
-        })),
-        statusMessages: statusMessages.map(m => ({ 
-          content: m.content?.substring(0, 50),
-          hasCreative: m.content?.toLowerCase().includes('creative'),
-          hasMedia: m.content?.toLowerCase().includes('media')
-        })),
-        isCreativeAgentActive
-      });
-
-      const shouldShowMediaLoading = (
-        hasReceivedBrief && 
-        !hasReceivedMedia && 
-        !needsCreativeApproval && 
-        isCreativeAgentActive
-      ) || (
-        // Also show loading if we detect creative agent running regardless of brief status
-        isCreativeAgentActive && 
-        !hasReceivedMedia && 
-        !needsCreativeApproval
-      );
-
-      console.log('🎨 Media Loading Debug:', {
-        hasReceivedBrief,
-        hasReceivedMedia,
-        needsCreativeApproval,
-        isCreativeAgentActive,
-        shouldShowMediaLoading,
-        'newMedia.length': newMedia ? newMedia.length : 'null',
-        'brief exists': !!newBrief,
-        'isFormattedBrief': accumulatedCampaignData.isFormattedBrief
-      });
-
-      // Detection for localization agent running
-      const isLocalizationAgentActive = currentlyRunningExecutor === 'localization_agent' ||
-        currentlyRunningExecutor === 'localization agent' ||
-        debugMessages.some(msg => 
-          msg.content && (
-            msg.content.toLowerCase().includes('localization agent') ||
-            msg.content.toLowerCase().includes('translating') ||
-            msg.content.toLowerCase().includes('localization')
-          )
-        );
-
-      const hasReceivedLocalizations = Array.isArray(newLocalizations) && newLocalizations.length > 0;
-      const shouldShowLocalizationLoading = (
-        hasReceivedMedia && 
-        !hasReceivedLocalizations && 
-        isLocalizationAgentActive
-      ) || (
-        // Also show if localization agent is detected running regardless
-        isLocalizationAgentActive && 
-        !hasReceivedLocalizations
-      );
-
-      // Detection for publishing agent running
-      const isPublishingAgentActive = currentlyRunningExecutor === 'publishing_agent' ||
-        currentlyRunningExecutor === 'publishing agent' ||
-        debugMessages.some(msg => 
-          msg.content && (
-            msg.content.toLowerCase().includes('publishing agent') ||
-            msg.content.toLowerCase().includes('publishing') ||
-            msg.content.toLowerCase().includes('scheduling')
-          )
-        );
-
-      const hasReceivedSchedule = Array.isArray(newSchedule) && newSchedule.length > 0;
-      const shouldShowPublishingLoading = (
-        hasReceivedLocalizations && 
-        !hasReceivedSchedule && 
-        isPublishingAgentActive
-      ) || (
-        // Also show if publishing agent is detected running regardless
-        isPublishingAgentActive && 
-        !hasReceivedSchedule
-      );
-
-      // Detection for Instagram agent running
-      const isInstagramAgentActive = currentlyRunningExecutor === 'instagram_agent' ||
-        currentlyRunningExecutor === 'instagram agent' ||
-        debugMessages.some(msg => 
-          msg.content && (
-            msg.content.toLowerCase().includes('instagram agent') ||
-            msg.content.toLowerCase().includes('instagram post') ||
-            msg.content.toLowerCase().includes('preparing instagram')
-          )
-        );
-
-      const hasReceivedInstagramPost = campaignData.value?.instagram_post != null;
-      const shouldShowInstagramLoading = (
-        hasReceivedSchedule && 
-        !hasReceivedInstagramPost && 
-        isInstagramAgentActive
-      ) || (
-        // Also show if Instagram agent is detected running regardless
-        isInstagramAgentActive && 
-        !hasReceivedInstagramPost
-      );
-
-      console.log('🎬 Enhanced loading state calculation:', {
-        currentlyRunningExecutor,
-        isCreativeAgentActive,
-        isLocalizationAgentActive,
-        isPublishingAgentActive,
-        isInstagramAgentActive,
-        hasReceivedBrief,
-        hasReceivedMedia,
-        hasReceivedLocalizations,
-        hasReceivedSchedule,
-        hasReceivedInstagramPost,
-        needsCreativeApproval,
-        shouldShowBriefLoading,
-        shouldShowMediaLoading,
-        shouldShowLocalizationLoading,
-        shouldShowPublishingLoading,
-        shouldShowInstagramLoading,
-        shouldShowPublishingLoading,
-        executorMessages: executorMessages.length,
-        debugMessages: debugMessages.length,
-        statusMessages: statusMessages.length
-      });
-
-      if (shouldShowBriefLoading && !shouldShowMediaLoading && !shouldShowLocalizationLoading && !shouldShowPublishingLoading && !shouldShowInstagramLoading) {
-        console.log('📋 Setting brief loading to true');
-        loadingStates.value = { campaignBrief: true, socialMedia: false, localization: false, publishing: false, instagram: false };
-      } else if (shouldShowMediaLoading && !shouldShowLocalizationLoading && !shouldShowPublishingLoading && !shouldShowInstagramLoading) {
-        console.log('🎨 Setting media loading to true');
-        loadingStates.value = { campaignBrief: false, socialMedia: true, localization: false, publishing: false, instagram: false };
-      } else if (shouldShowLocalizationLoading && !shouldShowPublishingLoading && !shouldShowInstagramLoading) {
-        console.log('🌍 Setting localization loading to true');
-        loadingStates.value = { campaignBrief: false, socialMedia: false, localization: true, publishing: false, instagram: false };
-      } else if (shouldShowPublishingLoading && !shouldShowInstagramLoading) {
-        console.log('📅 Setting publishing loading to true');
-        loadingStates.value = { campaignBrief: false, socialMedia: false, localization: false, publishing: true, instagram: false };
-      } else if (shouldShowInstagramLoading) {
-        console.log('📱 Setting Instagram loading to true');
-        loadingStates.value = { campaignBrief: false, socialMedia: false, localization: false, publishing: false, instagram: true };
-      } else if (hasReceivedBrief || hasReceivedMedia || hasReceivedLocalizations || hasReceivedSchedule || hasReceivedInstagramPost) {
-        console.log('✅ Setting all loading to false');
-        loadingStates.value = {
-          campaignBrief: false,
-          socialMedia: false,
-          localization: false,
-          publishing: false,
-          instagram: false
-        };
-      }
     };
 
     // Watch for message changes
@@ -412,13 +225,57 @@ export default {
       extractCampaignData(newMessages);
     }, { deep: true });
 
+    // Separate watcher for agent status detection
+    watch(messages, (newMessages) => {
+      // Check the last 5 messages for any agent status
+      const recentMessages = newMessages.slice(-5);
+      
+      for (const message of recentMessages) {
+        if (message && message.content) {
+          const content = message.content.toLowerCase();
+          
+          if (content.includes('coordinator is running')) {
+            console.log('🎯 Found "coordinator is running" - setting activeAgent to campaign_planner');
+            activeAgent.value = 'campaign_planner';
+            return; // Exit early once we find an agent
+          } else if (content.includes('creative agent is running')) {
+            console.log('🎯 Found "creative agent is running" - setting activeAgent to creative');
+            activeAgent.value = 'creative';
+            return;
+          } else if (content.includes('localization agent is running')) {
+            console.log('🎯 Found "localization agent is running" - setting activeAgent to localization');
+            activeAgent.value = 'localization';
+            return;
+          } else if (content.includes('publishing agent is running')) {
+            console.log('🎯 Found "publishing agent is running" - setting activeAgent to publishing');
+            activeAgent.value = 'publishing';
+            return;
+          } else if (content.includes('instagram agent is running')) {
+            console.log('🎯 Found "instagram agent is running" - setting activeAgent to instagram');
+            activeAgent.value = 'instagram';
+            return;
+          }
+        }
+      }
+    }, { immediate: true });
+
     onMounted(() => {
       checkWorkflowStatus();
       statusCheckInterval = setInterval(checkWorkflowStatus, 10000);
+      
+      // Expose setActiveAgent to window for WebSocket to call
+      window.setActiveAgent = (agent) => {
+        activeAgent.value = agent;
+      };
     });
     onUnmounted(() => {
       if (statusCheckInterval) {
         clearInterval(statusCheckInterval);
+      }
+      
+      // Clean up global function
+      if (window.setActiveAgent) {
+        delete window.setActiveAgent;
       }
     });
 
@@ -426,7 +283,7 @@ export default {
       sidebarCollapsed,
       workflowStatus,
       campaignData,
-      loadingStates,
+      activeAgent,
       messages,
       isConnected,
       handleSendMessage
