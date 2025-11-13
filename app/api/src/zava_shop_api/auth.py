@@ -36,7 +36,7 @@ class SessionToken(Base):
 
 
 ABS_DB_PATH = "sqlite+aiosqlite:////workspace/app/data/auth.db"
-REL_DB_PATH = "sqlite+aiosqlite:///../../data/auth.db"
+REL_DB_PATH = "sqlite+aiosqlite:///../data/auth.db"
 
 import pathlib
 

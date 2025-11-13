@@ -36,7 +36,7 @@ class Config:
         """Initialize configuration with environment variables."""
 
         ABS_DB_PATH = "sqlite+aiosqlite:////workspace/app/data/retail.db"
-        REL_DB_PATH = "sqlite+aiosqlite:///../../data/retail.db"
+        REL_DB_PATH = "sqlite+aiosqlite:///../data/retail.db"
 
 
         # Use absolute path if running in container (/workspace exists), else relative path
