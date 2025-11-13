@@ -34,7 +34,7 @@ WORKDIR /app/api
 
 # Install dependencies using UV
 # This will install the MCP server and the local shared package
-RUN uv sync --index-strategy unsafe-best-match --frozen
+RUN uv sync --prerelease=allow --frozen
 
 # Expose port (if needed for HTTP MCP server)
 EXPOSE 8000

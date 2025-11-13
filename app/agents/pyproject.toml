@@ -4,10 +4,10 @@ version = "0.1.0"
 description = "Agent implementations for the shop application"
 requires-python = ">=3.12"
 dependencies = [
-    "agent-framework-core@git+https://github.com/microsoft/agent-framework.git@feature-python-foundry-agents#egg=agent-framework-core&subdirectory=python/packages/core",
+    "agent-framework-core==1.0.0b251112",
     "azure-identity>=1.23.0,<2.0.0",
     "opentelemetry-instrumentation-openai",
-    "agent-framework-devui@git+https://github.com/microsoft/agent-framework.git@feature-python-foundry-agents#egg=agent-framework-devui&subdirectory=python/packages/devui",
+    "agent-framework-devui==1.0.0b251112",
     "opentelemetry-exporter-otlp",
     "azure-monitor-opentelemetry",
     "azure-monitor-opentelemetry-exporter",
@@ -15,19 +15,10 @@ dependencies = [
     "pillow>=12.0.0",
     "requests",
     # Azure AI preview
-    "azure-ai-projects>=2.0.0a20251103001",
-    "agent-framework-azure-ai@git+https://github.com/microsoft/agent-framework.git@feature-python-foundry-agents#egg=agent-framework-azure-ai&subdirectory=python/packages/azure-ai",
+    "agent-framework-azure-ai==1.0.0b251112",
     "aiohttp",
 ]
 
 [build-system]
 requires = ["uv_build>=0.9.3,<0.10.0"]
 build-backend = "uv_build"
-
-[[tool.uv.index]]
-name = "pypi"
-url = "https://pypi.org/simple/"
-
-[[tool.uv.index]]
-name = "azure-sdk-for-python"
-url = "https://pkgs.dev.azure.com/azure-sdk/public/_packaging/azure-sdk-for-python/pypi/simple/"
