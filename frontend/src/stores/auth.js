@@ -15,7 +15,7 @@ export const authStore = reactive({
         password
       });
       
-      const { access_token, user_role, store_id, store_name } = response.data;
+      const { access_token, user_role, store_id, store_name, name } = response.data;
       
       // Store authentication data
       this.isAuthenticated = true;
@@ -24,7 +24,8 @@ export const authStore = reactive({
         username,
         role: user_role,
         store_id,
-        store_name
+        store_name,
+        name
       };
       
       // Persist to sessionStorage
@@ -39,12 +40,28 @@ export const authStore = reactive({
     }
   },
   
-  logout() {
-    this.isAuthenticated = false;
-    this.user = null;
-    this.token = null;
-    sessionStorage.removeItem('auth_token');
-    sessionStorage.removeItem('auth_user');
+  async logout() {
+    try {
+      // Call the backend logout API to invalidate all sessions
+      const token = this.getToken();
+      if (token) {
+        await axios.post('/api/logout', {}, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      }
+    } catch (error) {
+      // Log error but continue with client-side logout
+      console.error('Logout API error:', error);
+    } finally {
+      // Always clear client-side auth state
+      this.isAuthenticated = false;
+      this.user = null;
+      this.token = null;
+      sessionStorage.removeItem('auth_token');
+      sessionStorage.removeItem('auth_user');
+    }
   },
   
   checkAuth() {

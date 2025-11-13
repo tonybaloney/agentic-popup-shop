@@ -69,7 +69,17 @@ export default {
         const result = await authStore.login(this.username, this.password);
         
         if (result.success) {
-          this.$router.push('/management');
+          // Redirect based on user role
+          const userRole = authStore.user?.role;
+          if (userRole === 'customer') {
+            this.$router.push('/customer/dashboard');
+          } else if (userRole === 'admin' || userRole === 'store_manager') {
+            this.$router.push('/management');
+          } else if (userRole === 'marketing') {
+            this.$router.push('/marketing');
+          } else {
+            this.$router.push('/');
+          }
         } else {
           this.error = result.error || 'Invalid username or password';
         }

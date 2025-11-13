@@ -8,8 +8,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@openai/chatkit-react": "^1.2.0",
     "axios": "^1.6.0",
     "marked": "^16.4.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "vue": "^3.4.0",
     "vue-router": "^4.2.5"
   },

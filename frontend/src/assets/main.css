@@ -1,16 +1,16 @@
 :root {
   /* Colors */
-  --primary-color: #24292f;
-  --secondary-color: #57606a;
-  --accent-color: #2da44e;
-  --accent-hover: #2c974b;
-  --background-color: #ffffff;
-  --text-color: #24292f;
-  --border-color: #d0d7de;
-  --hover-color: #f6f8fa;
-  --dark-bg: #0d1117;
-  --github-green: #2da44e;
-  --github-yellow: #bf8700;
+  --primary-color: #183D4c;
+  --secondary-color: #9EC9D9;
+  --accent-color: #092040;
+  --accent-hover: #9EC9D9;
+  --background-color: #fff;
+  --text-color: #0a0c0c;
+  --border-color: #5A6B75;
+  --hover-color: #5FA8C2;
+  --dark-bg: #0a0c0c;
+  --success-color: #3BB273;
+  --warning-color: #E6A23C;
 }
 
 * {
@@ -116,10 +116,10 @@ button {
 /* Error Message */
 .error {
   padding: 1rem;
-  background-color: #fee;
-  border: 1px solid #fcc;
+  background-color: #A6C8D9;
+  border: 1px solid #9EC9D9;
   border-radius: 4px;
-  color: #c00;
+  color: #0a0c0c;
   margin: 1rem 0;
 }
 

@@ -3,10 +3,10 @@
     <!-- Header -->
     <div class="page-header">
       <router-link to="/management/inventory" class="back-link">
-        <i class="bi bi-arrow-left"></i> Back to Inventory
+       <vibe-icon name="arrow-left" size="24"></vibe-icon> Back to Inventory
       </router-link>
-      <h1><i class="bi bi-robot"></i> AI Restocking Agent</h1>
-      <p class="subtitle">Analyze inventory levels and get intelligent restocking recommendations</p>
+      <!-- <h1><i class="bi bi-robot"></i> AI Restocking Agent</h1>
+      <p class="subtitle">Analyze inventory levels and get intelligent restocking recommendations</p> -->
     </div>
 
     <!-- Main Content -->
@@ -14,23 +14,23 @@
       <!-- Hero Section -->
       <div class="hero-section" v-if="!isRunning && !hasCompleted">
         <div class="hero-content">
-          <i class="bi bi-lightbulb hero-icon"></i>
-          <h2>Intelligent Inventory Analysis</h2>
+
+          <h2 class="hero-title"><vibe-icon name="sparkle" size="24"></vibe-icon>Intelligent Inventory Analysis</h2>
           <p>
             Our AI agent analyzes your inventory across all stores, identifies low-stock items,
             and provides prioritized restocking recommendations based on company policies and budget constraints.
           </p>
           <div class="features">
             <div class="feature">
-              <i class="bi bi-check-circle-fill"></i>
+<vibe-icon name="checkmark-circle" filled size="24"></vibe-icon>
               <span>Real-time inventory analysis</span>
             </div>
             <div class="feature">
-              <i class="bi bi-check-circle-fill"></i>
+      <vibe-icon name="checkmark-circle" filled size="24"></vibe-icon>
               <span>Policy-aware recommendations</span>
             </div>
             <div class="feature">
-              <i class="bi bi-check-circle-fill"></i>
+  <vibe-icon name="checkmark-circle" filled size="24"></vibe-icon>
               <span>Budget optimization</span>
             </div>
           </div>
@@ -40,13 +40,13 @@
       <!-- Input Section -->
       <div class="input-section" v-if="!isRunning && !hasCompleted">
         <div class="mock-mode-badge" v-if="useMockData">
-          <i class="bi bi-info-circle"></i>
+         <vibe-icon name="info" size="24"></vibe-icon>
           Running in demo mode (backend unavailable)
         </div>
         
         <div class="input-group" v-if="isAdmin">
           <label for="store-select" class="input-label">
-            <i class="bi bi-shop"></i> Select Store
+           <vibe-icon name="home" size="24"></vibe-icon> Select Store
           </label>
           <select 
             id="store-select" 
@@ -64,7 +64,7 @@
         <!-- Store Info for Store Managers (Read-only) -->
         <div class="input-group store-info-readonly" v-else>
           <label class="input-label">
-            <i class="bi bi-shop"></i> Store
+           <vibe-icon name="home" size="24"></vibe-icon> Store
           </label>
           <div class="store-display">
             {{ stores[0]?.name || 'Loading...' }}
@@ -73,7 +73,7 @@
         
         <div class="input-group">
           <label for="instructions" class="input-label">
-            <i class="bi bi-chat-left-text"></i> Instructions for AI Agent
+           <vibe-icon name="chat" size="24"></vibe-icon> Instructions for AI Agent
           </label>
           <textarea
             id="instructions"
@@ -89,7 +89,7 @@
           class="launch-button" 
           :disabled="!userInstructions.trim() || !selectedStoreId || loadingStores"
         >
-          <i class="bi bi-rocket-takeoff"></i> Launch AI Analysis
+        <vibe-icon name="rocket" size="24"></vibe-icon> Launch AI Analysis
         </button>
       </div>
 
@@ -100,8 +100,8 @@
           <div class="progress-header">
             <div class="header-left">
               <div class="spinner" v-if="isRunning"></div>
-              <i class="bi bi-x-circle-fill error-icon" v-else-if="error"></i>
-              <i class="bi bi-check-circle-fill complete-icon" v-else></i>
+              <vibe-icon name="error-circle" size="24" v-else-if="error"></vibe-icon>
+              <vibe-icon name="checkmark-circle-fill" size="24" v-else></vibe-icon>
               <div>
                 <h3>{{ error ? 'Analysis Failed' : (isRunning ? 'AI Analysis in Progress' : 'Analysis Complete') }}</h3>
                 <p class="progress-subtitle">{{ progressSummary }}</p>
@@ -112,7 +112,7 @@
               @click="showDetails = !showDetails" 
               class="details-toggle"
             >
-              <i :class="showDetails ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+              <vibe-icon :name="showDetails ? 'chevron-up' : 'chevron-down'" size="24"></vibe-icon>
               {{ showDetails ? 'Hide Details' : 'Show Details' }}
             </button>
           </div>
@@ -132,9 +132,9 @@
             >
               <div class="step-indicator">
                 <div class="spinner-small" v-if="step.status === 'active'"></div>
-                <i class="bi bi-check-circle-fill" v-else-if="step.status === 'complete'"></i>
-                <i class="bi bi-x-circle-fill" v-else-if="step.status === 'error'"></i>
-                <i class="bi bi-circle" v-else></i>
+                <vibe-icon name="check-circle-fill" size="24" v-else-if="step.status === 'complete'"></vibe-icon>
+                <vibe-icon name="dismiss-circle-fill" size="24" v-else-if="step.status === 'error'"></vibe-icon>
+                <vibe-icon name="circle" size="24" v-else></vibe-icon>
               </div>
               <div class="step-content">
                 <div class="step-title">{{ step.title }}</div>
@@ -148,7 +148,7 @@
           <transition name="slide">
             <div class="events-details" v-if="showDetails && events.length > 0">
               <div class="details-header">
-                <i class="bi bi-list-ul"></i>
+     <vibe-icon name="clipboard-task-list"></vibe-icon>
                 <span>Detailed Activity Log</span>
               </div>
               <div class="events-container">
@@ -173,7 +173,7 @@
       <!-- Final Output - Restocking Recommendations -->
       <div class="output-section" v-if="restockingItems.length > 0 && !error">
         <div class="output-header">
-          <i class="bi bi-check-circle-fill success-icon"></i>
+          <vibe-icon name="checkmark-circle" filled size="24"></vibe-icon>
           <h3>Restocking Recommendations</h3>
           <p class="output-subtitle">{{ restockingItems.length }} items need restocking. Select items to order.</p>
         </div>
@@ -181,7 +181,7 @@
         <!-- AI Summary -->
         <div class="summary-container" v-if="workflowSummary">
           <div class="summary-header">
-            <i class="bi bi-chat-left-text"></i>
+     <vibe-icon name="chat-sparkle" size="24"></vibe-icon>
             <span>AI Analysis Summary</span>
           </div>
           <div class="summary-content markdown-content" v-html="renderedSummary"></div>
@@ -279,11 +279,11 @@
             class="order-button"
             :disabled="selectedCount === 0 || isOrdering"
           >
-            <i class="bi bi-cart-check"></i>
+           <vibe-icon name="cart" size="24"></vibe-icon>
             {{ isOrdering ? 'Placing Order...' : `Place Order (${selectedCount} items)` }}
           </button>
           <button @click="resetAnalysis" class="reset-button secondary">
-            <i class="bi bi-arrow-counterclockwise"></i> Run Another Analysis
+            <vibe-icon name="arrow-clockwise" size="24"></vibe-icon> Run Another Analysis
           </button>
         </div>
       </div>
@@ -291,7 +291,7 @@
       <!-- Error Display -->
       <div class="error-section" v-if="error && !isRunning">
         <div class="error-header">
-          <i class="bi bi-exclamation-triangle-fill"></i>
+      <vibe-icon name="warning" size="24"></vibe-icon>
           <h3>Error Occurred</h3>
         </div>
         <div class="error-content">{{ error }}</div>
@@ -305,9 +305,12 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { apiClient, config } from '../../config/api'
 import { authStore } from '../../stores/auth'
+
+const router = useRouter()
 
 // Configure marked options
 marked.setOptions({
@@ -316,7 +319,7 @@ marked.setOptions({
 })
 
 // State
-const userInstructions = ref('Analyze inventory and recommend restocking priorities')
+const userInstructions = ref('')
 const selectedStoreId = ref(null)
 const stores = ref([])
 const loadingStores = ref(false)
@@ -977,6 +980,15 @@ onMounted(() => {
   // Fetch stores on component mount
   fetchStores()
   
+  // Check for instructions in URL query parameters
+  const route = router.currentRoute.value
+  if (route.query.instructions) {
+    userInstructions.value = route.query.instructions
+  } else {
+    // Set default only if no query param
+    userInstructions.value = 'Analyze inventory and recommend restocking priorities'
+  }
+  
   // Update currentTime every second to trigger reactive time updates
   timeUpdateInterval = setInterval(() => {
     currentTime.value = new Date()
@@ -1001,14 +1013,14 @@ onUnmounted(() => {
 
 <style scoped>
 .ai-agent-page {
-  padding: 2rem;
+  padding: 0 2rem;
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.page-header {
+/* .page-header {
   margin-bottom: 2rem;
-}
+} */
 
 .back-link {
   display: inline-flex;
@@ -1052,15 +1064,24 @@ onUnmounted(() => {
 /* Hero Section */
 .hero-section {
   text-align: center;
-  padding: 2rem 0;
   border-bottom: 1px solid #e9ecef;
   margin-bottom: 2rem;
+  padding-bottom: 2rem;
 }
 
 .hero-content {
   max-width: 700px;
   margin: 0 auto;
+  text-align: center;
 }
+
+.hero-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: auto;
+  }
 
 .hero-icon {
   font-size: 4rem;
@@ -1130,11 +1151,12 @@ onUnmounted(() => {
 }
 
 .input-label {
-  display: block;
+  display: flex;
   font-weight: 600;
   color: #495057;
   margin-bottom: 0.75rem;
   font-size: 1.05rem;
+  gap: 0.5rem;
 }
 
 .input-label i {
@@ -1191,13 +1213,13 @@ onUnmounted(() => {
 }
 
 .launch-button {
-  margin-top: 1.5rem;
+  margin: auto;
   width: 100%;
   padding: 1rem 2rem;
   font-size: 1.1rem;
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+  background: linear-gradient(135deg, #183D4c 0%, #092040 100%);
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -1206,6 +1228,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  max-width: 300px;
 }
 
 .launch-button:hover:not(:disabled) {
@@ -1224,16 +1247,16 @@ onUnmounted(() => {
 
 /* Progress Section */
 .progress-section {
-  margin-top: 2rem;
+  margin-top: 1rem;
 }
 
-.progress-card {
+/* .progress-card {
   background: white;
   border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e9ecef;
-}
+  /* padding: 2rem; */
+  /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef; 
+} */
 
 .progress-header {
   display: flex;
@@ -1251,14 +1274,14 @@ onUnmounted(() => {
 }
 
 .progress-header h3 {
-  color: #212529;
+  color: var(--primary-color);
   font-size: 1.5rem;
   font-weight: 600;
   margin: 0 0 0.5rem 0;
 }
 
 .progress-subtitle {
-  color: #6c757d;
+  color: var(--text-color);
   font-size: 0.95rem;
   margin: 0;
 }
@@ -1266,8 +1289,8 @@ onUnmounted(() => {
 .spinner {
   width: 2.5rem;
   height: 2.5rem;
-  border: 4px solid #e9ecef;
-  border-top-color: #0d6efd;
+  border: 4px solid hwb(210 91% 6%);
+  border-top-color: var(--primary-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   flex-shrink: 0;
@@ -1277,7 +1300,7 @@ onUnmounted(() => {
   width: 1.25rem;
   height: 1.25rem;
   border: 3px solid #e9ecef;
-  border-top-color: #0d6efd;
+  border-top-color: var(--primary-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -1288,7 +1311,7 @@ onUnmounted(() => {
 
 .complete-icon {
   font-size: 2.5rem;
-  color: #28a745;
+  color: var(--success-color);
   flex-shrink: 0;
 }
 
@@ -1525,7 +1548,7 @@ onUnmounted(() => {
 
 .output-header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
@@ -1538,7 +1561,7 @@ onUnmounted(() => {
 .output-header h3 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #28a745;
+  margin: 0;
 }
 
 /* AI Summary */
@@ -1844,7 +1867,6 @@ onUnmounted(() => {
 /* Restocking Table */
 .output-subtitle {
   color: #6c757d;
-  margin-top: 0.5rem;
   font-size: 1rem;
   font-weight: normal;
 }
@@ -2037,7 +2059,7 @@ onUnmounted(() => {
 /* Responsive */
 @media (max-width: 768px) {
   .ai-agent-page {
-    padding: 1rem;
+    padding: 0 1rem;
   }
 
   .agent-container {

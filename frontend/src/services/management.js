@@ -25,10 +25,10 @@ managementApi.interceptors.request.use(
 // Add response interceptor to handle 401 errors
 managementApi.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response && error.response.status === 401) {
       // Token is invalid or expired, logout user
-      authStore.logout();
+      await authStore.logout();
       // Redirect to login page
       window.location.href = '/login';
     }
@@ -104,9 +104,14 @@ export const managementService = {
   },
 
   // Weekly Insights
-  async getWeeklyInsights() {
+  async getWeeklyInsights(forceRefresh = false) {
     try {
-      const response = await managementApi.get('/api/management/insights');
+      const params = forceRefresh ? { force_refresh: true } : {};
+      // Use longer timeout for insights generation (90 seconds for workflow execution)
+      const response = await managementApi.get('/api/management/insights', { 
+        params,
+        timeout: 90000 
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching weekly insights:', error);

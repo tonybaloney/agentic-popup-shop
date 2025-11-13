@@ -18,7 +18,6 @@ from agent_framework import (ChatMessage,
                              WorkflowStartedEvent)
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 # Initialize in startup event
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
@@ -26,10 +25,11 @@ from fastapi_cache.decorator import cache
 
 from pydantic import BaseModel
 import json
-import secrets
 from datetime import datetime, timezone
 from zava_shop_shared.config import Config
-from zava_shop_agents.stock import workflow
+from zava_shop_agents.stock import workflow as stock_workflow
+from zava_shop_agents.insights import workflow as insights_workflow
+from zava_shop_agents.admin_insights import admin_workflow as admin_insights_workflow
 
 # SQLAlchemy imports for SQLite
 from sqlalchemy import select, func, case
@@ -45,15 +45,26 @@ from zava_shop_shared.models.sqlite.products import Product as ProductModel
 from zava_shop_shared.models.sqlite.categories import Category as CategoryModel
 from zava_shop_shared.models.sqlite.product_types import ProductType as ProductTypeModel
 from zava_shop_shared.models.sqlite.suppliers import Supplier as SupplierModel
+from zava_shop_shared.models.sqlite.customers import Customer as CustomerModel
 from .models import (
-    Product, ProductList, Store, StoreList, Category, CategoryList, 
-    TopCategory, TopCategoryList, Supplier, SupplierList, 
-    InventoryItem, InventorySummary, InventoryResponse, 
+    Product, ProductList, Store, StoreList, Category, CategoryList,
+    TopCategory, TopCategoryList, Supplier, SupplierList,
+    InventoryItem, InventorySummary, InventoryResponse,
     ManagementProduct, ProductPagination, ManagementProductResponse,
     LoginRequest, LoginResponse, TokenData,
-    WeeklyInsights, Insight, InsightAction
+    WeeklyInsights, Insight, CacheInvalidationResponse, CacheInfoResponse, 
+    OrderListResponse, CustomerProfile,
 )
+from zava_shop_agents.insights_cache import get_cache
+from .customers import get_customer_orders
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+
+from zava_shop_api.auth import (
+    authenticate_user,
+    get_current_user,
+    get_current_user_from_token,
+    logout_user,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -70,59 +81,6 @@ SCHEMA_NAME = "retail"
 sqlalchemy_engine: Optional[AsyncEngine] = None
 async_session_factory: Optional[async_sessionmaker[AsyncSession]] = None
 
-# Token storage (in-memory for simplicity - in production use Redis or database)
-# Maps token -> TokenData
-active_tokens: dict[str, TokenData] = {}
-
-# Static user database (in production, this would be in a database with hashed passwords)
-USERS = {
-    "admin": {
-        "password": "admin123",
-        "role": "admin",
-        "store_id": None
-    },
-    "manager1": {
-        "password": "manager123",
-        "role": "store_manager",
-        "store_id": 1  # NYC Times Square
-    },
-    "manager2": {
-        "password": "manager123",
-        "role": "store_manager",
-        "store_id": 2  # SF Union Square
-    },
-}
-
-
-# Authentication helper functions
-def generate_token() -> str:
-    """Generate a random secure token"""
-    return secrets.token_urlsafe(32)
-
-
-async def get_current_user(authorization: str = Header(...)) -> TokenData:
-    """
-    Dependency to get current user from bearer token.
-    Raises HTTPException if token is invalid or missing.
-    """
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    token = authorization.replace("Bearer ", "")
-    
-    if token not in active_tokens:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    return active_tokens[token]
-
 
 async def get_store_name(store_id: int) -> Optional[str]:
     """Get store name by ID"""
@@ -132,6 +90,20 @@ async def get_store_name(store_id: int) -> Optional[str]:
             result = await session.execute(stmt)
             store_name = result.scalar_one_or_none()
             return store_name
+    except Exception:
+        return None
+
+
+async def get_user_name(user_id: int) -> Optional[str]:
+    """Get user name by ID"""
+    try:
+        async with get_db_session() as session:
+            stmt = select(CustomerModel.first_name, CustomerModel.last_name).where(CustomerModel.customer_id == user_id)
+            result = await session.execute(stmt)
+            row = result.first()
+            if row:
+                return f"{row.first_name} {row.last_name}"
+            return None
     except Exception:
         return None
 
@@ -174,6 +146,15 @@ async def lifespan(app: FastAPI):
     # Initialize cache
     backend = InMemoryBackend()
     FastAPICache.init(backend=backend)
+
+    # Initialize token store
+    try:
+        from zava_shop_api.auth import token_store
+        await token_store.initialize()
+        logger.info("✅ Token store initialized")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize token store: {e}")
+        raise
 
     yield
 
@@ -228,6 +209,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from zava_shop_api.chatkit_router import router as chatkit_router
+app.include_router(chatkit_router)
+
+from zava_shop_api.routers.marketing import router as marketing_router, ws_router as marketing_ws_router
+app.include_router(marketing_router)
+app.include_router(marketing_ws_router)
 
 # Health check endpoint
 @app.get("/health")
@@ -242,45 +229,49 @@ async def health_check():
 async def login(credentials: LoginRequest) -> LoginResponse:
     """
     Login endpoint to authenticate users and receive bearer token.
-    
+
     Supports two user roles:
     - admin: Can see all stores
     - store_manager: Can only see their assigned store
     """
-    # Validate credentials
-    user = USERS.get(credentials.username)
-    if not user or user["password"] != credentials.password:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid username or password"
-        )
-    
-    # Generate token
-    token = generate_token()
-    
-    # Store token data
-    token_data = TokenData(
-        username=credentials.username,
-        user_role=user["role"],
-        store_id=user["store_id"]
-    )
-    active_tokens[token] = token_data
-    
-    # Get store name if store manager
-    store_name = None
-    if user["store_id"]:
-        store_name = await get_store_name(user["store_id"])
-    
-    logger.info(f"✅ User {credentials.username} ({user['role']}) logged in")
-    
-    return LoginResponse(
-        access_token=token,
-        token_type="bearer",
-        user_role=user["role"],
-        store_id=user["store_id"],
-        store_name=store_name
+    token, user = await authenticate_user(
+        credentials.username,
+        credentials.password
     )
 
+    # Get store name if store manager
+    store_name = None
+    if user.store_id:
+        store_name = await get_store_name(user.store_id)
+    if user.customer_id:
+        name = await get_user_name(user.customer_id)
+    else:
+        name = None
+
+    logger.info(f"✅ User {credentials.username} ({user.user_role}) logged in")
+
+    return LoginResponse(
+        access_token=token,
+        token_type="bearer",  # noqa: S106
+        user_role=user.user_role,
+        store_id=user.store_id,
+        store_name=store_name,
+        name=name
+    )
+
+@app.post("/api/logout")
+async def logout(authorization: str = Header(None)):
+    """Logout the current user from this session."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    token = authorization.replace("Bearer ", "")
+    success = await logout_user(token)
+
+    if success:
+        return {"message": "Successfully logged out"}
+    else:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 # Stores endpoint
 @app.get("/api/stores", response_model=StoreList)
@@ -519,7 +510,7 @@ async def get_products_by_category(
             total_result = await session.execute(total_stmt)
             total_count = total_result.scalar()
 
-            if total_count == 0:
+            if not total_count:
                 raise HTTPException(
                     status_code=404,
                     detail=f"No products found in category '{category}'"
@@ -729,6 +720,128 @@ async def get_product_by_sku(sku: str) -> Product:
         )
 
 
+@app.get("/api/users/profile", response_model=CustomerProfile)
+async def get_user_profile(
+    current_user: TokenData = Depends(get_current_user)
+) -> CustomerProfile:
+    """
+    Get profile information for the authenticated customer user.
+    Requires authentication with customer role.
+    Returns customer details including name, email, and primary store.
+    """
+    try:
+        # Verify user has customer role and customer_id
+        if current_user.user_role != "customer":
+            raise HTTPException(
+                status_code=403,
+                detail="Only customers can access this endpoint"
+            )
+        
+        if not current_user.customer_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Customer ID not found in token"
+            )
+        
+        async with get_db_session() as session:
+            # Query customer profile
+            stmt = (
+                select(
+                    CustomerModel.customer_id,
+                    CustomerModel.first_name,
+                    CustomerModel.last_name,
+                    CustomerModel.email,
+                    CustomerModel.phone,
+                    CustomerModel.primary_store_id,
+                    StoreModel.store_name
+                )
+                .outerjoin(
+                    StoreModel,
+                    CustomerModel.primary_store_id == StoreModel.store_id
+                )
+                .where(CustomerModel.customer_id == current_user.customer_id)
+            )
+
+            result = await session.execute(stmt)
+            row = result.first()
+
+            if not row:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Customer profile not found"
+                )
+
+            profile = CustomerProfile(
+                customer_id=row.customer_id,
+                first_name=row.first_name,
+                last_name=row.last_name,
+                email=row.email,
+                phone=row.phone,
+                primary_store_id=row.primary_store_id,
+                primary_store_name=row.store_name
+            )
+
+            logger.info(
+                f"✅ Retrieved profile for customer {current_user.username}"
+            )
+
+            return profile
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"❌ Error fetching profile for user {current_user.username}: {e}"
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch profile: {str(e)}"
+        )
+
+
+@app.get("/api/users/orders", response_model=OrderListResponse)
+async def get_user_orders(
+    current_user: TokenData = Depends(get_current_user)
+) -> OrderListResponse:
+    """
+    Get all orders for the authenticated customer user.
+    Requires authentication with customer role.
+    Returns orders sorted by date (newest first) with all order items.
+    """
+    try:
+        # Verify user has customer role and customer_id
+        if current_user.user_role != "customer":
+            raise HTTPException(
+                status_code=403,
+                detail="Only customers can access this endpoint"
+            )
+
+        if not current_user.customer_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Customer ID not found in token"
+            )
+
+        async with get_db_session() as session:
+            orders = await get_customer_orders(
+                customer_id=current_user.customer_id,
+                session=session
+            )
+
+        return orders
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"❌ Error fetching orders for user {current_user.username}: {e}"
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch orders: {str(e)}"
+        )
+
+
 @app.get("/api/management/dashboard/top-categories", response_model=TopCategoryList)
 @cache(expire=600)
 async def get_top_categories(
@@ -818,208 +931,252 @@ async def get_top_categories(
             detail=f"Failed to fetch top categories: {str(e)}"
         )
 
-
-@app.get("/api/management/insights", response_model=WeeklyInsights)
+@app.get("/api/management/insights", response_model=WeeklyInsights, response_model_exclude_none=False)
 async def get_weekly_insights(
+    store_id: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Store ID to generate insights for (admins only)",
+    ),
+    force_refresh: bool = Query(
+        False,
+        description="Force regenerate insights, bypassing cache"
+    ),
     current_user: TokenData = Depends(get_current_user)
 ) -> WeeklyInsights:
     """
     Get AI-generated weekly insights for the management dashboard.
-    Returns role-based insights: store-specific for managers, enterprise-wide for admins.
+    Returns cached insights if available and valid (< 7 days old).
+    Set force_refresh=true to bypass cache and regenerate.
     Requires authentication.
     """
     try:
         logger.info(
-            f"🤖 Fetching weekly insights for user {current_user.username} "
-            f"(role: {current_user.user_role}, store: {current_user.store_id})"
+            "🤖 Fetching weekly insights for user %s (role=%s, store=%s, force_refresh=%s)",
+            current_user.username,
+            current_user.user_role,
+            current_user.store_id,
+            force_refresh,
         )
 
-        # Store Manager for NYC Times Square (store_id = 1)
-        if current_user.user_role == 'store_manager' and current_user.store_id == 1:
-            return WeeklyInsights(
-                summary=(
-                    "NYC Times Square store performance remains strong this week with "
-                    "foot traffic up 12%. Weather forecasts indicate a significant cold "
-                    "snap arriving next week (temperatures dropping to 28°F/-2°C). This "
-                    "presents an immediate opportunity to capitalize on cold-weather "
-                    "accessory demand, particularly beanies and winter hats which saw "
-                    "340% increase during last year's similar weather event."
-                ),
-                insights=[
-                    Insight(
-                        type="warning",
-                        title="Cold Snap Alert - Stock Winter Accessories",
-                        description=(
-                            "Weather forecast shows temperatures dropping to 28°F starting "
-                            "Monday. Current beanie inventory: 47 units. Recommend immediate "
-                            "order of 200+ units across popular styles. Last year's cold snap "
-                            "generated $8,400 in beanie sales over 3 days."
-                        ),
-                        action=InsightAction(
-                            label="View Beanies",
-                            type="product-search",
-                            query="beanie"
-                        )
-                    ),
-                    Insight(
-                        type="success",
-                        title="Tourist Season Performance",
-                        description=(
-                            "Times Square location seeing 18% increase in tourist traffic vs "
-                            "last month. Branded merchandise and gift items up 24% week-over-week."
-                        )
-                    ),
-                    Insight(
-                        type="info",
-                        title="Peak Hours Optimization",
-                        description=(
-                            "Busiest hours: 2-6pm weekdays, 11am-8pm weekends. Consider "
-                            "adjusting staff schedules to maximize customer service during "
-                            "these windows."
-                        )
-                    ),
-                    Insight(
-                        type="success",
-                        title="Local Partnership Opportunity",
-                        description=(
-                            "NYC-themed merchandise performing exceptionally well (32% of "
-                            "accessory sales). Consider expanding local artist collaborations "
-                            "for holiday season."
-                        )
-                    )
-                ]
-            )
-
-        # Admin - Enterprise-wide insights
-        if current_user.user_role == 'admin':
-            return WeeklyInsights(
-                summary=(
-                    "Enterprise-wide performance analysis shows strong quarterly momentum "
-                    "with total revenue up 16% across all locations. Pike Place continues "
-                    "to lead in sales growth (+28%), while Spokane Pavilion requires "
-                    "attention for underperformance. Urban Threads supplier failing to meet "
-                    "contract terms with 23% late deliveries impacting inventory availability."
-                ),
-                insights=[
-                    Insight(
-                        type="success",
-                        title="Top Performing Store: Pike Place",
-                        description=(
-                            "Pike Place location leading network with 28% sales growth and "
-                            "4.8★ customer satisfaction. Strong performance in outdoor and "
-                            "lifestyle categories. Consider this location for new product "
-                            "line testing."
-                        ),
-                        action=InsightAction(
-                            label="View Details",
-                            type="navigation",
-                            path="/management/stores?store=3"
-                        )
-                    ),
-                    Insight(
-                        type="warning",
-                        title="Underperforming Location: Spokane Pavilion",
-                        description=(
-                            "Spokane Pavilion down 12% vs target with declining foot traffic. "
-                            "Inventory turnover rate below network average. Recommend immediate "
-                            "strategic review and potential merchandising refresh."
-                        ),
-                        action=InsightAction(
-                            label="View Analysis",
-                            type="navigation",
-                            path="/management/stores?store=4"
-                        )
-                    ),
-                    Insight(
-                        type="success",
-                        title="Product Line Winner: Technical Outerwear",
-                        description=(
-                            "Technical outerwear category exceeding projections by 34% "
-                            "network-wide. Mountain Peak Outfitters partnership driving strong "
-                            "margins (42%) and customer satisfaction. Expand SKU count by 25% "
-                            "for Q4."
-                        ),
-                        action=InsightAction(
-                            label="View Category",
-                            type="product-search",
-                            query="outerwear technical"
-                        )
-                    ),
-                    Insight(
-                        type="warning",
-                        title="Supplier Contract Breach: Urban Threads",
-                        description=(
-                            "Urban Threads missing SLA targets: 23% late deliveries, 8% "
-                            "quality defects. Contract terms require 95% on-time delivery. "
-                            "Recommend supplier review meeting and potential penalty assessment."
-                        ),
-                        action=InsightAction(
-                            label="View Supplier",
-                            type="navigation",
-                            path="/management/suppliers?supplier=urban-threads"
-                        )
-                    )
-                ]
-            )
-
-        # Default insights for other store managers
-        return WeeklyInsights(
-            summary=(
-                "Your store performance this week shows strong momentum with notable "
-                "improvements in inventory turnover and customer engagement. Here are "
-                "the key highlights and recommendations:"
-            ),
-            insights=[
-                Insight(
-                    type="success",
-                    title="Strong Performance in Outerwear",
-                    description=(
-                        "Outerwear category showing 23% increase in sales compared to last "
-                        "week. Consider restocking popular items like the Bomber Jacket and "
-                        "Rain Jacket."
-                    )
-                ),
-                Insight(
-                    type="warning",
-                    title="Low Stock Alert - Footwear",
-                    description=(
-                        "Classic White Sneakers and Running Athletic Shoes inventory is "
-                        "critically low. Recommend immediate reorder to avoid stockouts "
-                        "during peak season."
-                    ),
-                    action=InsightAction(
-                        label="View Inventory",
-                        type="navigation",
-                        path="/management/inventory?category=footwear&status=low"
-                    )
-                ),
-                Insight(
-                    type="info",
-                    title="Supplier Performance",
-                    description=(
-                        "Urban Threads Wholesale has consistently delivered on time with "
-                        "98% accuracy. Consider increasing order volume to leverage bulk "
-                        "discounts."
-                    )
-                ),
-                Insight(
-                    type="success",
-                    title="Seasonal Opportunity",
-                    description=(
-                        "With fall approaching, accessories like beanies and gloves are "
-                        "expected to see 40% increase in demand. Stock levels are currently "
-                        "optimal."
-                    )
+        # Determine which store the workflow should focus on.
+        if current_user.store_id is not None:
+            # Store manager - use their assigned store
+            target_store_id = current_user.store_id
+            if store_id and store_id != current_user.store_id:
+                logger.info(
+                    "🔒 Store manager attempted to request store %s; enforcing assigned store %s.",
+                    store_id,
+                    current_user.store_id,
                 )
-            ]
+        elif current_user.user_role == "admin":
+            # Admin - use cache key 0 for enterprise-wide insights
+            target_store_id = 0
+        else:
+            # Fallback for other roles
+            target_store_id = store_id if store_id is not None else 0
+
+        # Check cache first unless force refresh is requested
+        cache = get_cache()
+        if not force_refresh:
+            cached_data = cache.get(target_store_id)
+            if cached_data:
+                logger.info(f"📬 Returning cached insights for store {target_store_id}")
+                return WeeklyInsights.model_validate(cached_data)
+
+        # Cache miss or force refresh - generate new insights
+        logger.info(f"🔄 Generating fresh insights for store {target_store_id}")
+
+        # Select workflow based on user role
+        if current_user.user_role == "admin":
+            # Admin users get enterprise-wide insights
+            logger.info("👔 Using admin insights workflow for enterprise analysis")
+            workflow = admin_insights_workflow
+            agent_input = (
+                f"Generate admin weekly insights:\n"
+                f"User Role: {current_user.user_role}\n"
+                f"Days Back: 30"
+            )
+        else:
+            # Store managers get operational insights for their store
+            logger.info(f"🏪 Using store manager insights workflow for store {target_store_id}")
+            workflow = insights_workflow
+            agent_input = (
+                f"Generate weekly insights for:\n"
+                f"Store ID: {target_store_id}\n"
+                f"User Role: {current_user.user_role}"
+            )
+        
+        agent_message = ChatMessage(role="user", text=agent_input)
+
+        insights_result: Optional[WeeklyInsights] = None
+        fallback_payload: Optional[str] = None
+
+        async for event in workflow.run_stream(agent_message):
+            if isinstance(event, ExecutorFailedEvent):
+                logger.error(
+                    "❌ Insights workflow failed in executor %s: %s",
+                    event.executor_id,
+                    event.details.message,
+                )
+                fallback_payload = event.details.message or "Insights workflow failed"
+                break
+
+            if isinstance(event, WorkflowOutputEvent):
+                payload = event.data
+                if isinstance(payload, BaseModel):
+                    payload = payload.model_dump()
+
+                if isinstance(payload, dict):
+                    insights_result = WeeklyInsights.model_validate(payload)
+                else:
+                    fallback_payload = str(payload)
+                break
+
+        if insights_result:
+            logger.info(
+                "✅ Generated dynamic weekly insights for user %s (store_id=%s)",
+                current_user.username,
+                target_store_id,
+            )
+            # Cache the successful result (include None values so frontend gets all fields)
+            cache.set(target_store_id, insights_result.model_dump(exclude_none=False))
+            return insights_result
+
+        if fallback_payload:
+            logger.warning(
+                "⚠️ Insights workflow returned non-structured payload: %s",
+                fallback_payload,
+            )
+            return WeeklyInsights(
+                store_id=target_store_id,
+                summary="Dynamic insights are temporarily unavailable.",
+                weather_summary="Weather data unavailable at this time.",
+                events_summary=None,
+                stock_items=[],
+                insights=[
+                    Insight(
+                        type="warning",
+                        title="Insights Service Unavailable",
+                        description=fallback_payload,
+                        action=None,
+                    )
+                ],
+                unified_action=None,
+            )
+
+        raise HTTPException(
+            status_code=502,
+            detail="Insights workflow did not return data",
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"❌ Error fetching weekly insights: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch weekly insights: {str(e)}"
         )
+
+
+@app.delete("/api/management/insights/cache", response_model=CacheInvalidationResponse)
+async def invalidate_insights_cache(
+    store_id: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Store ID to invalidate cache for. If not provided, invalidates all caches."
+    ),
+    current_user: TokenData = Depends(get_current_user)
+) -> CacheInvalidationResponse:
+    """
+    Invalidate insights cache (admin only).
+    If store_id is provided, invalidates cache for that store only.
+    Otherwise, invalidates all cached insights.
+    """
+    # Check admin role
+    if current_user.user_role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required"
+        )
+    
+    try:
+        cache = get_cache()
+        
+        if store_id:
+            success = cache.invalidate(store_id)
+            if success:
+                return CacheInvalidationResponse(
+                    success=True,
+                    message=f"Cache invalidated for store {store_id}",
+                    store_id=store_id,
+                )
+            else:
+                return CacheInvalidationResponse(
+                    success=False,
+                    message=f"No cache found for store {store_id}",
+                    store_id=store_id,
+                )
+        else:
+            count = cache.invalidate_all()
+            return CacheInvalidationResponse(
+                success=True,
+                message=f"Invalidated {count} cached insights",
+                store_id=None,
+            )
+    except Exception as e:
+        logger.error(f"❌ Error invalidating cache: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to invalidate cache: {str(e)}"
+        )
+
+
+@app.get("/api/management/insights/cache/info", response_model=CacheInfoResponse)
+async def get_insights_cache_info(
+    store_id: int = Query(
+        ...,
+        ge=1,
+        description="Store ID to get cache info for"
+    ),
+    current_user: TokenData = Depends(get_current_user)
+) -> CacheInfoResponse:
+    """
+    Get cache metadata for a specific store (admin only).
+    Returns cache status, age, and validity information.
+    """
+    # Check admin role
+    if current_user.user_role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required"
+        )
+    
+    try:
+        cache = get_cache()
+        info = cache.get_cache_info(store_id)
+        
+        if info:
+            return CacheInfoResponse(
+                success=True,
+                cache_info=info,
+                message=None,
+            )
+        else:
+            return CacheInfoResponse(
+                success=False,
+                message=f"No cache found for store {store_id}",
+                cache_info=None,
+            )
+    except Exception as e:
+        logger.error(f"❌ Error getting cache info: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get cache info: {str(e)}"
+        )
+
+        
 
 
 @app.get("/api/management/suppliers", response_model=SupplierList)
@@ -1426,7 +1583,7 @@ async def get_products(
             count_stmt = select(func.count(func.distinct(
                 ProductModel.product_id))).select_from(stmt.alias())
             total_result = await session.execute(count_stmt)
-            total_count = total_result.scalar()
+            total_count = total_result.scalar() or 0
 
             # Apply ordering and pagination
             stmt = stmt.order_by(ProductModel.product_name).limit(
@@ -1517,25 +1674,11 @@ async def websocket_ai_agent_inventory(websocket: WebSocket):
             await websocket.close(code=1008, reason="Authentication required")
             return
 
-        # Validate token
-        if token not in active_tokens:
-            await websocket.send_json({
-                "type": "error",
-                "message": "Invalid or expired token",
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            })
-            await websocket.close(code=1008, reason="Invalid token")
-            return
-
-        current_user = active_tokens[token]
-        logger.info(
-            f"🔐 WebSocket authenticated: user={current_user.username}, "
-            f"role={current_user.user_role}, store={current_user.store_id}"
-        )
+        current_user = await get_current_user_from_token(token)
 
         input_message = request_data.get(
             'message', 'Analyze inventory and recommend restocking priorities')
-        
+
         # Store managers use their assigned store_id, admins can specify or use all stores
         if current_user.store_id is not None:
             # Store manager - use their store_id
@@ -1574,7 +1717,7 @@ async def websocket_ai_agent_inventory(websocket: WebSocket):
 
         workflow_output = None
         try:
-            async for event in workflow.run_stream(input):
+            async for event in stock_workflow.run_stream(input):
                 now = datetime.now(timezone.utc).isoformat()
                 if isinstance(event, WorkflowStartedEvent):
                     event_data = {

@@ -189,6 +189,7 @@ class LoginResponse(BaseModel):
     user_role: str = Field(..., description="User role (admin or store_manager)")
     store_id: Optional[int] = Field(None, description="Store ID for store managers")
     store_name: Optional[str] = Field(None, description="Store name for store managers")
+    name: Optional[str] = Field(None, description="Full name of the user")
 
 
 class TokenData(BaseModel):
@@ -196,19 +197,26 @@ class TokenData(BaseModel):
     username: str
     user_role: str
     store_id: Optional[int] = None
+    customer_id: Optional[int] = None
 
 
 class InsightAction(BaseModel):
     """Action button for an insight"""
     label: str = Field(..., description="Button label text")
     type: str = Field(
-        ..., description="Action type: 'product-search' or 'navigation'"
+        ..., description="Action type: 'product-search', 'navigation', or 'workflow-trigger'"
     )
     query: Optional[str] = Field(
         None, description="Search query for product-search type"
     )
     path: Optional[str] = Field(
         None, description="Navigation path for navigation type"
+    )
+    workflow_message: Optional[str] = Field(
+        None, description="Message to send to workflow for workflow-trigger type"
+    )
+    instructions: Optional[str] = Field(
+        None, description="Instructions to pre-fill in the AI agent interface"
     )
 
 
@@ -222,5 +230,108 @@ class Insight(BaseModel):
 
 class WeeklyInsights(BaseModel):
     """Weekly AI insights response"""
-    summary: str = Field(..., description="Overall summary of the week's performance")
+    store_id: int = Field(..., description="Store identifier for these insights")
+    summary: str = Field(..., description="AI-generated insights disclaimer (shown in italics)")
+    weather_summary: str = Field(..., description="Summary of weather conditions")
+    events_summary: Optional[str] = Field(None, description="Summary of local events")
+    stock_items: List[str] = Field(
+        default_factory=list,
+        description="List of specific product items to stock up on (determined by stock agent)",
+    )
     insights: List[Insight] = Field(..., description="List of specific insights")
+    unified_action: Optional[InsightAction] = Field(
+        None,
+        description="Single unified action that combines all insights for comprehensive analysis",
+    )
+
+
+class CacheInvalidationResponse(BaseModel):
+    """Response for cache invalidation operations"""
+    success: bool = Field(..., description="Whether the operation was successful")
+    message: str = Field(..., description="Human-readable message about the operation")
+    store_id: Optional[int] = Field(None, description="Store ID if invalidating specific store")
+
+
+class CacheInfo(BaseModel):
+    """Cache metadata information"""
+    store_id: int = Field(..., description="Store identifier")
+    generated_date: str = Field(..., description="ISO date when cache was generated")
+    filename: str = Field(..., description="Cache filename")
+    is_valid: bool = Field(..., description="Whether cache is still valid")
+    age_days: int = Field(..., description="Age of cache in days")
+    age_hours: int = Field(..., description="Additional hours beyond full days")
+
+
+class CacheInfoResponse(BaseModel):
+    """Response for cache info queries"""
+    success: bool = Field(..., description="Whether the operation was successful")
+    cache_info: Optional[CacheInfo] = Field(None, description="Cache information if found")
+    message: Optional[str] = Field(None, description="Error message if cache not found")
+
+
+# Order models for customer API
+class OrderItemResponse(BaseModel):
+    """Order item in a customer order"""
+    order_item_id: int = Field(..., description="Order item identifier")
+    product_id: int = Field(..., description="Product identifier")
+    product_name: str = Field(..., description="Product name")
+    sku: str = Field(..., description="Product SKU")
+    quantity: int = Field(..., description="Quantity ordered")
+    unit_price: float = Field(..., description="Unit price at time of order")
+    discount_percent: int = Field(..., description="Discount percentage applied")
+    discount_amount: float = Field(..., description="Discount amount")
+    total_amount: float = Field(..., description="Total amount for this line item")
+    image_url: Optional[str] = Field(None, description="Product image URL")
+
+
+class OrderResponse(BaseModel):
+    """Customer order response"""
+    order_id: int = Field(..., description="Order identifier")
+    order_date: str = Field(..., description="Order date (YYYY-MM-DD)")
+    store_id: int = Field(..., description="Store identifier")
+    store_name: str = Field(..., description="Store name")
+    items: List[OrderItemResponse] = Field(..., description="Order items")
+    total_items: int = Field(..., description="Total number of items")
+    order_total: float = Field(..., description="Total order amount")
+
+
+class OrderListResponse(BaseModel):
+    """List of customer orders"""
+    orders: List[OrderResponse] = Field(..., description="List of orders")
+    total: int = Field(..., description="Total number of orders")
+
+
+class CustomerProfile(BaseModel):
+    """Customer profile information"""
+    customer_id: int = Field(..., description="Customer identifier")
+    first_name: str = Field(..., description="Customer first name")
+    last_name: str = Field(..., description="Customer last name")
+    email: str = Field(..., description="Customer email address")
+    phone: Optional[str] = Field(None, description="Customer phone number")
+    primary_store_id: Optional[int] = Field(None, description="Primary store ID")
+    primary_store_name: Optional[str] = Field(None, description="Primary store name")
+
+
+# Chat models for customer AI agent
+class CustomerChatMessage(BaseModel):
+    """Chat message for AI agent conversation"""
+    role: str = Field(..., description="Message role: 'user' or 'assistant'")
+    content: str = Field(..., description="Message content")
+
+
+class CustomerChatRequest(BaseModel):
+    """Request to send message to AI agent"""
+    message: str = Field(..., description="User's message to the AI agent")
+    conversation_history: Optional[List[CustomerChatMessage]] = Field(
+        default=[],
+        description="Previous messages in the conversation"
+    )
+
+
+class CustomerChatResponse(BaseModel):
+    """Response from AI agent"""
+    message: str = Field(..., description="AI agent's response")
+    conversation_id: Optional[str] = Field(
+        None,
+        description="Conversation identifier for tracking"
+    )

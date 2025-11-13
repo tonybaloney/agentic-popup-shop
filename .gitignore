@@ -347,3 +347,4 @@ FodyWeavers.xsd
 .env.bak
 resources.txt
 *.egg-info/
+verify_query.py

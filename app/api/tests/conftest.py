@@ -21,7 +21,7 @@ def test_client() -> Generator[TestClient, None, None]:
         TestClient: A test client for making API requests
     """
     # Import here to avoid circular imports and ensure fresh app instance
-    from app.api.app import app
+    from zava_shop_api.app import app
     
     with TestClient(app) as client:
         yield client
@@ -45,6 +45,50 @@ def admin_auth_headers(test_client: TestClient) -> dict:
         json={"username": "admin", "password": "admin123"}
     )
     assert response.status_code == 200, f"Admin login failed: {response.json()}"
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture(scope="function")
+def customer_auth_headers(test_client: TestClient) -> dict:
+    """
+    Get authentication headers for customer user.
+    
+    Logs in as customer and returns headers with Bearer token.
+    
+    Args:
+        test_client: The test client fixture
+        
+    Returns:
+        dict: Headers with Authorization token
+    """
+    response = test_client.post(
+        "/api/login",
+        json={"username": "tracey.lopez.4", "password": "tracey123"}
+    )
+    assert response.status_code == 200, f"Customer login failed: {response.json()}"
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture(scope="function")
+def store_manager_auth_headers(test_client: TestClient) -> dict:
+    """
+    Get authentication headers for store manager user.
+    
+    Logs in as store manager and returns headers with Bearer token.
+    
+    Args:
+        test_client: The test client fixture
+        
+    Returns:
+        dict: Headers with Authorization token
+    """
+    response = test_client.post(
+        "/api/login",
+        json={"username": "manager1", "password": "manager123"}
+    )
+    assert response.status_code == 200, f"Manager login failed: {response.json()}"
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 

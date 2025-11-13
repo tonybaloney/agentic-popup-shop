@@ -1,0 +1,62 @@
+import axios from 'axios';
+import { authStore } from '../stores/auth';
+
+const customerApi = axios.create({
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
+
+// Add request interceptor to include auth token
+customerApi.interceptors.request.use(
+  (config) => {
+    const token = authStore.getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    console.log('Customer API Request:', config.method?.toUpperCase(), config.url);
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for error handling
+customerApi.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  async (error) => {
+    console.error('Customer API Error:', error.response?.status, error.message);
+    if (error.response?.status === 401) {
+      // Token expired or invalid
+      await authStore.logout();
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export const customerService = {
+  // Get customer profile
+  async getProfile() {
+    const response = await customerApi.get('/api/users/profile');
+    return response.data;
+  },
+
+  // Get customer orders
+  async getOrders() {
+    const response = await customerApi.get('/api/users/orders');
+    return response.data;
+  },
+
+  // Send chat message to AI assistant
+  async sendChatMessage(message) {
+    const response = await customerApi.post('/api/users/chat', { message });
+    return response.data;
+  }
+};
+
+export default customerApi;

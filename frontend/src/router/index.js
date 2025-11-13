@@ -37,9 +37,15 @@ const routes = [
     component: LoginPage
   },
   {
+    path: '/customer/dashboard',
+    name: 'CustomerDashboard',
+    component: () => import('../views/CustomerDashboard.vue'),
+    meta: { requiresAuth: true, requiresRole: 'customer' }
+  },
+  {
     path: '/management',
     component: ManagementLayout,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, requiresRole: ['admin', 'store_manager'] },
     children: [
       {
         path: '',
@@ -77,6 +83,18 @@ const routes = [
         component: () => import('../views/management/AIAgentPage.vue')
       }
     ]
+  },
+  {
+    path: '/marketing',
+    component: () => import('../views/MarketingLayout.vue'),
+    meta: { requiresAuth: true, requiresRole: 'marketing' },
+    children: [
+      {
+        path: '',
+        name: 'MarketingDashboard',
+        component: () => import('../views/MarketingDashboard.vue')
+      }
+    ]
   }
 ];
 
@@ -101,6 +119,26 @@ router.beforeEach((to, from, next) => {
     if (!authStore.isAuthenticated) {
       next('/login');
     } else {
+      // Check role-based access
+      const requiresRole = to.meta.requiresRole;
+      const userRole = authStore.user?.role;
+      
+      if (requiresRole) {
+        const allowedRoles = Array.isArray(requiresRole) ? requiresRole : [requiresRole];
+        if (!allowedRoles.includes(userRole)) {
+          // Redirect to appropriate dashboard based on role
+          if (userRole === 'customer') {
+            next('/customer/dashboard');
+          } else if (userRole === 'admin' || userRole === 'store_manager') {
+            next('/management');
+          } else if (userRole === 'marketing') {
+            next('/marketing');
+          } else {
+            next('/');
+          }
+          return;
+        }
+      }
       next();
     }
   } else {

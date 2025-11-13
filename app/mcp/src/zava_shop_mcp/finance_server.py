@@ -24,7 +24,8 @@ from starlette.responses import Response, JSONResponse
 
 from opentelemetry.instrumentation.mcp import McpInstrumentor
 McpInstrumentor().instrument()
-
+from pydantic import Field
+from typing import Annotated
 from sqlalchemy import select, func, case, and_
 
 from zava_shop_shared.models.sqlite import (
@@ -43,8 +44,10 @@ from zava_shop_mcp.models import (
     CompanyPolicyResult,
     SupplierContractResult,
     SalesDataResult,
+    TopProductSalesResult,
     InventoryStatusResult,
     StoreResult,
+    StorePerformanceResult,
 )
 
 GUEST_TOKEN = os.getenv("DEV_GUEST_TOKEN", "dev-guest-token")
@@ -69,19 +72,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-db: FinanceSQLiteProvider | None = None
+db: FinanceSQLiteProvider = FinanceSQLiteProvider()
 
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator:
-    global db
-    db = FinanceSQLiteProvider()
-    try:
-        await db.create_pool()
-        yield
-    finally:
-        # Cleanup on shutdown
-        if db:
-            await db.close_engine()
+    yield
+    db.close_engine()
 
 
 
@@ -91,13 +87,11 @@ mcp = FastMCP("Zava Finance Agent MCP Server", auth=verifier, lifespan=app_lifes
 
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(request: Request) -> Response:
-    if not db:
-        return JSONResponse({"status": "error", "message": "Server not initialized"}, status_code=500)
     return JSONResponse({"status": "ok"})
 
 @mcp.tool()
 async def get_company_order_policy(
-    department: Optional[str] = None
+    department: Annotated[str, Field(description="Department name to filter policies")] = ""
 ) -> list[CompanyPolicyResult]:
     """
     Get company order processing policies and budget authorization rules.
@@ -121,7 +115,7 @@ async def get_company_order_policy(
     try:
         logger.info(
             f"Retrieving company order policy for department: {department}")
-        assert db, "Server not initialized"  # noqa: S101
+        await db.create_pool()
         async with db.get_session() as session:
             # Build query using ORM
             policy_description = case(
@@ -188,7 +182,7 @@ async def get_company_order_policy(
 
 @mcp.tool()
 async def get_supplier_contract(
-    supplier_id: int
+    supplier_id: Annotated[int, Field(description="The unique identifier for the supplier")]
 ) -> list[SupplierContractResult]:
     """
     Get supplier contract information including terms and conditions.
@@ -213,7 +207,7 @@ async def get_supplier_contract(
     try:
         logger.info(
             f"Retrieving supplier contract for supplier_id: {supplier_id}")
-        assert db, "Server not initialized"  # noqa: S101
+        await db.create_pool()
         async with db.get_session() as session:
             # Calculate days until expiry
             current_date = func.current_date()
@@ -277,9 +271,9 @@ async def get_supplier_contract(
 
 @mcp.tool()
 async def get_historical_sales_data(
-    days_back: int = 30,
-    store_id: Optional[int] = None,
-    category_name: Optional[str] = None
+    days_back: Annotated[int, Field(description="Number of days to look back")] = 30,
+    store_id: Annotated[int, Field(description="Store ID to filter results")] = -1,
+    category_name: Annotated[str, Field(description="Category name to filter results")] = ""
 ) -> list[SalesDataResult]:
     """
     Get historical sales data with revenue, order counts, and customer metrics.
@@ -307,7 +301,7 @@ async def get_historical_sales_data(
         logger.info(
             f"Retrieving historical sales data for store_id: {store_id}, "
             f"category_name: {category_name}, days_back: {days_back}")
-        assert db, "Server not initialized"  # noqa: S101
+        await db.create_pool()
         async with db.get_session() as session:
             # Calculate cutoff date
             cutoff_date = datetime.now() - timedelta(days=days_back)
@@ -340,7 +334,7 @@ async def get_historical_sales_data(
                 Order.order_date >= cutoff_date.date()
             )
 
-            if store_id is not None:
+            if store_id != -1 and store_id != 0:
                 stmt = stmt.where(Order.store_id == store_id)
 
             if category_name:
@@ -364,10 +358,105 @@ async def get_historical_sales_data(
 
 
 @mcp.tool()
+async def get_top_selling_products(
+    days_back: Annotated[
+        int,
+        Field(gt=0, le=365, description="Number of days to look back"),
+    ] = 30,
+    store_id: Annotated[
+        Optional[int],
+        Field(description="Store ID to filter results")
+    ] = None,
+    category_name: Annotated[
+        Optional[str],
+        Field(description="Category name to filter results"),
+    ] = None,
+    limit: Annotated[
+        int,
+        Field(gt=0, le=50, description="Number of top products to return"),
+    ] = 5
+) -> list[TopProductSalesResult]:
+    """
+    Get top-selling products by units sold and revenue.
+
+    Returns product-level sales data showing the best-performing products
+    ranked by units sold (with revenue as a tiebreaker). Results can be
+    filtered by store and category.
+
+    Args:
+        days_back: Number of days to look back (default: 30)
+        store_id: Optional store ID to filter results
+        category_name: Optional category name to filter results
+        limit: Number of top products to return (default: 5)
+
+    Returns:
+        List of top products with product name, SKU, category, order counts,
+        revenue, and units sold.
+
+    Example:
+        >>> # Get top 5 products in Accessories for store 1
+        >>> result = await get_top_selling_products(
+        >>>     days_back=30, store_id=1, category_name="Accessories", limit=5
+        >>> )
+    """
+    try:
+        logger.info(
+            f"Retrieving top selling products for store_id: {store_id}, "
+            f"category_name: {category_name}, days_back: {days_back}, limit: {limit}")
+        await db.create_pool()
+        async with db.get_session() as session:
+            # Calculate cutoff date
+            cutoff_date = datetime.now() - timedelta(days=days_back)
+
+            # Build query using ORM - group by product
+            stmt = select(
+                Product.product_name,
+                Product.sku,
+                Category.category_name,
+                func.count(func.distinct(Order.order_id)).label("order_count"),
+                func.sum(OrderItem.total_amount).label("total_revenue"),
+                func.sum(OrderItem.quantity).label("total_units_sold"),
+            ).select_from(Order).join(
+                OrderItem, Order.order_id == OrderItem.order_id
+            ).join(
+                Product, OrderItem.product_id == Product.product_id
+            ).join(
+                Category, Product.category_id == Category.category_id
+            ).where(
+                Order.order_date >= cutoff_date.date()
+            )
+
+            if store_id is not None:
+                stmt = stmt.join(Store, Order.store_id == Store.store_id)
+                stmt = stmt.where(Order.store_id == store_id)
+
+            if category_name:
+                stmt = stmt.where(
+                    func.upper(Category.category_name) == category_name.upper()
+                )
+
+            stmt = stmt.group_by(
+                Product.product_name,
+                Product.sku,
+                Category.category_name,
+            ).order_by(
+                func.sum(OrderItem.quantity).desc(),
+                func.sum(OrderItem.total_amount).desc(),
+            ).limit(limit)
+
+            result = await session.execute(stmt)
+            rows = result.mappings().all()
+            return [TopProductSalesResult(**row) for row in rows]
+    except Exception as e:
+        logger.error(f"Error in get_top_selling_products: {e}")
+        raise e
+
+
+@mcp.tool()
 async def get_current_inventory_status(
-    store_id: Optional[int] = None,
-    category_name: Optional[str] = None,
-    low_stock_threshold: int = 10
+    store_id: Annotated[int, Field(description="Store ID to filter results")] = -1,
+    category_name: Annotated[str, Field(description="Category name to filter results")] = "",
+    low_stock_threshold: Annotated[int, Field(description="Low stock threshold")] = 10
 ) -> list[InventoryStatusResult]:
     """
     Get current inventory status across stores with values and low stock alerts.
@@ -400,7 +489,7 @@ async def get_current_inventory_status(
             f"Retrieving current inventory status for store_id: {store_id},"
             f" category_name: {category_name}, "
             f" low_stock_threshold: {low_stock_threshold}")
-        assert db, "Server not initialized"  # noqa: S101
+        await db.create_pool()
         async with db.get_session() as session:
             # Calculate inventory and retail values
             inventory_value = (
@@ -442,7 +531,7 @@ async def get_current_inventory_status(
                 Product.discontinued.is_(False)
             )
 
-            if store_id is not None:
+            if store_id != -1 and store_id != 0:
                 stmt = stmt.where(Inventory.store_id == store_id)
 
             if category_name:
@@ -466,7 +555,7 @@ async def get_current_inventory_status(
 
 @mcp.tool()
 async def get_stores(
-    store_name: Optional[str] = None
+    store_name: Annotated[str, Field(description="Store name to filter results")] = ""
 ) -> list[StoreResult]:
     """
     Get store information with optional filtering by name.
@@ -493,14 +582,13 @@ async def get_stores(
         >>> result = await get_stores(store_name="Online")
     """
     try:
-        assert db, "Server not initialized"  # noqa: S101
+        await db.create_pool()
         async with db.get_session() as session:
             # Build query using ORM
             stmt = select(
                 Store.store_id,
                 Store.store_name,
                 Store.is_online,
-                Store.rls_user_id,
             )
 
             # Apply filter if provided
@@ -538,6 +626,107 @@ async def get_current_utc_date() -> str:
         return datetime.now(UTC).isoformat()
     except Exception as e:
         logger.error(f"Error getting current UTC date: {e}")
+        raise e
+
+
+@mcp.tool()
+async def get_store_performance_comparison(
+    days_back: Annotated[
+        int,
+        Field(
+            gt=0,
+            le=365,
+            description=(
+                "Number of days to look back for analysis. "
+                "Common values: 7 (week), 30 (month), 90 (quarter), 365 (year). "
+                "Must be between 1 and 365 days."
+            ),
+        ),
+    ] = 30
+) -> list[StorePerformanceResult]:
+    """
+    Compare performance metrics across all stores to identify top and underperforming locations.
+
+    Analyzes store performance over a specified period and ranks stores by revenue per customer
+    (revenue efficiency). This metric normalizes for market size differences, allowing fair
+    comparison between stores with different customer bases.
+
+    Args:
+        days_back: Number of days to analyze (default: 30)
+
+    Returns:
+        List of StorePerformanceResult objects sorted by revenue_per_customer (highest first).
+        Each result includes store_id, store_name, is_online, total_revenue, total_orders,
+        total_units_sold, unique_customers, avg_order_value, revenue_per_customer, and
+        efficiency_rank (1-based where 1 = best). Returns empty list if no sales data exists.
+
+    Example:
+        >>> result = await get_store_performance_comparison(days_back=30)
+        >>> top_stores = result[:3]
+        >>> print(f"Top: {top_stores[0].store_name} - ${top_stores[0].revenue_per_customer:.2f}/customer")
+    """
+    try:
+        logger.info(
+            f"Retrieving store performance comparison for days_back: {days_back}"
+        )
+        await db.create_pool()
+        async with db.get_session() as session:
+            # Calculate cutoff date
+            cutoff_date = datetime.now() - timedelta(days=days_back)
+
+            # Build query to aggregate store performance
+            # Calculate revenue per customer for fair comparison across market sizes
+            total_revenue = func.coalesce(func.sum(OrderItem.total_amount), 0)
+            unique_customers = func.count(func.distinct(Order.customer_id))
+            
+            # Revenue per customer
+            revenue_per_customer = case(
+                (unique_customers > 0, total_revenue / unique_customers),
+                else_=0
+            ).label("revenue_per_customer")
+            
+            stmt = select(
+                Store.store_id,
+                Store.store_name,
+                Store.is_online,
+                total_revenue.label("total_revenue"),
+                func.count(func.distinct(Order.order_id)).label("total_orders"),
+                func.coalesce(func.sum(OrderItem.quantity), 0).label("total_units_sold"),
+                unique_customers.label("unique_customers"),
+                func.coalesce(
+                    func.avg(OrderItem.total_amount), 0
+                ).label("avg_order_value"),
+                revenue_per_customer,
+            ).select_from(Store).outerjoin(
+                Order,
+                and_(
+                    Store.store_id == Order.store_id,
+                    Order.order_date >= cutoff_date.date(),
+                ),
+            ).outerjoin(
+                OrderItem, Order.order_id == OrderItem.order_id
+            ).group_by(
+                Store.store_id,
+                Store.store_name,
+                Store.is_online,
+            ).order_by(
+                revenue_per_customer.desc()
+            )
+
+            result = await session.execute(stmt)
+            rows = result.mappings().all()
+
+            # Add efficiency rank to results (based on revenue per customer)
+            ranked_results = []
+            for rank, row in enumerate(rows, start=1):
+                store_data = dict(row)
+                store_data["efficiency_rank"] = rank
+                ranked_results.append(StorePerformanceResult(**store_data))
+
+            return ranked_results
+
+    except Exception as e:
+        logger.error(f"Error in get_store_performance_comparison: {e}")
         raise e
 
 if __name__ == "__main__":

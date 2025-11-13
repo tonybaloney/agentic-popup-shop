@@ -13,6 +13,7 @@ from agent_framework import (ChatMessage,
 import asyncio
 import dotenv
 from opentelemetry import trace
+import os
 
 dotenv.load_dotenv()
 from .stock import workflow
@@ -142,6 +143,12 @@ if __name__ == "__main__":
         action="store_true",
         help="If set, the batch process will not run the workflow.",
     )
+
+    if os.environ["APPLICATIONINSIGHTS_CONNECTION_STRING"]:
+        print("Configuring application insights")
+        from azure.monitor.opentelemetry import configure_azure_monitor
+        # Configure Azure monitor collection telemetry pipeline
+        configure_azure_monitor()
 
     args = parser.parse_args()
     asyncio.run(process_batch(
