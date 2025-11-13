@@ -35,6 +35,17 @@ class SessionToken(Base):
     expires_at = Column(DateTime, nullable=False)
 
 
+ABS_DB_PATH = "sqlite+aiosqlite:////workspace/app/data/auth.db"
+REL_DB_PATH = "sqlite+aiosqlite:///../../data/auth.db"
+
+import pathlib
+
+# Use absolute path if running in container (/workspace exists), else relative path
+if pathlib.Path("/workspace").exists():
+    DEFAULT_SQLITE_URL = ABS_DB_PATH
+else:
+    DEFAULT_SQLITE_URL = REL_DB_PATH
+
 class SQLiteTokenStore:
     """Provides SQLite database access for token storage with automatic expiry."""
 
@@ -44,7 +55,7 @@ class SQLiteTokenStore:
     def __init__(self, sqlite_url: Optional[str] = None) -> None:
         # Use the same database as the retail data
         self.sqlite_url = (
-            sqlite_url or "sqlite+aiosqlite:////workspace/app/data/auth.db"
+            sqlite_url or DEFAULT_SQLITE_URL
         )
         self.engine: Optional[AsyncEngine] = None
         self.async_session_factory: Optional[async_sessionmaker] = None

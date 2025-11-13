@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import pathlib
 
 # Load environment variables from .env file if dotenv is available
 try:
@@ -33,17 +34,20 @@ class Config:
 
     def __init__(self):
         """Initialize configuration with environment variables."""
-        # Load and clean individual PostgreSQL properties
-        self._postgres_host: str = self._clean_env_value(os.getenv("POSTGRES_DB_HOST", "localhost"))
-        self._postgres_port: int = int(self._clean_env_value(os.getenv("POSTGRES_DB_PORT", "5432")))
-        self._postgres_database: str = self._clean_env_value(os.getenv("POSTGRES_DB", "zava"))
-        self._postgres_user: str = self._clean_env_value(os.getenv("POSTGRES_USER", "postgres"))
-        self._postgres_password: str = self._clean_env_value(os.getenv("POSTGRES_PASSWORD", ""))
-        self._postgres_application_name: str = self._clean_env_value(os.getenv("POSTGRES_APPLICATION_NAME", "mcp-server"))
+
+        ABS_DB_PATH = "sqlite+aiosqlite:////workspace/app/data/retail.db"
+        REL_DB_PATH = "sqlite+aiosqlite:///../../data/retail.db"
+
+
+        # Use absolute path if running in container (/workspace exists), else relative path
+        if pathlib.Path("/workspace").exists():
+            DEFAULT_SQLITE_URL = ABS_DB_PATH
+        else:
+            DEFAULT_SQLITE_URL = REL_DB_PATH
 
         # SQLite database URL
         self._sqlite_database_url: str = self._clean_env_value(
-            os.getenv("SQLITE_DATABASE_URL", "sqlite+aiosqlite:////workspace/app/data/retail.db")
+            os.getenv("SQLITE_DATABASE_URL", DEFAULT_SQLITE_URL)
         )
 
         # Load and clean Application Insights connection string
@@ -68,57 +72,9 @@ class Config:
         )
 
     @property
-    def postgres_host(self) -> str:
-        """Returns the PostgreSQL host."""
-        return self._postgres_host
-
-    @property
-    def postgres_port(self) -> int:
-        """Returns the PostgreSQL port."""
-        return self._postgres_port
-
-    @property
-    def postgres_database(self) -> str:
-        """Returns the PostgreSQL database name."""
-        return self._postgres_database
-
-    @property
-    def postgres_user(self) -> str:
-        """Returns the PostgreSQL username."""
-        return self._postgres_user
-
-    @property
-    def postgres_password(self) -> str:
-        """Returns the PostgreSQL password."""
-        return self._postgres_password
-
-    @property
-    def postgres_application_name(self) -> str:
-        """Returns the PostgreSQL application name."""
-        return self._postgres_application_name
-
-    @property
     def sqlite_database_url(self) -> str:
         """Returns the SQLite database URL."""
         return self._sqlite_database_url
-
-    def get_postgres_connection_params(self) -> dict:
-        """Returns PostgreSQL connection parameters as a dictionary for asyncpg."""
-        return {
-            "host": self._postgres_host,
-            "port": self._postgres_port,
-            "database": self._postgres_database,
-            "user": self._postgres_user,
-            "password": self._postgres_password,
-            "server_settings": {
-                "application_name": self._postgres_application_name
-            }
-        }
-
-    @property
-    def postgres_url(self) -> str:
-        """Returns the PostgreSQL connection URL constructed from individual components."""
-        return f"postgresql://{self._postgres_user}:{self._postgres_password}@{self._postgres_host}:{self._postgres_port}/{self._postgres_database}?application_name={self._postgres_application_name}"
 
     @property
     def applicationinsights_connection_string(self) -> str:

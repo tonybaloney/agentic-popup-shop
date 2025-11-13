@@ -23,7 +23,7 @@ class FinanceSQLiteProvider:
 
     def __init__(self, sqlite_url: Optional[str] = None) -> None:
         # Use default SQLite URL if not provided
-        self.sqlite_url = sqlite_url or "sqlite+aiosqlite:////workspace/app/data/retail.db"
+        self.sqlite_url = config.sqlite_database_url if sqlite_url is None else sqlite_url
         self.engine: Optional[AsyncEngine] = None
         self.async_session_factory: Optional[async_sessionmaker] = None
 
