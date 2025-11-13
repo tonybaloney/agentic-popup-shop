@@ -1,7 +1,6 @@
 # View models
 from decimal import Decimal
 from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
 
 class CompanyPolicyResult(BaseModel):
@@ -43,6 +42,14 @@ class SalesDataResult(BaseModel):
     avg_order_value: Decimal
     total_units_sold: int
     unique_customers: int
+
+class TopProductSalesResult(BaseModel):
+    product_name: str
+    sku: str
+    category_name: str
+    order_count: int
+    total_revenue: Decimal
+    total_units_sold: int
 
 class InventoryStatusResult(BaseModel):
     store_name: str
@@ -116,3 +123,17 @@ class CompanySupplierPolicyResult(BaseModel):
     is_active: bool = False
     policy_description: str = ""
     content_length: int = 0
+
+
+class StorePerformanceResult(BaseModel):
+    """Store performance comparison data."""
+    store_id: int
+    store_name: str
+    is_online: bool
+    total_revenue: Decimal
+    total_orders: int
+    total_units_sold: int
+    unique_customers: int
+    avg_order_value: Decimal
+    revenue_per_customer: Decimal
+    efficiency_rank: int

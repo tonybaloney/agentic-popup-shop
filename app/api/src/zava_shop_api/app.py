@@ -27,7 +27,9 @@ from pydantic import BaseModel
 import json
 from datetime import datetime, timezone
 from zava_shop_shared.config import Config
-from zava_shop_agents.stock import workflow
+from zava_shop_agents.stock import workflow as stock_workflow
+from zava_shop_agents.insights import workflow as insights_workflow
+from zava_shop_agents.admin_insights import admin_workflow as admin_insights_workflow
 
 # SQLAlchemy imports for SQLite
 from sqlalchemy import select, func, case
@@ -50,9 +52,10 @@ from .models import (
     InventoryItem, InventorySummary, InventoryResponse,
     ManagementProduct, ProductPagination, ManagementProductResponse,
     LoginRequest, LoginResponse, TokenData,
-    WeeklyInsights, Insight, InsightAction,
+    WeeklyInsights, Insight, CacheInvalidationResponse, CacheInfoResponse, 
     OrderListResponse, CustomerProfile,
 )
+from zava_shop_agents.insights_cache import get_cache
 from .customers import get_customer_orders
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
@@ -928,208 +931,252 @@ async def get_top_categories(
             detail=f"Failed to fetch top categories: {str(e)}"
         )
 
-
-@app.get("/api/management/insights", response_model=WeeklyInsights)
+@app.get("/api/management/insights", response_model=WeeklyInsights, response_model_exclude_none=False)
 async def get_weekly_insights(
+    store_id: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Store ID to generate insights for (admins only)",
+    ),
+    force_refresh: bool = Query(
+        False,
+        description="Force regenerate insights, bypassing cache"
+    ),
     current_user: TokenData = Depends(get_current_user)
 ) -> WeeklyInsights:
     """
     Get AI-generated weekly insights for the management dashboard.
-    Returns role-based insights: store-specific for managers, enterprise-wide for admins.
+    Returns cached insights if available and valid (< 7 days old).
+    Set force_refresh=true to bypass cache and regenerate.
     Requires authentication.
     """
     try:
         logger.info(
-            f"🤖 Fetching weekly insights for user {current_user.username} "
-            f"(role: {current_user.user_role}, store: {current_user.store_id})"
+            "🤖 Fetching weekly insights for user %s (role=%s, store=%s, force_refresh=%s)",
+            current_user.username,
+            current_user.user_role,
+            current_user.store_id,
+            force_refresh,
         )
 
-        # Store Manager for NYC Times Square (store_id = 1)
-        if current_user.user_role == 'store_manager' and current_user.store_id == 1:
-            return WeeklyInsights(
-                summary=(
-                    "NYC Times Square store performance remains strong this week with "
-                    "foot traffic up 12%. Weather forecasts indicate a significant cold "
-                    "snap arriving next week (temperatures dropping to 28°F/-2°C). This "
-                    "presents an immediate opportunity to capitalize on cold-weather "
-                    "accessory demand, particularly beanies and winter hats which saw "
-                    "340% increase during last year's similar weather event."
-                ),
-                insights=[
-                    Insight(
-                        type="warning",
-                        title="Cold Snap Alert - Stock Winter Accessories",
-                        description=(
-                            "Weather forecast shows temperatures dropping to 28°F starting "
-                            "Monday. Current beanie inventory: 47 units. Recommend immediate "
-                            "order of 200+ units across popular styles. Last year's cold snap "
-                            "generated $8,400 in beanie sales over 3 days."
-                        ),
-                        action=InsightAction(
-                            label="View Beanies",
-                            type="product-search",
-                            query="beanie"
-                        )
-                    ),
-                    Insight(
-                        type="success",
-                        title="Tourist Season Performance",
-                        description=(
-                            "Times Square location seeing 18% increase in tourist traffic vs "
-                            "last month. Branded merchandise and gift items up 24% week-over-week."
-                        )
-                    ),
-                    Insight(
-                        type="info",
-                        title="Peak Hours Optimization",
-                        description=(
-                            "Busiest hours: 2-6pm weekdays, 11am-8pm weekends. Consider "
-                            "adjusting staff schedules to maximize customer service during "
-                            "these windows."
-                        )
-                    ),
-                    Insight(
-                        type="success",
-                        title="Local Partnership Opportunity",
-                        description=(
-                            "NYC-themed merchandise performing exceptionally well (32% of "
-                            "accessory sales). Consider expanding local artist collaborations "
-                            "for holiday season."
-                        )
-                    )
-                ]
-            )
-
-        # Admin - Enterprise-wide insights
-        if current_user.user_role == 'admin':
-            return WeeklyInsights(
-                summary=(
-                    "Enterprise-wide performance analysis shows strong quarterly momentum "
-                    "with total revenue up 16% across all locations. Pike Place continues "
-                    "to lead in sales growth (+28%), while Spokane Pavilion requires "
-                    "attention for underperformance. Urban Threads supplier failing to meet "
-                    "contract terms with 23% late deliveries impacting inventory availability."
-                ),
-                insights=[
-                    Insight(
-                        type="success",
-                        title="Top Performing Store: Pike Place",
-                        description=(
-                            "Pike Place location leading network with 28% sales growth and "
-                            "4.8★ customer satisfaction. Strong performance in outdoor and "
-                            "lifestyle categories. Consider this location for new product "
-                            "line testing."
-                        ),
-                        action=InsightAction(
-                            label="View Details",
-                            type="navigation",
-                            path="/management/stores?store=3"
-                        )
-                    ),
-                    Insight(
-                        type="warning",
-                        title="Underperforming Location: Spokane Pavilion",
-                        description=(
-                            "Spokane Pavilion down 12% vs target with declining foot traffic. "
-                            "Inventory turnover rate below network average. Recommend immediate "
-                            "strategic review and potential merchandising refresh."
-                        ),
-                        action=InsightAction(
-                            label="View Analysis",
-                            type="navigation",
-                            path="/management/stores?store=4"
-                        )
-                    ),
-                    Insight(
-                        type="success",
-                        title="Product Line Winner: Technical Outerwear",
-                        description=(
-                            "Technical outerwear category exceeding projections by 34% "
-                            "network-wide. Mountain Peak Outfitters partnership driving strong "
-                            "margins (42%) and customer satisfaction. Expand SKU count by 25% "
-                            "for Q4."
-                        ),
-                        action=InsightAction(
-                            label="View Category",
-                            type="product-search",
-                            query="outerwear technical"
-                        )
-                    ),
-                    Insight(
-                        type="warning",
-                        title="Supplier Contract Breach: Urban Threads",
-                        description=(
-                            "Urban Threads missing SLA targets: 23% late deliveries, 8% "
-                            "quality defects. Contract terms require 95% on-time delivery. "
-                            "Recommend supplier review meeting and potential penalty assessment."
-                        ),
-                        action=InsightAction(
-                            label="View Supplier",
-                            type="navigation",
-                            path="/management/suppliers?supplier=urban-threads"
-                        )
-                    )
-                ]
-            )
-
-        # Default insights for other store managers
-        return WeeklyInsights(
-            summary=(
-                "Your store performance this week shows strong momentum with notable "
-                "improvements in inventory turnover and customer engagement. Here are "
-                "the key highlights and recommendations:"
-            ),
-            insights=[
-                Insight(
-                    type="success",
-                    title="Strong Performance in Outerwear",
-                    description=(
-                        "Outerwear category showing 23% increase in sales compared to last "
-                        "week. Consider restocking popular items like the Bomber Jacket and "
-                        "Rain Jacket."
-                    )
-                ),
-                Insight(
-                    type="warning",
-                    title="Low Stock Alert - Footwear",
-                    description=(
-                        "Classic White Sneakers and Running Athletic Shoes inventory is "
-                        "critically low. Recommend immediate reorder to avoid stockouts "
-                        "during peak season."
-                    ),
-                    action=InsightAction(
-                        label="View Inventory",
-                        type="navigation",
-                        path="/management/inventory?category=footwear&status=low"
-                    )
-                ),
-                Insight(
-                    type="info",
-                    title="Supplier Performance",
-                    description=(
-                        "Urban Threads Wholesale has consistently delivered on time with "
-                        "98% accuracy. Consider increasing order volume to leverage bulk "
-                        "discounts."
-                    )
-                ),
-                Insight(
-                    type="success",
-                    title="Seasonal Opportunity",
-                    description=(
-                        "With fall approaching, accessories like beanies and gloves are "
-                        "expected to see 40% increase in demand. Stock levels are currently "
-                        "optimal."
-                    )
+        # Determine which store the workflow should focus on.
+        if current_user.store_id is not None:
+            # Store manager - use their assigned store
+            target_store_id = current_user.store_id
+            if store_id and store_id != current_user.store_id:
+                logger.info(
+                    "🔒 Store manager attempted to request store %s; enforcing assigned store %s.",
+                    store_id,
+                    current_user.store_id,
                 )
-            ]
+        elif current_user.user_role == "admin":
+            # Admin - use cache key 0 for enterprise-wide insights
+            target_store_id = 0
+        else:
+            # Fallback for other roles
+            target_store_id = store_id if store_id is not None else 0
+
+        # Check cache first unless force refresh is requested
+        cache = get_cache()
+        if not force_refresh:
+            cached_data = cache.get(target_store_id)
+            if cached_data:
+                logger.info(f"📬 Returning cached insights for store {target_store_id}")
+                return WeeklyInsights.model_validate(cached_data)
+
+        # Cache miss or force refresh - generate new insights
+        logger.info(f"🔄 Generating fresh insights for store {target_store_id}")
+
+        # Select workflow based on user role
+        if current_user.user_role == "admin":
+            # Admin users get enterprise-wide insights
+            logger.info("👔 Using admin insights workflow for enterprise analysis")
+            workflow = admin_insights_workflow
+            agent_input = (
+                f"Generate admin weekly insights:\n"
+                f"User Role: {current_user.user_role}\n"
+                f"Days Back: 30"
+            )
+        else:
+            # Store managers get operational insights for their store
+            logger.info(f"🏪 Using store manager insights workflow for store {target_store_id}")
+            workflow = insights_workflow
+            agent_input = (
+                f"Generate weekly insights for:\n"
+                f"Store ID: {target_store_id}\n"
+                f"User Role: {current_user.user_role}"
+            )
+        
+        agent_message = ChatMessage(role="user", text=agent_input)
+
+        insights_result: Optional[WeeklyInsights] = None
+        fallback_payload: Optional[str] = None
+
+        async for event in workflow.run_stream(agent_message):
+            if isinstance(event, ExecutorFailedEvent):
+                logger.error(
+                    "❌ Insights workflow failed in executor %s: %s",
+                    event.executor_id,
+                    event.details.message,
+                )
+                fallback_payload = event.details.message or "Insights workflow failed"
+                break
+
+            if isinstance(event, WorkflowOutputEvent):
+                payload = event.data
+                if isinstance(payload, BaseModel):
+                    payload = payload.model_dump()
+
+                if isinstance(payload, dict):
+                    insights_result = WeeklyInsights.model_validate(payload)
+                else:
+                    fallback_payload = str(payload)
+                break
+
+        if insights_result:
+            logger.info(
+                "✅ Generated dynamic weekly insights for user %s (store_id=%s)",
+                current_user.username,
+                target_store_id,
+            )
+            # Cache the successful result (include None values so frontend gets all fields)
+            cache.set(target_store_id, insights_result.model_dump(exclude_none=False))
+            return insights_result
+
+        if fallback_payload:
+            logger.warning(
+                "⚠️ Insights workflow returned non-structured payload: %s",
+                fallback_payload,
+            )
+            return WeeklyInsights(
+                store_id=target_store_id,
+                summary="Dynamic insights are temporarily unavailable.",
+                weather_summary="Weather data unavailable at this time.",
+                events_summary=None,
+                stock_items=[],
+                insights=[
+                    Insight(
+                        type="warning",
+                        title="Insights Service Unavailable",
+                        description=fallback_payload,
+                        action=None,
+                    )
+                ],
+                unified_action=None,
+            )
+
+        raise HTTPException(
+            status_code=502,
+            detail="Insights workflow did not return data",
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"❌ Error fetching weekly insights: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch weekly insights: {str(e)}"
         )
+
+
+@app.delete("/api/management/insights/cache", response_model=CacheInvalidationResponse)
+async def invalidate_insights_cache(
+    store_id: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Store ID to invalidate cache for. If not provided, invalidates all caches."
+    ),
+    current_user: TokenData = Depends(get_current_user)
+) -> CacheInvalidationResponse:
+    """
+    Invalidate insights cache (admin only).
+    If store_id is provided, invalidates cache for that store only.
+    Otherwise, invalidates all cached insights.
+    """
+    # Check admin role
+    if current_user.user_role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required"
+        )
+    
+    try:
+        cache = get_cache()
+        
+        if store_id:
+            success = cache.invalidate(store_id)
+            if success:
+                return CacheInvalidationResponse(
+                    success=True,
+                    message=f"Cache invalidated for store {store_id}",
+                    store_id=store_id,
+                )
+            else:
+                return CacheInvalidationResponse(
+                    success=False,
+                    message=f"No cache found for store {store_id}",
+                    store_id=store_id,
+                )
+        else:
+            count = cache.invalidate_all()
+            return CacheInvalidationResponse(
+                success=True,
+                message=f"Invalidated {count} cached insights",
+                store_id=None,
+            )
+    except Exception as e:
+        logger.error(f"❌ Error invalidating cache: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to invalidate cache: {str(e)}"
+        )
+
+
+@app.get("/api/management/insights/cache/info", response_model=CacheInfoResponse)
+async def get_insights_cache_info(
+    store_id: int = Query(
+        ...,
+        ge=1,
+        description="Store ID to get cache info for"
+    ),
+    current_user: TokenData = Depends(get_current_user)
+) -> CacheInfoResponse:
+    """
+    Get cache metadata for a specific store (admin only).
+    Returns cache status, age, and validity information.
+    """
+    # Check admin role
+    if current_user.user_role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required"
+        )
+    
+    try:
+        cache = get_cache()
+        info = cache.get_cache_info(store_id)
+        
+        if info:
+            return CacheInfoResponse(
+                success=True,
+                cache_info=info,
+                message=None,
+            )
+        else:
+            return CacheInfoResponse(
+                success=False,
+                message=f"No cache found for store {store_id}",
+                cache_info=None,
+            )
+    except Exception as e:
+        logger.error(f"❌ Error getting cache info: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get cache info: {str(e)}"
+        )
+
+        
 
 
 @app.get("/api/management/suppliers", response_model=SupplierList)
@@ -1670,7 +1717,7 @@ async def websocket_ai_agent_inventory(websocket: WebSocket):
 
         workflow_output = None
         try:
-            async for event in workflow.run_stream(input):
+            async for event in stock_workflow.run_stream(input):
                 now = datetime.now(timezone.utc).isoformat()
                 if isinstance(event, WorkflowStartedEvent):
                     event_data = {

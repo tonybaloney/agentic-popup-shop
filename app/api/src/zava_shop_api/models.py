@@ -204,13 +204,19 @@ class InsightAction(BaseModel):
     """Action button for an insight"""
     label: str = Field(..., description="Button label text")
     type: str = Field(
-        ..., description="Action type: 'product-search' or 'navigation'"
+        ..., description="Action type: 'product-search', 'navigation', or 'workflow-trigger'"
     )
     query: Optional[str] = Field(
         None, description="Search query for product-search type"
     )
     path: Optional[str] = Field(
         None, description="Navigation path for navigation type"
+    )
+    workflow_message: Optional[str] = Field(
+        None, description="Message to send to workflow for workflow-trigger type"
+    )
+    instructions: Optional[str] = Field(
+        None, description="Instructions to pre-fill in the AI agent interface"
     )
 
 
@@ -224,8 +230,43 @@ class Insight(BaseModel):
 
 class WeeklyInsights(BaseModel):
     """Weekly AI insights response"""
-    summary: str = Field(..., description="Overall summary of the week's performance")
+    store_id: int = Field(..., description="Store identifier for these insights")
+    summary: str = Field(..., description="AI-generated insights disclaimer (shown in italics)")
+    weather_summary: str = Field(..., description="Summary of weather conditions")
+    events_summary: Optional[str] = Field(None, description="Summary of local events")
+    stock_items: List[str] = Field(
+        default_factory=list,
+        description="List of specific product items to stock up on (determined by stock agent)",
+    )
     insights: List[Insight] = Field(..., description="List of specific insights")
+    unified_action: Optional[InsightAction] = Field(
+        None,
+        description="Single unified action that combines all insights for comprehensive analysis",
+    )
+
+
+class CacheInvalidationResponse(BaseModel):
+    """Response for cache invalidation operations"""
+    success: bool = Field(..., description="Whether the operation was successful")
+    message: str = Field(..., description="Human-readable message about the operation")
+    store_id: Optional[int] = Field(None, description="Store ID if invalidating specific store")
+
+
+class CacheInfo(BaseModel):
+    """Cache metadata information"""
+    store_id: int = Field(..., description="Store identifier")
+    generated_date: str = Field(..., description="ISO date when cache was generated")
+    filename: str = Field(..., description="Cache filename")
+    is_valid: bool = Field(..., description="Whether cache is still valid")
+    age_days: int = Field(..., description="Age of cache in days")
+    age_hours: int = Field(..., description="Additional hours beyond full days")
+
+
+class CacheInfoResponse(BaseModel):
+    """Response for cache info queries"""
+    success: bool = Field(..., description="Whether the operation was successful")
+    cache_info: Optional[CacheInfo] = Field(None, description="Cache information if found")
+    message: Optional[str] = Field(None, description="Error message if cache not found")
 
 
 # Order models for customer API
