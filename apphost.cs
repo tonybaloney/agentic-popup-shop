@@ -15,6 +15,10 @@ envVars.TryGetValue("APPLICATIONINSIGHTS_CONNECTION_STRING", out string? appInsi
 var financeMcp = builder.AddPythonModule("finance-mcp", "./app/mcp/", "zava_shop_mcp.finance_server")
     .WithUv()
     .WithHttpEndpoint(env: "PORT")
+    .WithEndpoint("http", e =>
+    {
+        e.Port = 28001;
+    })
     .WithHttpHealthCheck("/health")
     .WithEnvironment("OTEL_PYTHON_EXCLUDED_URLS", "/health")
     .WithTracing(appInsightsConnectionString)
@@ -24,6 +28,10 @@ var financeMcp = builder.AddPythonModule("finance-mcp", "./app/mcp/", "zava_shop
 var supplierMcp = builder.AddPythonModule("supplier-mcp", "./app/mcp/", "zava_shop_mcp.supplier_server")
     .WithUv()
     .WithHttpEndpoint(env: "PORT")
+    .WithEndpoint("http", e =>
+    {
+        e.Port = 28002;
+    })
     .WithHttpHealthCheck("/health")
     .WithEnvironment("OTEL_PYTHON_EXCLUDED_URLS", "/health")
     .WithTracing(appInsightsConnectionString)
