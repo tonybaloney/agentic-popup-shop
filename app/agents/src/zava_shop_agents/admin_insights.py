@@ -517,5 +517,3 @@ def get_admin_workflow():
 
 
 admin_workflow = get_admin_workflow()
-
-setup_observability()

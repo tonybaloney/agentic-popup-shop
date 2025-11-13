@@ -993,4 +993,3 @@ def get_workflow():
 
 workflow = get_workflow()
 
-setup_observability()
