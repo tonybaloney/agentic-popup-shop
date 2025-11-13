@@ -10,7 +10,6 @@ from agent_framework import (
     WorkflowContext,
     handler,
 )
-from agent_framework.observability import setup_observability
 from agent_framework.azure import AzureOpenAIChatClient
 from pydantic import BaseModel
 from zava_shop_agents import MCPStreamableHTTPToolOTEL

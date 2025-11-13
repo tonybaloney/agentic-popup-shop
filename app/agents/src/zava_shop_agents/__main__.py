@@ -10,11 +10,8 @@ from .insights import get_workflow as get_insights_workflow
 def main():
     port = os.environ.get("PORT", 8090)
 
-    from agent_framework.observability import setup_observability
-    setup_observability(vs_code_extension_port=4319)
-
     # Launch server with the workflow
-    serve(entities=[stock_workflow, magentic_workflow, supplier_review_workflow, get_marketing_workflow(), get_insights_workflow()], port=int(port), auto_open=True, tracing_enabled=False)
+    serve(entities=[stock_workflow, magentic_workflow, supplier_review_workflow, get_marketing_workflow(), get_insights_workflow()], port=int(port), auto_open=True, tracing_enabled=True)
 
 
 if __name__ == "__main__":

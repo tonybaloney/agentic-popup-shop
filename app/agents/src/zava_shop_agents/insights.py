@@ -18,7 +18,6 @@ from agent_framework import (
     HostedWebSearchTool,
 )
 from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import setup_observability
 from agent_framework_azure_ai import AzureAIAgentClient
 from azure.identity.aio import DefaultAzureCredential
 from zava_shop_agents import MCPStreamableHTTPToolOTEL

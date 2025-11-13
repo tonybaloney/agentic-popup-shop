@@ -92,29 +92,3 @@ class Config:
             self._appinsights_connection_string,
         )
         return connection_string
-
-    def validate_required_env_vars(self) -> None:
-        """
-        Validate that all required environment variables are set.
-
-        Raises:
-            ValueError: If any required environment variables are missing or invalid
-        """
-        missing_vars = []
-
-        if not self._postgres_host:
-            missing_vars.append("POSTGRES_DB_HOST")
-        if not self._postgres_database:
-            missing_vars.append("POSTGRES_DB")
-        if not self._postgres_user:
-            missing_vars.append("POSTGRES_USER")
-        if not self._postgres_password:
-            missing_vars.append("POSTGRES_PASSWORD")
-
-        if not self.applicationinsights_connection_string:
-            missing_vars.append("APPLICATIONINSIGHTS_CONNECTION_STRING")
-
-        if missing_vars:
-            raise ValueError(
-                f"Missing or invalid required environment variables: {', '.join(missing_vars)}"
-            )

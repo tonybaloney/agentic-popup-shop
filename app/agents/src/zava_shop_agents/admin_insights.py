@@ -16,7 +16,6 @@ from agent_framework import (
     handler,
 )
 from agent_framework.azure import AzureOpenAIChatClient
-from agent_framework.observability import setup_observability
 from zava_shop_agents import MCPStreamableHTTPToolOTEL
 
 

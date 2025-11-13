@@ -55,6 +55,13 @@ var agentDev = builder.AddPythonModule("agent-dev", "./app/agents/", "zava_shop_
     .WithEnvironment("AZURE_AI_PROJECT_API_KEY", envVars["AZURE_AI_PROJECT_API_KEY"])
     .WithEnvironment("AZURE_AI_PROJECT_AGENT_VERSION", envVars["AZURE_AI_PROJECT_AGENT_VERSION"])
     .WithEnvironment("AZURE_AI_PROJECT_AGENT_ID", envVars["AZURE_AI_PROJECT_AGENT_ID"])
+    // Insights search
+    .WithEnvironment("OPENWEATHER_API_KEY", envVars["OPENWEATHER_API_KEY"])
+    .WithEnvironment("BING_CUSTOM_CONNECTION_ID", envVars["BING_CUSTOM_CONNECTION_ID"])
+    .WithEnvironment("BING_CUSTOM_INSTANCE_NAME", envVars["BING_CUSTOM_INSTANCE_NAME"])
+    .WithEnvironment("BING_CUSTOM_CONNECTION_NAME", envVars["BING_CUSTOM_CONNECTION_NAME"])
+    .WithEnvironment("BING_API_KEY", envVars["BING_API_KEY"])
+
     .WithTracing(appInsightsConnectionString)
     .WithEnvironment("DEV_GUEST_TOKEN", envVars["DEV_GUEST_TOKEN"])
     .WithExternalHttpEndpoints();
@@ -79,6 +86,12 @@ var apiService = builder.AddPythonModule("api", "./app/api/", "uvicorn")
     .WithEnvironment("AZURE_AI_PROJECT_API_KEY", envVars["AZURE_AI_PROJECT_API_KEY"])
     .WithEnvironment("AZURE_AI_PROJECT_AGENT_VERSION", envVars["AZURE_AI_PROJECT_AGENT_VERSION"])
     .WithEnvironment("AZURE_AI_PROJECT_AGENT_ID", envVars["AZURE_AI_PROJECT_AGENT_ID"])
+    // Insights search
+    .WithEnvironment("OPENWEATHER_API_KEY", envVars["OPENWEATHER_API_KEY"])
+    .WithEnvironment("BING_CUSTOM_CONNECTION_ID", envVars["BING_CUSTOM_CONNECTION_ID"])
+    .WithEnvironment("BING_CUSTOM_INSTANCE_NAME", envVars["BING_CUSTOM_INSTANCE_NAME"])
+    .WithEnvironment("BING_CUSTOM_CONNECTION_NAME", envVars["BING_CUSTOM_CONNECTION_NAME"])
+    .WithEnvironment("BING_API_KEY", envVars["BING_API_KEY"])
     // Extra
     .WithTracing(appInsightsConnectionString)
     .WithEnvironment("DEV_GUEST_TOKEN", envVars["DEV_GUEST_TOKEN"])

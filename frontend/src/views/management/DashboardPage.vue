@@ -124,8 +124,18 @@
 <vibe-icon name="chat" size="24"></vibe-icon>
                 Weekly Insights
               </h3>
-              <span class="ai-badge"><vibe-icon name="sparkle"></vibe-icon>
+              <div class="insights-header-actions">
+                <span class="ai-badge"><vibe-icon name="sparkle"></vibe-icon>
  AI Generated</span>
+                <button 
+                  class="refresh-btn" 
+                  @click="refreshInsights"
+                  :disabled="loadingInsights"
+                  title="Refresh insights"
+                >
+                  <vibe-icon name="arrow-clockwise" size="20"></vibe-icon>
+                </button>
+              </div>
             </div>
             
             <div class="insights-content" v-if="!loadingInsights">
@@ -380,10 +390,10 @@ export default {
         this.loading = false;
       }
     },
-    async loadWeeklyInsights() {
+    async loadWeeklyInsights(forceRefresh = false) {
       this.loadingInsights = true;
       try {
-        this.weeklyInsights = await managementService.getWeeklyInsights();
+        this.weeklyInsights = await managementService.getWeeklyInsights(forceRefresh);
       } catch (error) {
         console.error('Error loading weekly insights:', error);
         this.weeklyInsights = {
@@ -393,6 +403,9 @@ export default {
       } finally {
         this.loadingInsights = false;
       }
+    },
+    async refreshInsights() {
+      await this.loadWeeklyInsights(true);
     },
     extractNumberedInsightItems(description) {
       if (!description) return null;
@@ -774,6 +787,12 @@ export default {
   margin-bottom: 1rem;
 }
 
+.insights-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .ai-badge {
   display: inline-flex;
   align-items: center;
@@ -785,6 +804,37 @@ export default {
   border-radius: 20px;
   border: 1px solid var(--accent-color);
   margin-top: -18px;
+}
+
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--accent-color);
+  transition: all 0.2s ease;
+  margin-top: -18px;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: var(--hover-color);
+  border-color: var(--accent-color);
+  transform: translateY(-1px);
+}
+
+.refresh-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .insights-content {
