@@ -309,28 +309,28 @@ def create_social_media_image(
         }
         return json.dumps(result_data)
 
-# TODO: Kosta - wire this up with Sora2
 def create_promotional_video(
     campaign_message: Annotated[str, Field(description="The key message or story for the video.")],
     caption: Annotated[str, Field(description="Compelling caption for this video (50-100 words).")],
     hashtags: Annotated[str, Field(description="3-5 relevant hashtags, e.g. '#innovation #tech #future'")],
-    duration_seconds: Annotated[int, Field(
-        description="Video duration in seconds (4-12).")] = 4,
+    duration_seconds: Annotated[str, Field(
+        description="Video duration in seconds ('4', '8' or '12').")] = '12',
 ) -> str:
     """Generate a promotional video for the campaign."""
     import time
     timestamp = int(time.time())
     safe_message = campaign_message.replace(" ", "_").replace("/", "_")[:50]
-    filename = f"promo_video_{safe_message}_{timestamp}.mp4"
+    filename = f"promo_video_{safe_message}_{timestamp}.mp4" 
     resolution = "1280x720"
 
     # Create detailed DALL-E prompt
-    video_prompt = f"Professional social media marketing video with the following descriotion: {campaign_message}. High quality, engaging, suitable for Instagram/TikTok. No text overlay."
+    video_prompt = f"Professional social media marketing video with the following descriotion: {campaign_message}. High quality, engaging, suitable for Instagram/TikTok. No text overlay. No human voice/speech."
 
     video = video_client.videos.create(
         model="sora-2", # Replace with Sora 2 model deployment name
         prompt=video_prompt,
         size=resolution,
+        seconds=duration_seconds
     )
 
     while video.status not in ["completed", "failed", "cancelled"]:
