@@ -29,10 +29,14 @@ from fastapi_cache.decorator import cache
 from pydantic import BaseModel
 import json
 from datetime import datetime, timezone
+
+from zava_shop_api.chatkit_router import router as chatkit_router
+from zava_shop_api.routers.marketing import router as marketing_router, ws_router as marketing_ws_router
+
 from zava_shop_shared.config import Config
 from zava_shop_agents.stock import workflow as stock_workflow
-from zava_shop_agents.insights import workflow as insights_workflow
 from zava_shop_agents.admin_insights import admin_workflow as admin_insights_workflow
+from zava_shop_agents.insights import workflow as insights_workflow
 
 # SQLAlchemy imports for SQLite
 from sqlalchemy import select, func, case
@@ -213,10 +217,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from zava_shop_api.chatkit_router import router as chatkit_router
 app.include_router(chatkit_router)
-
-from zava_shop_api.routers.marketing import router as marketing_router, ws_router as marketing_ws_router
 app.include_router(marketing_router)
 app.include_router(marketing_ws_router)
 
