@@ -3,6 +3,9 @@
 FastAPI Backend for Popup Store
 Provides REST API endpoints for the frontend application.
 """
+from agent_framework.observability import setup_observability
+setup_observability(vs_code_extension_port=4319)
+
 from opentelemetry.instrumentation.auto_instrumentation import initialize
 initialize()
 
@@ -139,10 +142,6 @@ async def lifespan(app: FastAPI):
         )
 
         logger.info(f"✅ SQLAlchemy async engine created: {sqlite_url}")
-
-
-        from agent_framework.observability import setup_observability
-        setup_observability(vs_code_extension_port=4319)
 
     except Exception as e:
         logger.error(f"❌ Failed to initialize SQLAlchemy: {e}")

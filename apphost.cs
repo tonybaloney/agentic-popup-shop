@@ -68,7 +68,7 @@ var agentDev = builder.AddPythonModule("agent-dev", "./app/agents/", "zava_shop_
 
 
 var apiService = builder.AddPythonModule("api", "./app/api/", "uvicorn")
-    .WithArgs("zava_shop_api.app:app", "--reload")
+    .WithArgs("zava_shop_api.app:app")
     .WithUv(args: ["sync", "--prerelease=allow", "--link-mode=copy"])
     .WithCertificateTrustScope(CertificateTrustScope.System)
     .WithHttpEndpoint(env: "UVICORN_PORT")
