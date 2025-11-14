@@ -11,7 +11,8 @@ import logging
 import json
 import base64
 import asyncio
-from azure.identity.aio import DefaultAzureCredential  # For async agents
+from openai import OpenAI
+from azure.identity.aio import DefaultAzureCredential
 from agent_framework_azure_ai import AzureAIAgentClient
 from agent_framework import (
     AgentExecutor,
@@ -51,6 +52,13 @@ if root_env.exists():
 else:
     load_dotenv()
 
+# Configuration for image generation
+# Try new env var names first, fall back to old ones
+
+VIDEO_ENDPOINT = os.getenv("VIDEO_ENDPOINT") or os.getenv(
+    "AZURE_OPENAI_ENDPOINT", "")
+VIDEO_API_KEY = os.getenv("VIDEO_API_KEY") or os.getenv(
+    "AZURE_OPENAI_API_KEY", "")
 # Configuration for image generation - use same endpoint as other agents
 IMAGE_ENDPOINT = os.environ.get("AZURE_AI_PROJECT_ENDPOINT", "")
 IMAGE_MODEL_DEPLOYMENT = os.getenv("IMAGE_MODEL") or os.getenv(
@@ -93,6 +101,11 @@ def create_image_client():
         base_url=azure_endpoint_base,
         api_key=token.token  # Use the token as API key
     )
+
+# video_client = OpenAI(
+#     base_url=VIDEO_ENDPOINT,
+#     api_key=VIDEO_API_KEY
+# )
 
 
 # For now, create a client (but we'll refresh it in the function)
@@ -183,7 +196,6 @@ class CreativeAssetsGeneratedEvent(WorkflowEvent):
         super().__init__(f"Generated {len(assets)} creative assets")
         self.assets = assets
 
-
 def create_social_media_image(
     campaign_theme: Annotated[str, Field(description="The campaign theme or message for the image.")],
     style: Annotated[str, Field(description="Visual style (e.g., 'modern', 'minimalist', 'vibrant').")],
@@ -194,8 +206,8 @@ def create_social_media_image(
     import time
 
     timestamp = int(time.time())
-    safe_theme = campaign_theme.replace(" ", "_").replace("/", "_")[:50]
-    filename = f"social_image_{safe_theme}_{timestamp}.png"
+    #safe_theme = campaign_theme.replace(" ", "_").replace("/", "_")[:50]
+    filename = f"social_image_{timestamp}.png"
 
     # DEBUG MODE: Skip actual image generation for faster testing
     if DEBUG_SKIP_IMAGES:
@@ -297,30 +309,59 @@ def create_social_media_image(
         }
         return json.dumps(result_data)
 
-
 def create_promotional_video(
     campaign_message: Annotated[str, Field(description="The key message or story for the video.")],
     caption: Annotated[str, Field(description="Compelling caption for this video (50-100 words).")],
     hashtags: Annotated[str, Field(description="3-5 relevant hashtags, e.g. '#innovation #tech #future'")],
-    duration_seconds: Annotated[int, Field(
-        description="Video duration in seconds (15-60).")] = 30,
+    duration_seconds: Annotated[str, Field(
+        description="Video duration in seconds ('4', '8' or '12').")] = '12',
 ) -> str:
     """Generate a promotional video for the campaign."""
-    import time
-    timestamp = int(time.time())
-    safe_message = campaign_message.replace(" ", "_").replace("/", "_")[:50]
-    filename = f"promo_video_{safe_message}_{timestamp}.mp4"
+    # import time
+    # timestamp = int(time.time())
+    # safe_message = campaign_message.replace(" ", "_").replace("/", "_")[:50]
+    # Hardcoding the video for demo, can be removed later
+    filename = "promo_video_zava-core.mp4" #f"promo_video_{timestamp}.mp4" 
+    resolution = "1280x720"
 
-    # Return structured JSON with placeholder video thumbnail
+    
+    # video_prompt = f"Professional social media marketing video with the following descriotion: {campaign_message}. High quality, engaging, suitable for Instagram/TikTok. No text overlay. No human voice/speech."
+
+    # video = video_client.videos.create(
+    #     model="sora-2", # Replace with Sora 2 model deployment name
+    #     prompt=video_prompt,
+    #     size=resolution,
+    #     seconds=duration_seconds
+    # )
+
+    # while video.status not in ["completed", "failed", "cancelled"]:
+    #     print(f"Status: {video.status}. Waiting 10 seconds...")
+    #     time.sleep(10)
+        
+    #     # Retrieve the latest status
+    #     video = video_client.videos.retrieve(video.id)
+
+    # if video.status == "completed":
+    #     print("Video successfully completed!")
+        
+    #     # Save video to the generated_images directory
+    #     video_path = images_directory / filename
+    #     content = video_client.videos.download_content(video.id, variant="video")
+    #     content.write_to_file(str(video_path))
+        
+    #     print(f"✅ Video saved to {video_path}")
+        
+        
+    
+    # Return structured JSON with base64-encoded video data URL
     result_data = {
         "type": "video",
         "filename": filename,
-        "url": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%23cccccc'/%3E%3Cpolygon points='150,100 150,300 300,200' fill='%23666'/%3E%3Ctext x='50%25' y='85%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='20' fill='%23666'%3EPromotional Video%3C/text%3E%3C/svg%3E",
         "message": campaign_message,
         "caption": caption,
         "hashtags": hashtags,
         "duration": f"{duration_seconds}s",
-        "resolution": "1920x1080",
+        "resolution": resolution,
         "format": "MP4"
     }
     return json.dumps(result_data)
@@ -367,11 +408,12 @@ def post_to_ayrshare(
                     if not path.exists():
                         print(f"❌ File not found: {file_path}")
                         continue
-
+                    extension = path.suffix[1:]
+                    mime_type = f"image/{extension}" if extension in ["jpg", "jpeg", "png", "gif"] else f"video/{extension}"
                     # Prepare file for upload
                     with open(file_path, 'rb') as file:
                         files = {
-                            'file': (path.name, file, f'image/{path.suffix[1:]}')
+                            'file': (path.name, file, mime_type)
                         }
 
                         # Upload to Ayrshare media API
@@ -706,16 +748,27 @@ class Coordinator(Executor):
             print(f"� Scanning {images_dir} for recent files...")
 
             if images_dir.exists():
-                recent_files = []
+                recent_images = []
+                recent_videos = []
                 for file_path in images_dir.glob("social_image_*.png"):
-                    file_age = current_time - file_path.stat().st_mtime
-                    if file_age < recent_threshold:
-                        recent_files.append(file_path)
+                        file_age = current_time - file_path.stat().st_mtime
+                   # if file_age < recent_threshold:
+                        recent_images.append(file_path)
                         print(
                             f"   ✅ Found recent file: {file_path.name} (age: {file_age:.1f}s)")
+                
+                for file_path in images_dir.glob("promo_video_*.mp4"):
+                        file_age = current_time - file_path.stat().st_mtime
+                    #if file_age < recent_threshold:
+                        recent_videos.append(file_path)          
+                        print(
+                            f"   ✅ Found recent file: {file_path.name} (age: {file_age:.1f}s)")
+                            
 
                 # Sort by modification time (newest first)
-                recent_files.sort(
+                recent_videos.sort(
+                    key=lambda f: f.stat().st_mtime, reverse=True)
+                recent_images.sort(
                     key=lambda f: f.stat().st_mtime, reverse=True)
 
                 # Extract captions and hashtags from agent's text response
@@ -775,7 +828,7 @@ class Coordinator(Executor):
                 # Create asset entries for the most recent files
 
                 # Take up to 2 images
-                for idx, file_path in enumerate(recent_files[:2]):
+                for idx, file_path in enumerate(recent_images[:2]):
                     asset_data = {
                         "type": "image",
                         "filename": file_path.name,
@@ -792,13 +845,23 @@ class Coordinator(Executor):
                 # Add video placeholder
                 video_caption = captions[2] if len(
                     captions) > 2 else "Watch our latest campaign video!"
+               
+
+                video_file = recent_videos[:1]
+                 # Read video file and encode as base64 for data URL
+                with open(video_file[0].absolute(), "rb") as v:
+                    video_data = v.read()
+                    video_b64 = base64.b64encode(video_data).decode('utf-8')
+                    video_data_url = f"data:video/mp4;base64,{video_b64}"
+
                 video_asset = {
                     "type": "video",
-                    "filename": "promo_video_campaign.mp4",
-                    "url": "placeholder://video",
+                    "filename": video_file[0].name if video_file else "promo_video_campaign.mp4",
+                    "file_url":  f"file://{video_file[0].absolute()}" if video_file else "placeholder://video",
+                    "url": video_data_url if video_file else "placeholder://video",
                     "caption": video_caption,
                     "hashtags": hashtags_list,
-                    "duration": 30,
+                    "duration": 4,
                     "format": "MP4"
                 }
                 self.generated_assets.append(video_asset)
@@ -880,14 +943,14 @@ class Coordinator(Executor):
 
             publishing_input = (
                 "Create a 2-week social media publishing schedule for Instagram (posts and reels) "
-                "and TikTok based on the campaign assets. Include optimal posting times and content types. "
+                "based on the campaign assets. Include optimal posting times and content types. "
                 f"We have {len(self.generated_assets)} pieces of content to schedule.\n\n"
                 f"Target markets selected by user: {self.target_markets}\n\n"
                 "IMPORTANT: Create schedule entries for BOTH English (original) and the localized language(s) specified above.\n\n"
                 "Return your response as a JSON array with this structure:\n"
                 "[\n"
-                '  {"date": "2025-11-01", "time": "09:00 AM", "platform": "Instagram", "type": "Post", "content": "Image 1 - Natural Beauty"},\n'
-                '  {"date": "2025-11-01", "time": "06:00 PM", "platform": "TikTok", "type": "Video", "content": "Promotional Video"},\n'
+                '  {"date": "2025-11-01", "time": "09:00 AM", "platform": "Instagram", "content_type": "Post", "content": "Image 1 - Natural Beauty"},\n'
+                '  {"date": "2025-11-01", "time": "06:00 PM", "platform": "Instagram", "content_type": "Reel", "content": "Promotional Video"},\n'
                 "  ...\n"
                 "]\n"
             )
@@ -1049,7 +1112,7 @@ class Coordinator(Executor):
             for asset in self.generated_assets:
                 asset_info = {
                     "type": asset.get("type"),
-                    "url": asset.get("url"),
+                    "url": asset.get("file_url") if asset.get("type")=="video" else asset.get("url"),
                     "caption": asset.get("caption"),
                     "hashtags": asset.get("hashtags"),
                     "filename": asset.get("filename")
@@ -1183,7 +1246,7 @@ Be efficient and decisive. Use smart defaults when information is missing rather
 - **Objective**: Brand awareness and engagement (if not specified)
 - **Audience**: General demographic 18-45, tech-savvy social media users (if not specified)
 - **Timeline**: 2-week campaign starting immediately (if not specified)
-- **Platforms**: Instagram (Posts + Reels) and TikTok (if not specified)
+- **Platforms**: Instagram (Posts + Reels) only (if not specified)
 - **Budget**: Mid-range social media budget (if not specified)
 
 **CRITICAL OUTPUT FORMAT REQUIREMENT:**
@@ -1208,7 +1271,7 @@ All responses MUST be valid JSON using this exact structure:
 **Example efficient response:**
 
 {
-  "agent_response": "Campaign Plan: Launch a 2-week social media campaign targeting tech-savvy millennials (18-35) focused on brand awareness and engagement. Content themes: Innovation showcase, behind-the-scenes, user testimonials. Platform strategy: Instagram Posts (product highlights), Instagram Reels (quick demos), TikTok Videos (trending format adoption). Posting frequency: 1 post daily, 3 reels/videos weekly. Success metrics: Engagement rate, reach, brand mention tracking. Handing off to Creative Agent for asset production.",
+  "agent_response": "Campaign Plan: Launch a 2-week social media campaign targeting tech-savvy millennials (18-35) focused on brand awareness and engagement. Content themes: Innovation showcase, behind-the-scenes, user testimonials. Platform strategy: Instagram Posts (product highlights), Instagram Reels (quick demos). Posting frequency: 1 post daily, 3 reels weekly. Success metrics: Engagement rate, reach, brand mention tracking. Handing off to Creative Agent for asset production.",
   "campaign_title": "Innovation Spotlight 2025",
   "final_plan": true
 }
@@ -1249,10 +1312,14 @@ All responses MUST be valid JSON using this exact structure:
             instructions=(
                 "You are a creative director who produces social media assets. "
                 "Based on the campaign brief, create EXACTLY these 3 assets by calling the tools:\n\n"
+                "VISUAL STYLE REQUIREMENTS:\n"
+                "Mood/style: Athletic, techy, sporty, dramatic, high-performance, cinematic, high-energy, golden-hour sunlight, confident and aspirational. High contrast, subtle rim light, dynamic composition.\n\n"
+                "Negative prompt: faces, readable signage, race bib numbers, brand logos (other than \"zava\"), \"New York City Marathon\" or sponsor text, cluttered typography, front-facing portraits, low resolution, cartoonish styles.\n\n"
                 "REQUIRED TOOL CALLS:\n"
                 "1. Call create_social_media_image with theme and style for Image 1\n"
                 "2. Call create_social_media_image with theme and style for Image 2\n"
                 "3. Call create_promotional_video with message and duration for Video 1\n\n"
+                "IMPORTANT: When calling the tools, incorporate the visual style requirements above into your style parameter. Use descriptive style language like 'Athletic cinematic style with golden-hour lighting, high contrast, dramatic composition' or similar.\n\n"
                 "IMPORTANT: After calling all 3 tools, respond with the captions you created in this EXACT format:\n"
                 "Image 1: [caption for first image]\n"
                 "Image 2: [caption for second image]\n"
@@ -1322,24 +1389,31 @@ All responses MUST be valid JSON using this exact structure:
         ).create_agent(
             name="publishing_agent",
             instructions=(
-                "You are a social media publishing strategist. Create optimal posting schedules for Instagram and TikTok.\n\n"
+                "You are a social media publishing strategist. Create optimal posting schedules for Instagram posts and reels.\n\n"
                 "CRITICAL REQUIREMENTS:\n"
                 "1. Return ONLY a JSON array - no other text, no markdown, no explanations\n"
                 "2. Use EXACTLY these field names: platform, content_type, date, time, language, timezone, local_time, priority\n"
                 "3. Do NOT use 'type' - use 'content_type'\n"
                 "4. Do NOT use 'content' - use 'content_type'\n\n"
+                "MANDATORY FIRST POST REQUIREMENTS:\n"
+                "- The FIRST entry in the JSON array MUST be a video post (Instagram Reel)\n"
+                "- MUST be in English (language: 'English')\n"
+                "- MUST be set to post immediately (use TODAY's date and current time in PST)\n"
+                "- MUST use content_type: 'Reel'\n"
+                "- MUST use platform: 'Instagram'\n"
+                "- MUST have priority: 'High'\n\n"
                 "REQUIRED JSON FORMAT:\n"
                 "[\n"
+                '  {"platform": "Instagram", "content_type": "Reel", "date": "2025-11-14", "time": "NOW", "language": "English", "timezone": "PST", "local_time": null, "priority": "High"},\n'
                 '  {"platform": "Instagram", "content_type": "Post", "date": "2025-11-15", "time": "09:00 AM PST", "language": "English", "timezone": "PST", "local_time": null, "priority": "High"},\n'
-                '  {"platform": "Instagram", "content_type": "Reel", "date": "2025-11-15", "time": "03:00 PM PST", "language": "English", "timezone": "PST", "local_time": null, "priority": "High"},\n'
                 '  {"platform": "Instagram", "content_type": "Post", "date": "2025-11-16", "time": "10:00 AM PST", "language": "Spanish (Spain)", "timezone": "PST / CET", "local_time": "07:00 PM CET", "priority": "Medium"},\n'
-                '  {"platform": "TikTok", "content_type": "Video", "date": "2025-11-16", "time": "12:00 PM PST", "language": "English", "timezone": "PST", "local_time": null, "priority": "Medium"}\n'
+                '  {"platform": "Instagram", "content_type": "Reel", "date": "2025-11-16", "time": "12:00 PM PST", "language": "English", "timezone": "PST", "local_time": null, "priority": "Medium"}\n'
                 "]\n\n"
                 "FIELD SPECIFICATIONS:\n"
-                "- platform: 'Instagram' or 'TikTok' (exactly as shown)\n"
-                "- content_type: 'Post', 'Reel' (Instagram only), or 'Video' (TikTok)\n"
-                "- date: YYYY-MM-DD format\n"
-                "- time: HH:MM AM/PM PST format (always in PST for ALL posts)\n"
+                "- platform: Always 'Instagram'\n"
+                "- content_type: 'Post' or 'Reel' only\n"
+                "- date: YYYY-MM-DD format (use TODAY for first post)\n"
+                "- time: Use 'NOW' for immediate posting, otherwise HH:MM AM/PM PST format (always in PST for ALL posts)\n"
                 "- language: 'English' or language/market from localization (e.g., 'Spanish (Spain)', 'Spanish (Mexico)', 'French (France)')\n"
                 "- timezone: 'PST' for English posts, 'PST / [LOCAL_TZ]' for localized posts (e.g., 'PST / CET', 'PST / CST')\n"
                 "- local_time: null for English posts, local timezone equivalent for localized posts (e.g., '07:00 PM CET')\n"
@@ -1358,7 +1432,7 @@ All responses MUST be valid JSON using this exact structure:
                 "- For localized posts, convert PST times to local timezone using the mappings above\n"
                 "- Space localized posts to align with peak engagement times in target market (consider local evening hours)\n"
                 "- If multiple markets are targeted, create separate schedule entries for each market's localized content\n\n"
-                "Create 8-12 posts over 2 weeks, starting tomorrow. Include both English and all localized versions provided."
+                "Create 8-12 posts over 2 weeks, starting with the MANDATORY immediate reel. Include both English and all localized versions provided. Mix of Instagram Posts and Instagram Reels only."
             ),
         ),
         id="publishing_agent",
@@ -1482,7 +1556,7 @@ async def main() -> None:
             else workflow.run_stream(
                 "**Campaign:** #RunYourWay — Launch of StrideX running shoes to boost awareness and sales.\n"
                 "**Audience:** Active adults 18–40 passionate about fitness and performance gear.\n"
-                "**Platforms & Content:** Instagram, TikTok, YouTube — challenge videos, athlete collabs, UGC runs.\n"
+                "**Platforms & Content:** Instagram Posts and Reels — challenge videos, athlete collabs, UGC runs.\n"
                 "**Goal:** 10K site visits, 1K purchases, 2K hashtag uses in first month."
                 "**Timeline** 4 weeks"
                 "**Budget** 10k"

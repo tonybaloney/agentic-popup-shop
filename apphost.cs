@@ -92,6 +92,10 @@ var apiService = builder.AddPythonModule("api", "./app/api/", "uvicorn")
     .WithEnvironment("BING_CUSTOM_INSTANCE_NAME", envVars["BING_CUSTOM_INSTANCE_NAME"])
     .WithEnvironment("BING_CUSTOM_CONNECTION_NAME", envVars["BING_CUSTOM_CONNECTION_NAME"])
     .WithEnvironment("BING_API_KEY", envVars["BING_API_KEY"])
+    // Image models
+    .WithEnvironment("IMAGE_ENDPOINT", envVars["IMAGE_ENDPOINT"])
+    .WithEnvironment("IMAGE_API_KEY", envVars["IMAGE_API_KEY"])
+    .WithEnvironment("IMAGE_MODEL", envVars["IMAGE_MODEL"])
     // Extra
     .WithTracing(appInsightsConnectionString)
     .WithEnvironment("DEV_GUEST_TOKEN", envVars["DEV_GUEST_TOKEN"])
