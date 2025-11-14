@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "agent-framework-core==1.0.0b251112",
     "azure-identity>=1.23.0,<2.0.0",
-    "opentelemetry-instrumentation-openai",
+    "opentelemetry-instrumentation-openai-v2",
     "agent-framework-devui==1.0.0b251112",
     "opentelemetry-exporter-otlp",
     "azure-monitor-opentelemetry",
