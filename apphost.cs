@@ -99,6 +99,8 @@ var apiService = builder.AddPythonModule("api", "./app/api/", "uvicorn")
     // Extra
     .WithTracing(appInsightsConnectionString)
     .WithEnvironment("DEV_GUEST_TOKEN", envVars["DEV_GUEST_TOKEN"])
+    // TODO: Review this setting
+    .WithEnvironment("ENABLE_VSCODE_TRACING", "true")
     .WithExternalHttpEndpoints();
 
 builder.AddViteApp("frontend", "./frontend")
