@@ -102,10 +102,10 @@ def create_image_client():
         api_key=token.token  # Use the token as API key
     )
 
-video_client = OpenAI(
-    base_url=VIDEO_ENDPOINT,
-    api_key=VIDEO_API_KEY
-)
+# video_client = OpenAI(
+#     base_url=VIDEO_ENDPOINT,
+#     api_key=VIDEO_API_KEY
+# )
 
 
 # For now, create a client (but we'll refresh it in the function)
@@ -320,6 +320,7 @@ def create_promotional_video(
     # import time
     # timestamp = int(time.time())
     # safe_message = campaign_message.replace(" ", "_").replace("/", "_")[:50]
+    # Hardcoding the video for demo, can be removed later
     filename = "promo_video_zava-core.mp4" #f"promo_video_{timestamp}.mp4" 
     resolution = "1280x720"
 
