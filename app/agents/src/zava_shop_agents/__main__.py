@@ -11,7 +11,7 @@ def main():
     port = os.environ.get("PORT", 8090)
 
     # Launch server with the workflow
-    serve(entities=[stock_workflow, magentic_workflow, supplier_review_workflow, get_marketing_workflow(), get_insights_workflow()], port=int(port), auto_open=True, tracing_enabled=True)
+    serve(entities=[stock_workflow, magentic_workflow, supplier_review_workflow, get_marketing_workflow(), get_insights_workflow()], port=int(port), auto_open=False, tracing_enabled=False)
 
 
 if __name__ == "__main__":
