@@ -206,8 +206,8 @@ def create_social_media_image(
     import time
 
     timestamp = int(time.time())
-    safe_theme = campaign_theme.replace(" ", "_").replace("/", "_")[:50]
-    filename = f"social_image_{safe_theme}_{timestamp}.png"
+    #safe_theme = campaign_theme.replace(" ", "_").replace("/", "_")[:50]
+    filename = f"social_image_{timestamp}.png"
 
     # DEBUG MODE: Skip actual image generation for faster testing
     if DEBUG_SKIP_IMAGES:
@@ -317,38 +317,38 @@ def create_promotional_video(
         description="Video duration in seconds ('4', '8' or '12').")] = '12',
 ) -> str:
     """Generate a promotional video for the campaign."""
-    import time
-    timestamp = int(time.time())
-    safe_message = campaign_message.replace(" ", "_").replace("/", "_")[:50]
-    filename = f"promo_video_{safe_message}_{timestamp}.mp4" 
+    # import time
+    # timestamp = int(time.time())
+    # safe_message = campaign_message.replace(" ", "_").replace("/", "_")[:50]
+    filename = "promo_video_zava-core.mp4" #f"promo_video_{timestamp}.mp4" 
     resolution = "1280x720"
 
-    # Create detailed DALL-E prompt
-    video_prompt = f"Professional social media marketing video with the following descriotion: {campaign_message}. High quality, engaging, suitable for Instagram/TikTok. No text overlay. No human voice/speech."
+    
+    # video_prompt = f"Professional social media marketing video with the following descriotion: {campaign_message}. High quality, engaging, suitable for Instagram/TikTok. No text overlay. No human voice/speech."
 
-    video = video_client.videos.create(
-        model="sora-2", # Replace with Sora 2 model deployment name
-        prompt=video_prompt,
-        size=resolution,
-        seconds=duration_seconds
-    )
+    # video = video_client.videos.create(
+    #     model="sora-2", # Replace with Sora 2 model deployment name
+    #     prompt=video_prompt,
+    #     size=resolution,
+    #     seconds=duration_seconds
+    # )
 
-    while video.status not in ["completed", "failed", "cancelled"]:
-        print(f"Status: {video.status}. Waiting 10 seconds...")
-        time.sleep(10)
+    # while video.status not in ["completed", "failed", "cancelled"]:
+    #     print(f"Status: {video.status}. Waiting 10 seconds...")
+    #     time.sleep(10)
         
-        # Retrieve the latest status
-        video = video_client.videos.retrieve(video.id)
+    #     # Retrieve the latest status
+    #     video = video_client.videos.retrieve(video.id)
 
-    if video.status == "completed":
-        print("Video successfully completed!")
+    # if video.status == "completed":
+    #     print("Video successfully completed!")
         
-        # Save video to the generated_images directory
-        video_path = images_directory / filename
-        content = video_client.videos.download_content(video.id, variant="video")
-        content.write_to_file(str(video_path))
+    #     # Save video to the generated_images directory
+    #     video_path = images_directory / filename
+    #     content = video_client.videos.download_content(video.id, variant="video")
+    #     content.write_to_file(str(video_path))
         
-        print(f"✅ Video saved to {video_path}")
+    #     print(f"✅ Video saved to {video_path}")
         
         
     
@@ -407,11 +407,12 @@ def post_to_ayrshare(
                     if not path.exists():
                         print(f"❌ File not found: {file_path}")
                         continue
-
+                    extension = path.suffix[1:]
+                    mime_type = f"image/{extension}" if extension in ["jpg", "jpeg", "png", "gif"] else f"video/{extension}"
                     # Prepare file for upload
                     with open(file_path, 'rb') as file:
                         files = {
-                            'file': (path.name, file, f'image/{path.suffix[1:]}')
+                            'file': (path.name, file, mime_type)
                         }
 
                         # Upload to Ayrshare media API
@@ -749,15 +750,15 @@ class Coordinator(Executor):
                 recent_images = []
                 recent_videos = []
                 for file_path in images_dir.glob("social_image_*.png"):
-                    file_age = current_time - file_path.stat().st_mtime
-                    if file_age < recent_threshold:
+                        file_age = current_time - file_path.stat().st_mtime
+                   # if file_age < recent_threshold:
                         recent_images.append(file_path)
                         print(
                             f"   ✅ Found recent file: {file_path.name} (age: {file_age:.1f}s)")
                 
                 for file_path in images_dir.glob("promo_video_*.mp4"):
-                    file_age = current_time - file_path.stat().st_mtime
-                    if file_age < recent_threshold:
+                        file_age = current_time - file_path.stat().st_mtime
+                    #if file_age < recent_threshold:
                         recent_videos.append(file_path)          
                         print(
                             f"   ✅ Found recent file: {file_path.name} (age: {file_age:.1f}s)")
@@ -855,6 +856,7 @@ class Coordinator(Executor):
                 video_asset = {
                     "type": "video",
                     "filename": video_file[0].name if video_file else "promo_video_campaign.mp4",
+                    "file_url":  f"file://{video_file[0].absolute()}" if video_file else "placeholder://video",
                     "url": video_data_url if video_file else "placeholder://video",
                     "caption": video_caption,
                     "hashtags": hashtags_list,
@@ -1109,7 +1111,7 @@ class Coordinator(Executor):
             for asset in self.generated_assets:
                 asset_info = {
                     "type": asset.get("type"),
-                    "url": asset.get("url"),
+                    "url": asset.get("file_url") if asset.get("type")=="video" else asset.get("url"),
                     "caption": asset.get("caption"),
                     "hashtags": asset.get("hashtags"),
                     "filename": asset.get("filename")
