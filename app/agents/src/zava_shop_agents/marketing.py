@@ -943,14 +943,14 @@ class Coordinator(Executor):
 
             publishing_input = (
                 "Create a 2-week social media publishing schedule for Instagram (posts and reels) "
-                "and TikTok based on the campaign assets. Include optimal posting times and content types. "
+                "based on the campaign assets. Include optimal posting times and content types. "
                 f"We have {len(self.generated_assets)} pieces of content to schedule.\n\n"
                 f"Target markets selected by user: {self.target_markets}\n\n"
                 "IMPORTANT: Create schedule entries for BOTH English (original) and the localized language(s) specified above.\n\n"
                 "Return your response as a JSON array with this structure:\n"
                 "[\n"
-                '  {"date": "2025-11-01", "time": "09:00 AM", "platform": "Instagram", "type": "Post", "content": "Image 1 - Natural Beauty"},\n'
-                '  {"date": "2025-11-01", "time": "06:00 PM", "platform": "TikTok", "type": "Video", "content": "Promotional Video"},\n'
+                '  {"date": "2025-11-01", "time": "09:00 AM", "platform": "Instagram", "content_type": "Post", "content": "Image 1 - Natural Beauty"},\n'
+                '  {"date": "2025-11-01", "time": "06:00 PM", "platform": "Instagram", "content_type": "Reel", "content": "Promotional Video"},\n'
                 "  ...\n"
                 "]\n"
             )
@@ -1246,7 +1246,7 @@ Be efficient and decisive. Use smart defaults when information is missing rather
 - **Objective**: Brand awareness and engagement (if not specified)
 - **Audience**: General demographic 18-45, tech-savvy social media users (if not specified)
 - **Timeline**: 2-week campaign starting immediately (if not specified)
-- **Platforms**: Instagram (Posts + Reels) and TikTok (if not specified)
+- **Platforms**: Instagram (Posts + Reels) only (if not specified)
 - **Budget**: Mid-range social media budget (if not specified)
 
 **CRITICAL OUTPUT FORMAT REQUIREMENT:**
@@ -1271,7 +1271,7 @@ All responses MUST be valid JSON using this exact structure:
 **Example efficient response:**
 
 {
-  "agent_response": "Campaign Plan: Launch a 2-week social media campaign targeting tech-savvy millennials (18-35) focused on brand awareness and engagement. Content themes: Innovation showcase, behind-the-scenes, user testimonials. Platform strategy: Instagram Posts (product highlights), Instagram Reels (quick demos), TikTok Videos (trending format adoption). Posting frequency: 1 post daily, 3 reels/videos weekly. Success metrics: Engagement rate, reach, brand mention tracking. Handing off to Creative Agent for asset production.",
+  "agent_response": "Campaign Plan: Launch a 2-week social media campaign targeting tech-savvy millennials (18-35) focused on brand awareness and engagement. Content themes: Innovation showcase, behind-the-scenes, user testimonials. Platform strategy: Instagram Posts (product highlights), Instagram Reels (quick demos). Posting frequency: 1 post daily, 3 reels weekly. Success metrics: Engagement rate, reach, brand mention tracking. Handing off to Creative Agent for asset production.",
   "campaign_title": "Innovation Spotlight 2025",
   "final_plan": true
 }
@@ -1312,10 +1312,14 @@ All responses MUST be valid JSON using this exact structure:
             instructions=(
                 "You are a creative director who produces social media assets. "
                 "Based on the campaign brief, create EXACTLY these 3 assets by calling the tools:\n\n"
+                "VISUAL STYLE REQUIREMENTS:\n"
+                "Mood/style: Athletic, techy, sporty, dramatic, high-performance, cinematic, high-energy, golden-hour sunlight, confident and aspirational. High contrast, subtle rim light, dynamic composition.\n\n"
+                "Negative prompt: faces, readable signage, race bib numbers, brand logos (other than \"zava\"), \"New York City Marathon\" or sponsor text, cluttered typography, front-facing portraits, low resolution, cartoonish styles.\n\n"
                 "REQUIRED TOOL CALLS:\n"
                 "1. Call create_social_media_image with theme and style for Image 1\n"
                 "2. Call create_social_media_image with theme and style for Image 2\n"
                 "3. Call create_promotional_video with message and duration for Video 1\n\n"
+                "IMPORTANT: When calling the tools, incorporate the visual style requirements above into your style parameter. Use descriptive style language like 'Athletic cinematic style with golden-hour lighting, high contrast, dramatic composition' or similar.\n\n"
                 "IMPORTANT: After calling all 3 tools, respond with the captions you created in this EXACT format:\n"
                 "Image 1: [caption for first image]\n"
                 "Image 2: [caption for second image]\n"
@@ -1385,24 +1389,31 @@ All responses MUST be valid JSON using this exact structure:
         ).create_agent(
             name="publishing_agent",
             instructions=(
-                "You are a social media publishing strategist. Create optimal posting schedules for Instagram and TikTok.\n\n"
+                "You are a social media publishing strategist. Create optimal posting schedules for Instagram posts and reels.\n\n"
                 "CRITICAL REQUIREMENTS:\n"
                 "1. Return ONLY a JSON array - no other text, no markdown, no explanations\n"
                 "2. Use EXACTLY these field names: platform, content_type, date, time, language, timezone, local_time, priority\n"
                 "3. Do NOT use 'type' - use 'content_type'\n"
                 "4. Do NOT use 'content' - use 'content_type'\n\n"
+                "MANDATORY FIRST POST REQUIREMENTS:\n"
+                "- The FIRST entry in the JSON array MUST be a video post (Instagram Reel)\n"
+                "- MUST be in English (language: 'English')\n"
+                "- MUST be set to post immediately (use TODAY's date and current time in PST)\n"
+                "- MUST use content_type: 'Reel'\n"
+                "- MUST use platform: 'Instagram'\n"
+                "- MUST have priority: 'High'\n\n"
                 "REQUIRED JSON FORMAT:\n"
                 "[\n"
+                '  {"platform": "Instagram", "content_type": "Reel", "date": "2025-11-14", "time": "NOW", "language": "English", "timezone": "PST", "local_time": null, "priority": "High"},\n'
                 '  {"platform": "Instagram", "content_type": "Post", "date": "2025-11-15", "time": "09:00 AM PST", "language": "English", "timezone": "PST", "local_time": null, "priority": "High"},\n'
-                '  {"platform": "Instagram", "content_type": "Reel", "date": "2025-11-15", "time": "03:00 PM PST", "language": "English", "timezone": "PST", "local_time": null, "priority": "High"},\n'
                 '  {"platform": "Instagram", "content_type": "Post", "date": "2025-11-16", "time": "10:00 AM PST", "language": "Spanish (Spain)", "timezone": "PST / CET", "local_time": "07:00 PM CET", "priority": "Medium"},\n'
-                '  {"platform": "TikTok", "content_type": "Video", "date": "2025-11-16", "time": "12:00 PM PST", "language": "English", "timezone": "PST", "local_time": null, "priority": "Medium"}\n'
+                '  {"platform": "Instagram", "content_type": "Reel", "date": "2025-11-16", "time": "12:00 PM PST", "language": "English", "timezone": "PST", "local_time": null, "priority": "Medium"}\n'
                 "]\n\n"
                 "FIELD SPECIFICATIONS:\n"
-                "- platform: 'Instagram' or 'TikTok' (exactly as shown)\n"
-                "- content_type: 'Post', 'Reel' (Instagram only), or 'Video' (TikTok)\n"
-                "- date: YYYY-MM-DD format\n"
-                "- time: HH:MM AM/PM PST format (always in PST for ALL posts)\n"
+                "- platform: Always 'Instagram'\n"
+                "- content_type: 'Post' or 'Reel' only\n"
+                "- date: YYYY-MM-DD format (use TODAY for first post)\n"
+                "- time: Use 'NOW' for immediate posting, otherwise HH:MM AM/PM PST format (always in PST for ALL posts)\n"
                 "- language: 'English' or language/market from localization (e.g., 'Spanish (Spain)', 'Spanish (Mexico)', 'French (France)')\n"
                 "- timezone: 'PST' for English posts, 'PST / [LOCAL_TZ]' for localized posts (e.g., 'PST / CET', 'PST / CST')\n"
                 "- local_time: null for English posts, local timezone equivalent for localized posts (e.g., '07:00 PM CET')\n"
@@ -1421,7 +1432,7 @@ All responses MUST be valid JSON using this exact structure:
                 "- For localized posts, convert PST times to local timezone using the mappings above\n"
                 "- Space localized posts to align with peak engagement times in target market (consider local evening hours)\n"
                 "- If multiple markets are targeted, create separate schedule entries for each market's localized content\n\n"
-                "Create 8-12 posts over 2 weeks, starting tomorrow. Include both English and all localized versions provided."
+                "Create 8-12 posts over 2 weeks, starting with the MANDATORY immediate reel. Include both English and all localized versions provided. Mix of Instagram Posts and Instagram Reels only."
             ),
         ),
         id="publishing_agent",
@@ -1545,7 +1556,7 @@ async def main() -> None:
             else workflow.run_stream(
                 "**Campaign:** #RunYourWay — Launch of StrideX running shoes to boost awareness and sales.\n"
                 "**Audience:** Active adults 18–40 passionate about fitness and performance gear.\n"
-                "**Platforms & Content:** Instagram, TikTok, YouTube — challenge videos, athlete collabs, UGC runs.\n"
+                "**Platforms & Content:** Instagram Posts and Reels — challenge videos, athlete collabs, UGC runs.\n"
                 "**Goal:** 10K site visits, 1K purchases, 2K hashtag uses in first month."
                 "**Timeline** 4 weeks"
                 "**Budget** 10k"
