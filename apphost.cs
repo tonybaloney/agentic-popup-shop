@@ -79,6 +79,10 @@ var apiService = builder.AddPythonModule("api", "./app/api/", "uvicorn")
     .WithEnvironment("AZURE_AI_PROJECT_API_KEY", envVars["AZURE_AI_PROJECT_API_KEY"])
     .WithEnvironment("AZURE_AI_PROJECT_AGENT_VERSION", envVars["AZURE_AI_PROJECT_AGENT_VERSION"])
     .WithEnvironment("AZURE_AI_PROJECT_AGENT_ID", envVars["AZURE_AI_PROJECT_AGENT_ID"])
+    // Image models
+    .WithEnvironment("IMAGE_ENDPOINT", envVars["IMAGE_ENDPOINT"])
+    .WithEnvironment("IMAGE_API_KEY", envVars["IMAGE_API_KEY"])
+    .WithEnvironment("IMAGE_MODEL", envVars["IMAGE_MODEL"])
     // Extra
     .WithTracing(appInsightsConnectionString)
     .WithEnvironment("DEV_GUEST_TOKEN", envVars["DEV_GUEST_TOKEN"])
