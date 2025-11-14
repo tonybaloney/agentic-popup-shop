@@ -3,8 +3,11 @@
 FastAPI Backend for Popup Store
 Provides REST API endpoints for the frontend application.
 """
-from agent_framework.observability import setup_observability
-setup_observability(vs_code_extension_port=4319)
+import os
+
+if os.environ.get("ENABLE_VSCODE_TRACING", "false").lower() == "true":
+    from agent_framework.observability import setup_observability
+    setup_observability(vs_code_extension_port=4319)
 
 from opentelemetry.instrumentation.auto_instrumentation import initialize
 initialize()
