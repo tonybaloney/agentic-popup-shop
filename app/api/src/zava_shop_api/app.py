@@ -85,7 +85,6 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 config = Config()
-SCHEMA_NAME = "retail"
 
 # Database connections
 sqlalchemy_engine: Optional[AsyncEngine] = None
@@ -125,12 +124,12 @@ async def lifespan(app: FastAPI):
     global sqlalchemy_engine, async_session_factory
 
     # Startup
-    logger.info("🚀 Starting API Server...")
+    logger.info("Starting API Server...")
 
     # Initialize SQLAlchemy async engine for SQLite
     try:
         sqlite_url = config.sqlite_database_url
-        logger.info(f"🔗 Connecting to SQLite database at {sqlite_url}...")
+        logger.info(f"Connecting to SQLite database at {sqlite_url}...")
         sqlalchemy_engine = create_async_engine(
             sqlite_url,
             connect_args={"timeout": 30, "check_same_thread": False},
@@ -148,10 +147,10 @@ async def lifespan(app: FastAPI):
             expire_on_commit=False,
         )
 
-        logger.info(f"✅ SQLAlchemy async engine created: {sqlite_url}")
+        logger.info(f"SQLAlchemy async engine created: {sqlite_url}")
 
     except Exception as e:
-        logger.error(f"❌ Failed to initialize SQLAlchemy: {e}")
+        logger.error(f"Failed to initialize SQLAlchemy: {e}")
         raise
 
     # Initialize cache
@@ -162,20 +161,20 @@ async def lifespan(app: FastAPI):
     try:
         from zava_shop_api.auth import token_store
         await token_store.initialize()
-        logger.info("✅ Token store initialized")
+        logger.info("Token store initialized")
     except Exception as e:
-        logger.error(f"❌ Failed to initialize token store: {e}")
+        logger.error(f"Failed to initialize token store: {e}")
         raise
 
     yield
 
     # Shutdown
-    logger.info("🛑 Shutting down API Server...")
+    logger.info("Shutting down API Server...")
 
     # Dispose SQLAlchemy engine
     if sqlalchemy_engine:
         await sqlalchemy_engine.dispose()
-        logger.info("✅ SQLAlchemy async engine disposed")
+        logger.info("SQLAlchemy async engine disposed")
 
 
 # Create FastAPI app
@@ -256,7 +255,7 @@ async def login(credentials: LoginRequest) -> LoginResponse:
     else:
         name = None
 
-    logger.info(f"✅ User {credentials.username} ({user.user_role}) logged in")
+    logger.info(f"User {credentials.username} ({user.user_role}) logged in")
 
     return LoginResponse(
         access_token=token,
@@ -366,12 +365,12 @@ async def get_stores() -> StoreList:
                     )
                 ))
 
-            logger.info(f"✅ Retrieved {len(stores)} stores")
+            logger.info(f"Retrieved {len(stores)} stores")
 
             return StoreList(stores=stores, total=len(stores))
 
     except Exception as e:
-        logger.error(f"❌ Error fetching stores: {e}")
+        logger.error(f"Error fetching stores: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch stores: {str(e)}"
@@ -407,12 +406,12 @@ async def get_categories() -> CategoryList:
                     name=row.category_name
                 ))
 
-            logger.info(f"✅ Retrieved {len(categories)} categories")
+            logger.info(f"Retrieved {len(categories)} categories")
 
             return CategoryList(categories=categories, total=len(categories))
 
     except Exception as e:
-        logger.error(f"❌ Error fetching categories: {e}")
+        logger.error(f"Error fetching categories: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch categories: {str(e)}"
@@ -479,7 +478,7 @@ async def get_featured_products(
                     image_url=row.image_url
                 ))
 
-            logger.info(f"✅ Retrieved {len(products)} featured products")
+            logger.info(f"Retrieved {len(products)} featured products")
 
             return ProductList(
                 products=products,
@@ -487,7 +486,7 @@ async def get_featured_products(
             )
 
     except Exception as e:
-        logger.error(f"❌ Error fetching featured products: {e}")
+        logger.error(f"Error fetching featured products: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch featured products: {str(e)}"
@@ -571,7 +570,7 @@ async def get_products_by_category(
                 ))
 
             logger.info(
-                f"✅ Retrieved {len(products)} products for category '{category}'"
+                f"Retrieved {len(products)} products for category '{category}'"
             )
 
             return ProductList(
@@ -582,7 +581,7 @@ async def get_products_by_category(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Error fetching products by category: {e}")
+        logger.error(f"Error fetching products by category: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch products: {str(e)}"
@@ -645,14 +644,14 @@ async def get_product_by_id(product_id: int) -> Product:
             )
 
             logger.info(
-                f"✅ Retrieved product {product_id}: {product.product_name}")
+                f"Retrieved product {product_id}: {product.product_name}")
 
             return product
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Error fetching product {product_id}: {e}")
+        logger.error(f"Error fetching product {product_id}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch product: {str(e)}"
@@ -714,14 +713,14 @@ async def get_product_by_sku(sku: str) -> Product:
             )
 
             logger.info(
-                f"✅ Retrieved product by SKU {sku}: {product.product_name}")
+                f"Retrieved product by SKU {sku}: {product.product_name}")
 
             return product
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Error fetching product by SKU {sku}: {e}")
+        logger.error(f"Error fetching product by SKU {sku}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch product: {str(e)}"
@@ -790,7 +789,7 @@ async def get_user_profile(
             )
 
             logger.info(
-                f"✅ Retrieved profile for customer {current_user.username}"
+                f"Retrieved profile for customer {current_user.username}"
             )
 
             return profile
@@ -799,7 +798,7 @@ async def get_user_profile(
         raise
     except Exception as e:
         logger.error(
-            f"❌ Error fetching profile for user {current_user.username}: {e}"
+            f"Error fetching profile for user {current_user.username}: {e}"
         )
         raise HTTPException(
             status_code=500,
@@ -842,7 +841,7 @@ async def get_user_orders(
         raise
     except Exception as e:
         logger.error(
-            f"❌ Error fetching orders for user {current_user.username}: {e}"
+            f"Error fetching orders for user {current_user.username}: {e}"
         )
         raise HTTPException(
             status_code=500,
@@ -864,7 +863,7 @@ async def get_top_categories(
     try:
         async with get_db_session() as session:
             logger.info(
-                f"📊 Fetching top {limit} categories by inventory value for user {current_user.username}...")
+                f"Fetching top {limit} categories by inventory value for user {current_user.username}...")
 
             stmt = (
                 select(
@@ -924,7 +923,7 @@ async def get_top_categories(
                     potential_profit=round(float(row.potential_profit), 2)
                 ))
 
-            logger.info(f"✅ Retrieved {len(categories)} categories")
+            logger.info(f"Retrieved {len(categories)} categories")
 
             return TopCategoryList(
                 categories=categories,
@@ -933,7 +932,7 @@ async def get_top_categories(
             )
 
     except Exception as e:
-        logger.error(f"❌ Error fetching top categories: {e}")
+        logger.error(f"Error fetching top categories: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch top categories: {str(e)}"
@@ -960,7 +959,7 @@ async def get_weekly_insights(
     """
     try:
         logger.info(
-            "🤖 Fetching weekly insights for user %s (role=%s, store=%s, force_refresh=%s)",
+            "Fetching weekly insights for user %s (role=%s, store=%s, force_refresh=%s)",
             current_user.username,
             current_user.user_role,
             current_user.store_id,
@@ -973,7 +972,7 @@ async def get_weekly_insights(
             target_store_id = current_user.store_id
             if store_id and store_id != current_user.store_id:
                 logger.info(
-                    "🔒 Store manager attempted to request store %s; enforcing assigned store %s.",
+                    "Store manager attempted to request store %s; enforcing assigned store %s.",
                     store_id,
                     current_user.store_id,
                 )
@@ -989,16 +988,16 @@ async def get_weekly_insights(
         if not force_refresh:
             cached_data = cache.get(target_store_id)
             if cached_data:
-                logger.info(f"📬 Returning cached insights for store {target_store_id}")
+                logger.info(f"Returning cached insights for store {target_store_id}")
                 return WeeklyInsights.model_validate(cached_data)
 
         # Cache miss or force refresh - generate new insights
-        logger.info(f"🔄 Generating fresh insights for store {target_store_id}")
+        logger.info(f"Generating fresh insights for store {target_store_id}")
 
         # Select workflow based on user role
         if current_user.user_role == "admin":
             # Admin users get enterprise-wide insights
-            logger.info("👔 Using admin insights workflow for enterprise analysis")
+            logger.info("Using admin insights workflow for enterprise analysis")
             workflow = admin_insights_workflow
             agent_input = (
                 f"Generate admin weekly insights:\n"
@@ -1007,7 +1006,7 @@ async def get_weekly_insights(
             )
         else:
             # Store managers get operational insights for their store
-            logger.info(f"🏪 Using store manager insights workflow for store {target_store_id}")
+            logger.info(f"Using store manager insights workflow for store {target_store_id}")
             workflow = insights_workflow
             agent_input = (
                 f"Generate weekly insights for:\n"
@@ -1023,7 +1022,7 @@ async def get_weekly_insights(
         async for event in workflow.run_stream(agent_message):
             if isinstance(event, ExecutorFailedEvent):
                 logger.error(
-                    "❌ Insights workflow failed in executor %s: %s",
+                    "Insights workflow failed in executor %s: %s",
                     event.executor_id,
                     event.details.message,
                 )
@@ -1043,7 +1042,7 @@ async def get_weekly_insights(
 
         if insights_result:
             logger.info(
-                "✅ Generated dynamic weekly insights for user %s (store_id=%s)",
+                "Generated dynamic weekly insights for user %s (store_id=%s)",
                 current_user.username,
                 target_store_id,
             )
@@ -1053,7 +1052,7 @@ async def get_weekly_insights(
 
         if fallback_payload:
             logger.warning(
-                "⚠️ Insights workflow returned non-structured payload: %s",
+                "Insights workflow returned non-structured payload: %s",
                 fallback_payload,
             )
             return WeeklyInsights(
@@ -1081,7 +1080,7 @@ async def get_weekly_insights(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Error fetching weekly insights: {e}")
+        logger.error(f"Error fetching weekly insights: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch weekly insights: {str(e)}"
@@ -1134,7 +1133,7 @@ async def invalidate_insights_cache(
                 store_id=None,
             )
     except Exception as e:
-        logger.error(f"❌ Error invalidating cache: {e}")
+        logger.error(f"Error invalidating cache: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to invalidate cache: {str(e)}"
@@ -1178,7 +1177,7 @@ async def get_insights_cache_info(
                 cache_info=None,
             )
     except Exception as e:
-        logger.error(f"❌ Error getting cache info: {e}")
+        logger.error(f"Error getting cache info: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get cache info: {str(e)}"
@@ -1196,7 +1195,7 @@ async def get_suppliers(current_user: TokenData = Depends(get_current_user)) -> 
     """
     try:
         async with get_db_session() as session:
-            logger.info(f"📊 Fetching suppliers for user {current_user.username}...")
+            logger.info(f"Fetching suppliers for user {current_user.username}...")
 
             # Get basic supplier info
             stmt = (
@@ -1281,7 +1280,7 @@ async def get_suppliers(current_user: TokenData = Depends(get_current_user)) -> 
                         row.bulk_discount_percent) if row.bulk_discount_percent else 0.0
                 ))
 
-            logger.info(f"✅ Retrieved {len(suppliers)} suppliers")
+            logger.info(f"Retrieved {len(suppliers)} suppliers")
 
             return SupplierList(
                 suppliers=suppliers,
@@ -1289,7 +1288,7 @@ async def get_suppliers(current_user: TokenData = Depends(get_current_user)) -> 
             )
 
     except Exception as e:
-        logger.error(f"❌ Error fetching suppliers: {e}")
+        logger.error(f"Error fetching suppliers: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch suppliers: {str(e)}"
@@ -1321,7 +1320,7 @@ async def get_inventory(
     try:
         async with get_db_session() as session:
             logger.info(
-                f"📦 Fetching inventory (store={store_id}, product={product_id}, category={category}, low_stock={low_stock_only})...")
+                f"Fetching inventory (store={store_id}, product={product_id}, category={category}, low_stock={low_stock_only})...")
 
             # Build base query with joins
             base_stmt = (
@@ -1475,7 +1474,7 @@ async def get_inventory(
                 summary_row.avg_stock_level) if summary_row.avg_stock_level else 0.0
 
             logger.info(
-                f"✅ Retrieved {len(inventory_items)} inventory items (showing {len(inventory_items)} of {total_items} total, {low_stock_count} low stock)")
+                f"Retrieved {len(inventory_items)} inventory items (showing {len(inventory_items)} of {total_items} total, {low_stock_count} low stock)")
 
             return InventoryResponse(
                 inventory=inventory_items,
@@ -1489,7 +1488,7 @@ async def get_inventory(
             )
 
     except Exception as e:
-        logger.error(f"❌ Error fetching inventory: {e}")
+        logger.error(f"Error fetching inventory: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch inventory: {str(e)}"
@@ -1520,7 +1519,7 @@ async def get_products(
     """
     try:
         async with get_db_session() as session:
-            logger.info("📦 Fetching products...")
+            logger.info("Fetching products...")
 
             # Build base query
             stmt = (
@@ -1635,7 +1634,7 @@ async def get_products(
                 ))
 
             logger.info(
-                f"✅ Retrieved {len(products)} products (total: {total_count})")
+                f"Retrieved {len(products)} products (total: {total_count})")
 
             return ManagementProductResponse(
                 products=products,
@@ -1648,7 +1647,7 @@ async def get_products(
             )
 
     except Exception as e:
-        logger.error(f"❌ Error fetching products: {e}")
+        logger.error(f"Error fetching products: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch products: {str(e)}"
@@ -1692,19 +1691,19 @@ async def websocket_ai_agent_inventory(websocket: WebSocket):
             # Store manager - use their store_id
             store_id = current_user.store_id
             logger.info(
-                f"📍 Store manager detected - using store_id: {store_id}"
+                f"Store manager detected - using store_id: {store_id}"
             )
         else:
             # Admin - can optionally specify store_id
             store_id = request_data.get('store_id')
             if store_id:
-                logger.info(f"📍 Admin specified store_id: {store_id}")
+                logger.info(f"Admin specified store_id: {store_id}")
             else:
-                logger.info("📍 Admin analyzing all stores")
+                logger.info("Admin analyzing all stores")
 
         logger.info(
-            f"🤖 AI Agent request from {current_user.username}: "
-            f"{input_message} (store_id: {store_id})"
+            f"AI Agent request from {current_user.username}: "
+            f"  {input_message} (store_id: {store_id})"
         )
 
         # Send initial acknowledgment
@@ -1782,10 +1781,10 @@ async def websocket_ai_agent_inventory(websocket: WebSocket):
                 "output": workflow_output,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             })
-            logger.info("✅ AI Agent workflow completed")
+            logger.info("AI Agent workflow completed")
 
         except Exception as workflow_error:
-            logger.error(f"❌ Workflow error: {workflow_error}")
+            logger.error(f"Workflow error: {workflow_error}")
             await websocket.send_json({
                 "type": "error",
                 "message": f"Workflow error: {str(workflow_error)}",
@@ -1795,7 +1794,7 @@ async def websocket_ai_agent_inventory(websocket: WebSocket):
     except WebSocketDisconnect:
         logger.info("🔌 WebSocket disconnected")
     except Exception as e:
-        logger.error(f"❌ WebSocket error: {e}")
+        logger.error(f"WebSocket error: {e}")
         try:
             await websocket.send_json({
                 "type": "error",

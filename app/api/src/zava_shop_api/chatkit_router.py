@@ -52,12 +52,6 @@ chat_client = AzureAIClient(
     model_deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5", "gpt-5-mini")
 )
 
-# Old API
-# chat_client = AzureOpenAIChatClient(api_key=os.environ.get("AZURE_OPENAI_API_KEY_GPT5"),
-#                                     endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT_GPT5"),
-#                                     deployment_name=os.environ.get("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME_GPT5"),
-#                                     api_version=os.environ.get("AZURE_OPENAI_ENDPOINT_VERSION_GPT5", "2024-02-15-preview"))
-
 class ChatKitContext(BaseModel):
     """Context passed to ChatKit server."""
     user_id: str
