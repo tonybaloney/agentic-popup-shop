@@ -8,7 +8,7 @@
           "price": 15.99,
           "description": "Comfortable 100% cotton t-shirt, perfect for everyday wear with a classic fit.",
           "stock_level": 150,
-          "image_path": "images/apparel_tops_t_shirts_classic_cotton_t_shirt_20251015_032003.png"
+          "image_path": "images/apparel_tops_t_shirts_classic_cotton_t_shirt_20251114_191933.png"
         },
         {
           "name": "V-Neck Casual Tee",
@@ -16,7 +16,7 @@
           "price": 17.99,
           "description": "Stylish v-neck t-shirt in soft cotton blend, ideal for layering or wearing alone.",
           "stock_level": 120,
-          "image_path": "images/apparel_tops_t_shirts_v_neck_casual_tee_20251015_032030.png"
+          "image_path": "images/apparel_tops_t_shirts_v_neck_casual_tee_20251114_191957.png"
         },
         {
           "name": "Graphic Print T-Shirt",
@@ -24,7 +24,7 @@
           "price": 19.99,
           "description": "Trendy graphic tee with bold designs, perfect for expressing your personal style.",
           "stock_level": 100,
-          "image_path": "images/apparel_tops_t_shirts_graphic_print_t_shirt_20251015_032057.png"
+          "image_path": "images/apparel_tops_t_shirts_graphic_print_t_shirt_20251114_192019.png"
         },
         {
           "name": "Long Sleeve Basic Tee",
@@ -32,7 +32,7 @@
           "price": 21.99,
           "description": "Versatile long sleeve t-shirt in premium cotton, great for cooler weather.",
           "stock_level": 90,
-          "image_path": "images/apparel_tops_t_shirts_long_sleeve_basic_tee_20251015_032123.png"
+          "image_path": "images/apparel_tops_t_shirts_long_sleeve_basic_tee_20251114_192040.png"
         },
         {
           "name": "Striped Casual T-Shirt",
@@ -40,7 +40,7 @@
           "price": 18.99,
           "description": "Classic striped pattern t-shirt in comfortable cotton, timeless wardrobe essential.",
           "stock_level": 110,
-          "image_path": "images/apparel_tops_t_shirts_striped_casual_t_shirt_20251015_032150.png"
+          "image_path": "images/apparel_tops_t_shirts_striped_casual_t_shirt_20251114_192101.png"
         },
         {
           "name": "Polo Style T-Shirt",
@@ -48,7 +48,7 @@
           "price": 24.99,
           "description": "Smart casual polo tee with collar, perfect for semi-formal occasions.",
           "stock_level": 80,
-          "image_path": "images/apparel_tops_t_shirts_polo_style_t_shirt_20251015_032216.png"
+          "image_path": "images/apparel_tops_t_shirts_polo_style_t_shirt_20251114_192123.png"
         },
         {
           "name": "Pocket T-Shirt",
@@ -56,7 +56,7 @@
           "price": 16.99,
           "description": "Practical t-shirt with chest pocket, combines style and functionality.",
           "stock_level": 130,
-          "image_path": "images/apparel_tops_t_shirts_pocket_t_shirt_20251015_032243.png"
+          "image_path": "images/apparel_tops_t_shirts_pocket_t_shirt_20251114_192147.png"
         },
         {
           "name": "Athletic Performance Tee",
@@ -64,7 +64,7 @@
           "price": 22.99,
           "description": "Moisture-wicking athletic t-shirt, designed for active lifestyles and workouts.",
           "stock_level": 95,
-          "image_path": "images/apparel_tops_t_shirts_athletic_performance_tee_20251015_032311.png"
+          "image_path": "images/apparel_tops_t_shirts_athletic_performance_tee_20251114_192209.png"
         },
         {
           "name": "Henley Long Sleeve Tee",
@@ -72,7 +72,7 @@
           "price": 26.99,
           "description": "Classic henley style with button placket, perfect for PNW layering.",
           "stock_level": 85,
-          "image_path": "images/apparel_tops_t_shirts_henley_long_sleeve_tee_20251015_032337.png"
+          "image_path": "images/apparel_tops_t_shirts_henley_long_sleeve_tee_20251114_192229.png"
         },
         {
           "name": "Raglan Baseball Tee",
@@ -80,7 +80,7 @@
           "price": 19.99,
           "description": "Retro raglan sleeve tee in contrast colors, casual athletic style.",
           "stock_level": 100,
-          "image_path": "images/apparel_tops_t_shirts_raglan_baseball_tee_20251015_032407.png"
+          "image_path": "images/apparel_tops_t_shirts_raglan_baseball_tee_20251114_192250.png"
         },
         {
           "name": "Scoop Neck Tee",
@@ -88,7 +88,7 @@
           "price": 16.99,
           "description": "Flattering scoop neck t-shirt, soft and comfortable everyday wear.",
           "stock_level": 110,
-          "image_path": "images/apparel_tops_t_shirts_scoop_neck_tee_20251015_032435.png"
+          "image_path": "images/apparel_tops_t_shirts_scoop_neck_tee_20251114_192312.png"
         },
         {
           "name": "Thermal Waffle Tee",
@@ -96,7 +96,7 @@
           "price": 28.99,
           "description": "Warm waffle-knit thermal tee, perfect for cool Washington mornings.",
           "stock_level": 95,
-          "image_path": "images/apparel_tops_t_shirts_thermal_waffle_tee_20251015_032505.png"
+          "image_path": "images/apparel_tops_t_shirts_thermal_waffle_tee_20251114_192336.png"
         }
       ],
       "Formal Shirts": [
@@ -106,7 +106,7 @@
           "price": 39.99,
           "description": "Classic Oxford button-down in crisp cotton, perfect for business or formal events.",
           "stock_level": 70,
-          "image_path": "images/apparel_tops_formal_shirts_oxford_button_down_shirt_20251015_032531.png"
+          "image_path": "images/apparel_tops_formal_shirts_oxford_button_down_shirt_20251114_192356.png"
         },
         {
           "name": "Slim Fit Dress Shirt",
@@ -114,7 +114,7 @@
           "price": 44.99,
           "description": "Modern slim fit dress shirt with elegant tailoring, ideal for office wear.",
           "stock_level": 60,
-          "image_path": "images/apparel_tops_formal_shirts_slim_fit_dress_shirt_20251015_032558.png"
+          "image_path": "images/apparel_tops_formal_shirts_slim_fit_dress_shirt_20251114_192418.png"
         },
         {
           "name": "Wrinkle-Free Business Shirt",
@@ -122,7 +122,7 @@
           "price": 49.99,
           "description": "Easy-care wrinkle-free shirt, maintains crisp appearance throughout the day.",
           "stock_level": 55,
-          "image_path": "images/apparel_tops_formal_shirts_wrinkle_free_business_shirt_20251015_032625.png"
+          "image_path": "images/apparel_tops_formal_shirts_wrinkle_free_business_shirt_20251114_192437.png"
         },
         {
           "name": "French Cuff Dress Shirt",
@@ -130,7 +130,7 @@
           "price": 54.99,
           "description": "Sophisticated French cuff shirt for formal occasions, pairs well with cufflinks.",
           "stock_level": 40,
-          "image_path": "images/apparel_tops_formal_shirts_french_cuff_dress_shirt_20251015_032652.png"
+          "image_path": "images/apparel_tops_formal_shirts_french_cuff_dress_shirt_20251114_192457.png"
         },
         {
           "name": "Striped Business Shirt",
@@ -138,7 +138,7 @@
           "price": 42.99,
           "description": "Professional striped dress shirt in premium cotton, versatile office staple.",
           "stock_level": 65,
-          "image_path": "images/apparel_tops_formal_shirts_striped_business_shirt_20251015_032720.png"
+          "image_path": "images/apparel_tops_formal_shirts_striped_business_shirt_20251114_192518.png"
         },
         {
           "name": "Classic White Dress Shirt",
@@ -146,7 +146,7 @@
           "price": 38.99,
           "description": "Timeless white dress shirt, essential for every wardrobe and occasion.",
           "stock_level": 85,
-          "image_path": "images/apparel_tops_formal_shirts_classic_white_dress_shirt_20251015_032746.png"
+          "image_path": "images/apparel_tops_formal_shirts_classic_white_dress_shirt_20251114_192542.png"
         },
         {
           "name": "Chambray Work Shirt",
@@ -154,7 +154,7 @@
           "price": 46.99,
           "description": "Casual chambray shirt, perfect for Pacific Northwest business casual.",
           "stock_level": 70,
-          "image_path": "images/apparel_tops_formal_shirts_chambray_work_shirt_20251015_032812.png"
+          "image_path": "images/apparel_tops_formal_shirts_chambray_work_shirt_20251114_192603.png"
         },
         {
           "name": "Flannel Button-Down",
@@ -162,7 +162,7 @@
           "price": 41.99,
           "description": "Soft flannel button-down shirt, Seattle style staple for casual wear.",
           "stock_level": 90,
-          "image_path": "images/apparel_tops_formal_shirts_flannel_button_down_20251015_032841.png"
+          "image_path": "images/apparel_tops_formal_shirts_flannel_button_down_20251114_192630.png"
         }
       ],
       "Hoodies": [
@@ -172,7 +172,7 @@
           "price": 34.99,
           "description": "Cozy pullover hoodie in soft fleece, perfect for casual comfort and warmth.",
           "stock_level": 100,
-          "image_path": "images/apparel_tops_hoodies_pullover_fleece_hoodie_20251015_032906.png"
+          "image_path": "images/apparel_tops_hoodies_pullover_fleece_hoodie_20251114_192652.png"
         },
         {
           "name": "Zip-Up Hoodie Jacket",
@@ -180,7 +180,7 @@
           "price": 39.99,
           "description": "Versatile zip-up hoodie, easy to layer and adjust for changing temperatures.",
           "stock_level": 85,
-          "image_path": "images/apparel_tops_hoodies_zip_up_hoodie_jacket_20251015_032933.png"
+          "image_path": "images/apparel_tops_hoodies_zip_up_hoodie_jacket_20251114_192712.png"
         },
         {
           "name": "Athletic Performance Hoodie",
@@ -188,7 +188,7 @@
           "price": 44.99,
           "description": "Technical hoodie with moisture-wicking fabric, ideal for sports and exercise.",
           "stock_level": 75,
-          "image_path": "images/apparel_tops_hoodies_athletic_performance_hoodie_20251015_033001.png"
+          "image_path": "images/apparel_tops_hoodies_athletic_performance_hoodie_20251114_192734.png"
         },
         {
           "name": "Oversized Comfort Hoodie",
@@ -196,7 +196,7 @@
           "price": 42.99,
           "description": "Trendy oversized hoodie in ultra-soft fabric, perfect for relaxed style.",
           "stock_level": 90,
-          "image_path": "images/apparel_tops_hoodies_oversized_comfort_hoodie_20251015_033028.png"
+          "image_path": "images/apparel_tops_hoodies_oversized_comfort_hoodie_20251114_192754.png"
         },
         {
           "name": "Logo Print Hoodie",
@@ -204,7 +204,7 @@
           "price": 36.99,
           "description": "Stylish hoodie with bold logo design, makes a fashion statement.",
           "stock_level": 80,
-          "image_path": "images/apparel_tops_hoodies_logo_print_hoodie_20251015_033053.png"
+          "image_path": "images/apparel_tops_hoodies_logo_print_hoodie_20251114_192815.png"
         },
         {
           "name": "Sherpa Lined Hoodie",
@@ -212,7 +212,7 @@
           "price": 54.99,
           "description": "Extra warm sherpa-lined hoodie, perfect for cold Washington winters.",
           "stock_level": 65,
-          "image_path": "images/apparel_tops_hoodies_sherpa_lined_hoodie_20251015_033124.png"
+          "image_path": "images/apparel_tops_hoodies_sherpa_lined_hoodie_20251114_192839.png"
         },
         {
           "name": "Tech Fleece Hoodie",
@@ -220,7 +220,7 @@
           "price": 49.99,
           "description": "Modern tech fleece construction, lightweight warmth for active lifestyles.",
           "stock_level": 70,
-          "image_path": "images/apparel_tops_hoodies_tech_fleece_hoodie_20251015_042331.png"
+          "image_path": "images/apparel_tops_hoodies_tech_fleece_hoodie_20251114_192900.png"
         }
       ],
       "Sweatshirts": [
@@ -230,7 +230,7 @@
           "price": 29.99,
           "description": "Classic crewneck sweatshirt in soft cotton blend, casual everyday comfort.",
           "stock_level": 120,
-          "image_path": "images/apparel_tops_sweatshirts_crewneck_sweatshirt_20251015_042344.png"
+          "image_path": "images/apparel_tops_sweatshirts_crewneck_sweatshirt_20251114_192923.png"
         },
         {
           "name": "Vintage College Sweatshirt",
@@ -238,7 +238,7 @@
           "price": 34.99,
           "description": "Retro college style sweatshirt, comfortable oversized fit.",
           "stock_level": 95,
-          "image_path": "images/apparel_tops_sweatshirts_vintage_college_sweatshirt_20251015_042449.png"
+          "image_path": "images/apparel_tops_sweatshirts_vintage_college_sweatshirt_20251114_192944.png"
         },
         {
           "name": "Quarter-Zip Pullover",
@@ -246,7 +246,7 @@
           "price": 38.99,
           "description": "Sporty quarter-zip pullover, perfect for layering in unpredictable weather.",
           "stock_level": 85,
-          "image_path": "images/apparel_tops_sweatshirts_quarter_zip_pullover_20251015_042508.png"
+          "image_path": "images/apparel_tops_sweatshirts_quarter_zip_pullover_20251114_193005.png"
         },
         {
           "name": "Mock Neck Sweatshirt",
@@ -254,7 +254,7 @@
           "price": 36.99,
           "description": "Modern mock neck design, extra warmth and contemporary style.",
           "stock_level": 75,
-          "image_path": "images/apparel_tops_sweatshirts_mock_neck_sweatshirt_20251015_042529.png"
+          "image_path": "images/apparel_tops_sweatshirts_mock_neck_sweatshirt_20251114_193025.png"
         }
       ],
       "Flannel Shirts": [
@@ -264,7 +264,7 @@
           "price": 39.99,
           "description": "Traditional plaid flannel shirt, essential Pacific Northwest wardrobe piece.",
           "stock_level": 110,
-          "image_path": "images/apparel_tops_flannel_shirts_classic_plaid_flannel_20251015_050204.png"
+          "image_path": "images/apparel_tops_flannel_shirts_classic_plaid_flannel_20251114_193046.png"
         },
         {
           "name": "Heavyweight Work Flannel",
@@ -272,7 +272,7 @@
           "price": 49.99,
           "description": "Durable heavyweight flannel, perfect for outdoor work and cool weather.",
           "stock_level": 85,
-          "image_path": "images/apparel_tops_flannel_shirts_heavyweight_work_flannel_20251015_042605.png"
+          "image_path": "images/apparel_tops_flannel_shirts_heavyweight_work_flannel_20251114_193108.png"
         },
         {
           "name": "Slim Fit Flannel Shirt",
@@ -280,7 +280,7 @@
           "price": 44.99,
           "description": "Modern slim fit flannel in buffalo check pattern, stylish and comfortable.",
           "stock_level": 90,
-          "image_path": "images/apparel_tops_flannel_shirts_slim_fit_flannel_shirt_20251015_042624.png"
+          "image_path": "images/apparel_tops_flannel_shirts_slim_fit_flannel_shirt_20251114_193133.png"
         },
         {
           "name": "Flannel Shirt Jacket",
@@ -288,7 +288,7 @@
           "price": 54.99,
           "description": "Thick flannel shirt jacket with quilted lining, doubles as light outerwear.",
           "stock_level": 70,
-          "image_path": "images/apparel_tops_flannel_shirts_flannel_shirt_jacket_20251015_042645.png"
+          "image_path": "images/apparel_tops_flannel_shirts_flannel_shirt_jacket_20251114_193156.png"
         }
       ]
     },
@@ -300,7 +300,7 @@
           "price": 49.99,
           "description": "Timeless straight leg jeans in durable denim, versatile everyday essential.",
           "stock_level": 120,
-          "image_path": "images/apparel_bottoms_jeans_classic_straight_leg_jeans_20251015_043228.png"
+          "image_path": "images/apparel_bottoms_jeans_classic_straight_leg_jeans_20251114_193219.png"
         },
         {
           "name": "Slim Fit Stretch Jeans",
@@ -308,7 +308,7 @@
           "price": 54.99,
           "description": "Modern slim fit jeans with stretch for comfort and style, perfect fit guaranteed.",
           "stock_level": 110,
-          "image_path": "images/apparel_bottoms_jeans_slim_fit_stretch_jeans_20251015_042720.png"
+          "image_path": "images/apparel_bottoms_jeans_slim_fit_stretch_jeans_20251114_193246.png"
         },
         {
           "name": "Bootcut Denim Jeans",
@@ -316,7 +316,7 @@
           "price": 52.99,
           "description": "Classic bootcut style jeans, flattering fit that works with various footwear.",
           "stock_level": 90,
-          "image_path": "images/apparel_bottoms_jeans_bootcut_denim_jeans_20251015_042740.png"
+          "image_path": "images/apparel_bottoms_jeans_bootcut_denim_jeans_20251114_193308.png"
         },
         {
           "name": "Distressed Fashion Jeans",
@@ -324,7 +324,7 @@
           "price": 59.99,
           "description": "Trendy distressed jeans with authentic worn-in look, fashion-forward design.",
           "stock_level": 75,
-          "image_path": "images/apparel_bottoms_jeans_distressed_fashion_jeans_20251114_182726.png"
+          "image_path": "images/apparel_bottoms_jeans_distressed_fashion_jeans_20251114_193331.png"
         },
         {
           "name": "Dark Wash Jeans",
@@ -332,7 +332,7 @@
           "price": 56.99,
           "description": "Sophisticated dark wash jeans, suitable for casual or semi-formal occasions.",
           "stock_level": 100,
-          "image_path": "images/apparel_bottoms_jeans_dark_wash_jeans_20251114_182749.png"
+          "image_path": "images/apparel_bottoms_jeans_dark_wash_jeans_20251114_193352.png"
         },
         {
           "name": "Relaxed Fit Comfort Jeans",
@@ -340,7 +340,7 @@
           "price": 48.99,
           "description": "Comfortable relaxed fit jeans, perfect for all-day wear and ease of movement.",
           "stock_level": 105,
-          "image_path": "images/apparel_bottoms_jeans_relaxed_fit_comfort_jeans_20251015_042836.png"
+          "image_path": "images/apparel_bottoms_jeans_relaxed_fit_comfort_jeans_20251114_193418.png"
         },
         {
           "name": "Skinny Fit Jeans",
@@ -348,7 +348,7 @@
           "price": 51.99,
           "description": "Sleek skinny fit jeans, contemporary style with stretch denim for comfort.",
           "stock_level": 85,
-          "image_path": "images/apparel_bottoms_jeans_skinny_fit_jeans_20251015_042856.png"
+          "image_path": "images/apparel_bottoms_jeans_skinny_fit_jeans_20251114_193440.png"
         },
         {
           "name": "Raw Selvedge Jeans",
@@ -356,7 +356,7 @@
           "price": 79.99,
           "description": "Premium raw selvedge denim, ages beautifully with wear for unique character.",
           "stock_level": 50,
-          "image_path": "images/apparel_bottoms_jeans_raw_selvedge_jeans_20251015_042916.png"
+          "image_path": "images/apparel_bottoms_jeans_raw_selvedge_jeans_20251114_193502.png"
         },
         {
           "name": "High-Waist Mom Jeans",
@@ -364,7 +364,7 @@
           "price": 58.99,
           "description": "Trendy high-waisted mom jeans, relaxed fit with vintage appeal.",
           "stock_level": 80,
-          "image_path": "images/apparel_bottoms_jeans_high_waist_mom_jeans_20251015_043254.png"
+          "image_path": "images/apparel_bottoms_jeans_high_waist_mom_jeans_20251114_193524.png"
         }
       ],
       "Pants": [
@@ -374,7 +374,7 @@
           "price": 44.99,
           "description": "Classic chino pants in cotton twill, versatile smart casual essential.",
           "stock_level": 100,
-          "image_path": "images/apparel_bottoms_pants_chino_pants_20251015_042951.png"
+          "image_path": "images/apparel_bottoms_pants_chino_pants_20251114_193545.png"
         },
         {
           "name": "Cargo Pants Utility",
@@ -382,7 +382,7 @@
           "price": 49.99,
           "description": "Functional cargo pants with multiple pockets, practical outdoor style.",
           "stock_level": 85,
-          "image_path": "images/apparel_bottoms_pants_cargo_pants_utility_20251015_043011.png"
+          "image_path": "images/apparel_bottoms_pants_cargo_pants_utility_20251114_193604.png"
         },
         {
           "name": "Jogger Sweatpants",
@@ -390,7 +390,7 @@
           "price": 39.99,
           "description": "Comfortable jogger style sweatpants, perfect for athleisure and lounging.",
           "stock_level": 110,
-          "image_path": "images/apparel_bottoms_pants_jogger_sweatpants_20251015_043031.png"
+          "image_path": "images/apparel_bottoms_pants_jogger_sweatpants_20251114_193625.png"
         },
         {
           "name": "Corduroy Pants",
@@ -398,7 +398,7 @@
           "price": 52.99,
           "description": "Soft corduroy pants with vintage texture, great for fall and winter.",
           "stock_level": 70,
-          "image_path": "images/apparel_bottoms_pants_corduroy_pants_20251015_050235.png"
+          "image_path": "images/apparel_bottoms_pants_corduroy_pants_20251114_193643.png"
         }
       ],
       "Shorts": [
@@ -408,7 +408,7 @@
           "price": 32.99,
           "description": "Comfortable chino shorts, perfect for summer and warm days.",
           "stock_level": 90,
-          "image_path": "images/apparel_bottoms_shorts_casual_chino_shorts_20251114_182811.png"
+          "image_path": "images/apparel_bottoms_shorts_casual_chino_shorts_20251114_193707.png"
         },
         {
           "name": "Athletic Running Shorts",
@@ -416,7 +416,7 @@
           "price": 24.99,
           "description": "Lightweight running shorts with moisture-wicking fabric, ideal for workouts.",
           "stock_level": 100,
-          "image_path": "images/apparel_bottoms_shorts_athletic_running_shorts_20251015_043349.png"
+          "image_path": "images/apparel_bottoms_shorts_athletic_running_shorts_20251114_193728.png"
         },
         {
           "name": "Cargo Shorts",
@@ -424,7 +424,7 @@
           "price": 34.99,
           "description": "Practical cargo shorts with multiple pockets, casual outdoor wear.",
           "stock_level": 85,
-          "image_path": "images/apparel_bottoms_shorts_cargo_shorts_20251015_043413.png"
+          "image_path": "images/apparel_bottoms_shorts_cargo_shorts_20251114_193751.png"
         },
         {
           "name": "Denim Shorts",
@@ -432,7 +432,7 @@
           "price": 36.99,
           "description": "Classic denim shorts in various washes, casual summer staple.",
           "stock_level": 95,
-          "image_path": "images/apparel_bottoms_shorts_denim_shorts_20251015_043438.png"
+          "image_path": "images/apparel_bottoms_shorts_denim_shorts_20251114_193811.png"
         }
       ]
     },
@@ -444,7 +444,7 @@
           "price": 64.99,
           "description": "Classic denim jacket in premium wash, timeless layering piece for any season.",
           "stock_level": 70,
-          "image_path": "images/outerwear_jackets_denim_jacket_classic_20251015_043502.png"
+          "image_path": "images/outerwear_jackets_denim_jacket_classic_20251114_193833.png"
         },
         {
           "name": "Windbreaker Sport Jacket",
@@ -452,7 +452,7 @@
           "price": 54.99,
           "description": "Lightweight windbreaker jacket, perfect for outdoor activities and light rain.",
           "stock_level": 80,
-          "image_path": "images/outerwear_jackets_windbreaker_sport_jacket_20251015_043527.png"
+          "image_path": "images/outerwear_jackets_windbreaker_sport_jacket_20251114_193855.png"
         },
         {
           "name": "Bomber Jacket",
@@ -460,7 +460,7 @@
           "price": 74.99,
           "description": "Stylish bomber jacket with ribbed cuffs, contemporary urban fashion statement.",
           "stock_level": 60,
-          "image_path": "images/outerwear_jackets_bomber_jacket_20251015_043552.png"
+          "image_path": "images/outerwear_jackets_bomber_jacket_20251114_193915.png"
         },
         {
           "name": "Leather Jacket",
@@ -468,7 +468,7 @@
           "price": 149.99,
           "description": "Premium faux leather jacket, edgy style with classic moto details.",
           "stock_level": 35,
-          "image_path": "images/outerwear_jackets_leather_jacket_20251015_043616.png"
+          "image_path": "images/outerwear_jackets_leather_jacket_20251114_193936.png"
         },
         {
           "name": "Puffer Jacket",
@@ -476,7 +476,7 @@
           "price": 89.99,
           "description": "Warm puffer jacket with insulation, perfect for cold weather protection.",
           "stock_level": 65,
-          "image_path": "images/outerwear_jackets_puffer_jacket_20251114_182831.png"
+          "image_path": "images/outerwear_jackets_puffer_jacket_20251114_194000.png"
         },
         {
           "name": "Rain Jacket Waterproof",
@@ -484,7 +484,7 @@
           "price": 69.99,
           "description": "Waterproof rain jacket with hood, essential for wet Washington weather.",
           "stock_level": 120,
-          "image_path": "images/outerwear_jackets_rain_jacket_waterproof_20251015_050300.png"
+          "image_path": "images/outerwear_jackets_rain_jacket_waterproof_20251114_194024.png"
         },
         {
           "name": "Fleece Zip Jacket",
@@ -492,7 +492,7 @@
           "price": 44.99,
           "description": "Cozy fleece zip jacket, perfect for layering and casual comfort.",
           "stock_level": 90,
-          "image_path": "images/outerwear_jackets_fleece_zip_jacket_20251114_182854.png"
+          "image_path": "images/outerwear_jackets_fleece_zip_jacket_20251114_194046.png"
         },
         {
           "name": "Down Parka",
@@ -500,7 +500,7 @@
           "price": 129.99,
           "description": "Warm down-filled parka with hood, premium cold weather protection.",
           "stock_level": 55,
-          "image_path": "images/outerwear_jackets_down_parka_20251015_050326.png"
+          "image_path": "images/outerwear_jackets_down_parka_20251114_194108.png"
         },
         {
           "name": "Softshell Jacket",
@@ -508,7 +508,7 @@
           "price": 79.99,
           "description": "Water-resistant softshell with stretch, ideal for PNW hiking and outdoor activities.",
           "stock_level": 75,
-          "image_path": "images/outerwear_jackets_softshell_jacket_20251015_043736.png"
+          "image_path": "images/outerwear_jackets_softshell_jacket_20251114_194132.png"
         },
         {
           "name": "Quilted Vest",
@@ -516,7 +516,7 @@
           "price": 49.99,
           "description": "Insulated quilted vest for layering, perfect for transitional weather.",
           "stock_level": 85,
-          "image_path": "images/outerwear_jackets_quilted_vest_20251015_043801.png"
+          "image_path": "images/outerwear_jackets_quilted_vest_20251114_194156.png"
         }
       ],
       "Coats": [
@@ -526,7 +526,7 @@
           "price": 119.99,
           "description": "Classic peacoat in wool blend, sophisticated warmth for winter.",
           "stock_level": 45,
-          "image_path": "images/outerwear_coats_peacoat_wool_blend_20251015_043826.png"
+          "image_path": "images/outerwear_coats_peacoat_wool_blend_20251114_194219.png"
         },
         {
           "name": "Trench Coat",
@@ -534,7 +534,7 @@
           "price": 99.99,
           "description": "Elegant trench coat with belt, perfect for rainy Seattle days.",
           "stock_level": 60,
-          "image_path": "images/outerwear_coats_trench_coat_20251015_043851.png"
+          "image_path": "images/outerwear_coats_trench_coat_20251114_194239.png"
         },
         {
           "name": "Parka Winter Coat",
@@ -542,7 +542,7 @@
           "price": 139.99,
           "description": "Heavy-duty winter parka with faux fur trim, maximum warmth and style.",
           "stock_level": 50,
-          "image_path": "images/outerwear_coats_parka_winter_coat_20251015_043917.png"
+          "image_path": "images/outerwear_coats_parka_winter_coat_20251114_194301.png"
         },
         {
           "name": "Rain Coat Long",
@@ -562,7 +562,7 @@
           "price": 59.99,
           "description": "Versatile white sneakers with clean design, perfect for everyday casual wear.",
           "stock_level": 150,
-          "image_path": "images/footwear_sneakers_classic_white_sneakers_20251015_044005.png"
+          "image_path": "images/footwear_sneakers_classic_white_sneakers_20251114_194427.png"
         },
         {
           "name": "Running Athletic Shoes",
@@ -570,7 +570,7 @@
           "price": 79.99,
           "description": "Performance running shoes with cushioning, designed for comfort and support.",
           "stock_level": 100,
-          "image_path": "images/footwear_sneakers_running_athletic_shoes_20251015_044030.png"
+          "image_path": "images/footwear_sneakers_running_athletic_shoes_20251114_194450.png"
         },
         {
           "name": "High-Top Sneakers",
@@ -578,7 +578,7 @@
           "price": 69.99,
           "description": "Stylish high-top sneakers with ankle support, urban fashion meets function.",
           "stock_level": 85,
-          "image_path": "images/footwear_sneakers_high_top_sneakers_20251015_044054.png"
+          "image_path": "images/footwear_sneakers_high_top_sneakers_20251114_194514.png"
         },
         {
           "name": "Slip-On Canvas Sneakers",
@@ -586,7 +586,7 @@
           "price": 44.99,
           "description": "Easy slip-on canvas sneakers, comfortable and convenient for quick wear.",
           "stock_level": 120,
-          "image_path": "images/footwear_sneakers_slip_on_canvas_sneakers_20251015_044119.png"
+          "image_path": "images/footwear_sneakers_slip_on_canvas_sneakers_20251114_194538.png"
         },
         {
           "name": "Retro Style Sneakers",
@@ -594,7 +594,7 @@
           "price": 64.99,
           "description": "Vintage-inspired retro sneakers, combines classic style with modern comfort.",
           "stock_level": 90,
-          "image_path": "images/footwear_sneakers_retro_style_sneakers_20251015_044144.png"
+          "image_path": "images/footwear_sneakers_retro_style_sneakers_20251114_194600.png"
         },
         {
           "name": "Mesh Athletic Sneakers",
@@ -602,7 +602,7 @@
           "price": 54.99,
           "description": "Breathable mesh sneakers, lightweight design for active lifestyles.",
           "stock_level": 110,
-          "image_path": "images/footwear_sneakers_mesh_athletic_sneakers_20251015_044209.png"
+          "image_path": "images/footwear_sneakers_mesh_athletic_sneakers_20251114_194621.png"
         },
         {
           "name": "Platform Sneakers",
@@ -610,7 +610,7 @@
           "price": 72.99,
           "description": "Trendy platform sneakers with elevated sole, fashion-forward street style.",
           "stock_level": 75,
-          "image_path": "images/footwear_sneakers_platform_sneakers_20251015_044233.png"
+          "image_path": "images/footwear_sneakers_platform_sneakers_20251114_194642.png"
         },
         {
           "name": "Trail Running Shoes",
@@ -618,7 +618,7 @@
           "price": 89.99,
           "description": "Rugged trail shoes with grip, perfect for Pacific Northwest hiking.",
           "stock_level": 70,
-          "image_path": "images/footwear_sneakers_trail_running_shoes_20251015_044258.png"
+          "image_path": "images/footwear_sneakers_trail_running_shoes_20251114_194704.png"
         },
         {
           "name": "Skate Shoes",
@@ -626,7 +626,7 @@
           "price": 59.99,
           "description": "Durable skate shoes with padded collar, street style and functionality.",
           "stock_level": 85,
-          "image_path": "images/footwear_sneakers_skate_shoes_20251015_044323.png"
+          "image_path": "images/footwear_sneakers_skate_shoes_20251114_194726.png"
         }
       ],
       "Boots": [
@@ -636,7 +636,7 @@
           "price": 109.99,
           "description": "Rugged waterproof hiking boots, essential for wet Washington trails.",
           "stock_level": 80,
-          "image_path": "images/footwear_boots_waterproof_hiking_boots_20251015_044349.png"
+          "image_path": "images/footwear_boots_waterproof_hiking_boots_20251114_194749.png"
         },
         {
           "name": "Chelsea Ankle Boots",
@@ -644,7 +644,7 @@
           "price": 94.99,
           "description": "Stylish Chelsea boots with elastic sides, versatile for any outfit.",
           "stock_level": 70,
-          "image_path": "images/footwear_boots_chelsea_ankle_boots_20251015_044413.png"
+          "image_path": "images/footwear_boots_chelsea_ankle_boots_20251114_194810.png"
         },
         {
           "name": "Combat Boots",
@@ -652,7 +652,7 @@
           "price": 89.99,
           "description": "Edgy combat boots with lace-up design, urban fashion statement.",
           "stock_level": 65,
-          "image_path": "images/footwear_boots_combat_boots_20251015_044438.png"
+          "image_path": "images/footwear_boots_combat_boots_20251114_194837.png"
         },
         {
           "name": "Rain Boots Waterproof",
@@ -660,7 +660,7 @@
           "price": 49.99,
           "description": "Classic rain boots for wet weather, practical Seattle essential.",
           "stock_level": 100,
-          "image_path": "images/footwear_boots_rain_boots_waterproof_20251015_044502.png"
+          "image_path": "images/footwear_boots_rain_boots_waterproof_20251114_194859.png"
         },
         {
           "name": "Work Boots Steel Toe",
@@ -668,7 +668,7 @@
           "price": 119.99,
           "description": "Durable steel toe work boots, safety and comfort for tough jobs.",
           "stock_level": 60,
-          "image_path": "images/footwear_boots_work_boots_steel_toe_20251015_044527.png"
+          "image_path": "images/footwear_boots_work_boots_steel_toe_20251114_194922.png"
         }
       ],
       "Dress Shoes": [
@@ -678,7 +678,7 @@
           "price": 89.99,
           "description": "Classic Oxford dress shoes in genuine leather, elegant formal footwear.",
           "stock_level": 60,
-          "image_path": "images/footwear_dress_shoes_oxford_leather_shoes_20251015_044552.png"
+          "image_path": "images/footwear_dress_shoes_oxford_leather_shoes_20251114_194943.png"
         },
         {
           "name": "Loafer Slip-On Shoes",
@@ -686,7 +686,7 @@
           "price": 79.99,
           "description": "Comfortable loafer shoes, sophisticated style for business or casual occasions.",
           "stock_level": 70,
-          "image_path": "images/footwear_dress_shoes_loafer_slip_on_shoes_20251015_044617.png"
+          "image_path": "images/footwear_dress_shoes_loafer_slip_on_shoes_20251114_195002.png"
         },
         {
           "name": "Derby Dress Shoes",
@@ -694,7 +694,7 @@
           "price": 94.99,
           "description": "Refined derby shoes with quality craftsmanship, perfect for formal events.",
           "stock_level": 50,
-          "image_path": "images/footwear_dress_shoes_derby_dress_shoes_20251015_044641.png"
+          "image_path": "images/footwear_dress_shoes_derby_dress_shoes_20251114_195022.png"
         },
         {
           "name": "Monk Strap Shoes",
@@ -702,7 +702,7 @@
           "price": 99.99,
           "description": "Distinguished monk strap shoes, unique style with buckle closure.",
           "stock_level": 45,
-          "image_path": "images/footwear_dress_shoes_monk_strap_shoes_20251015_044706.png"
+          "image_path": "images/footwear_dress_shoes_monk_strap_shoes_20251114_195042.png"
         },
         {
           "name": "Brogue Wingtip Shoes",
@@ -710,7 +710,7 @@
           "price": 97.99,
           "description": "Traditional brogue wingtips with decorative perforations, timeless elegance.",
           "stock_level": 55,
-          "image_path": "images/footwear_dress_shoes_brogue_wingtip_shoes_20251015_044730.png"
+          "image_path": "images/footwear_dress_shoes_brogue_wingtip_shoes_20251114_195105.png"
         }
       ],
       "Sandals": [
@@ -720,7 +720,7 @@
           "price": 39.99,
           "description": "Comfortable sport sandals with adjustable straps, perfect for summer adventures.",
           "stock_level": 90,
-          "image_path": "images/footwear_sandals_sport_sandals_20251015_044755.png"
+          "image_path": "images/footwear_sandals_sport_sandals_20251114_195124.png"
         },
         {
           "name": "Flip Flops",
@@ -728,7 +728,7 @@
           "price": 19.99,
           "description": "Classic flip flops for beach and pool, casual summer footwear.",
           "stock_level": 130,
-          "image_path": "images/footwear_sandals_flip_flops_20251015_044819.png"
+          "image_path": "images/footwear_sandals_flip_flops_20251114_195144.png"
         },
         {
           "name": "Slide Sandals",
@@ -736,7 +736,7 @@
           "price": 29.99,
           "description": "Easy-on slide sandals, comfortable for casual wear and lounging.",
           "stock_level": 110,
-          "image_path": "images/footwear_sandals_slide_sandals_20251015_044844.png"
+          "image_path": "images/footwear_sandals_slide_sandals_20251114_195205.png"
         }
       ]
     },
@@ -748,7 +748,7 @@
           "price": 19.99,
           "description": "Classic baseball cap with adjustable strap, casual everyday headwear.",
           "stock_level": 200,
-          "image_path": "images/accessories_caps_&_hats_baseball_cap_classic_20251015_044908.png"
+          "image_path": "images/accessories_caps_&_hats_baseball_cap_classic_20251114_195225.png"
         },
         {
           "name": "Snapback Hat",
@@ -756,7 +756,7 @@
           "price": 24.99,
           "description": "Trendy snapback hat with flat brim, urban street style essential.",
           "stock_level": 150,
-          "image_path": "images/accessories_caps_&_hats_snapback_hat_20251015_044933.png"
+          "image_path": "images/accessories_caps_&_hats_snapback_hat_20251114_195246.png"
         },
         {
           "name": "Beanie Winter Hat",
@@ -764,7 +764,7 @@
           "price": 16.99,
           "description": "Warm knit beanie for cold weather, cozy and stylish winter accessory.",
           "stock_level": 180,
-          "image_path": "images/accessories_caps_&_hats_beanie_winter_hat_20251015_044957.png"
+          "image_path": "images/accessories_caps_&_hats_beanie_winter_hat_20251114_195310.png"
         },
         {
           "name": "Bucket Hat",
@@ -772,7 +772,7 @@
           "price": 22.99,
           "description": "Fashionable bucket hat with wide brim, perfect for sun protection and style.",
           "stock_level": 130,
-          "image_path": "images/accessories_caps_&_hats_bucket_hat_20251015_045022.png"
+          "image_path": "images/accessories_caps_&_hats_bucket_hat_20251114_195331.png"
         },
         {
           "name": "Trucker Cap Mesh",
@@ -780,7 +780,7 @@
           "price": 18.99,
           "description": "Classic trucker cap with mesh back, breathable and comfortable design.",
           "stock_level": 160,
-          "image_path": "images/accessories_caps_&_hats_trucker_cap_mesh_20251015_045047.png"
+          "image_path": "images/accessories_caps_&_hats_trucker_cap_mesh_20251114_195351.png"
         },
         {
           "name": "Fedora Hat",
@@ -788,7 +788,7 @@
           "price": 34.99,
           "description": "Sophisticated fedora hat, adds vintage elegance to any outfit.",
           "stock_level": 70,
-          "image_path": "images/accessories_caps_&_hats_fedora_hat_20251015_045111.png"
+          "image_path": "images/accessories_caps_&_hats_fedora_hat_20251114_195412.png"
         },
         {
           "name": "Knit Pom Beanie",
@@ -796,7 +796,7 @@
           "price": 19.99,
           "description": "Cozy knit beanie with pom-pom, perfect for cold Washington winters.",
           "stock_level": 160,
-          "image_path": "images/accessories_caps_&_hats_knit_pom_beanie_20251015_045136.png"
+          "image_path": "images/accessories_caps_&_hats_knit_pom_beanie_20251114_195435.png"
         },
         {
           "name": "Fleece Ear Warmer Headband",
@@ -804,7 +804,7 @@
           "price": 14.99,
           "description": "Warm fleece headband for ears, ideal for outdoor activities in cold weather.",
           "stock_level": 140,
-          "image_path": "images/accessories_caps_&_hats_fleece_ear_warmer_headband_20251015_045201.png"
+          "image_path": "images/accessories_caps_&_hats_fleece_ear_warmer_headband_20251114_195455.png"
         }
       ],
       "Socks": [
@@ -814,7 +814,7 @@
           "price": 12.99,
           "description": "Comfortable crew socks in 3-pack, ideal for sports and everyday wear.",
           "stock_level": 250,
-          "image_path": "images/accessories_socks_athletic_crew_socks_pack_20251015_045225.png"
+          "image_path": "images/accessories_socks_athletic_crew_socks_pack_20251114_195517.png"
         },
         {
           "name": "No-Show Ankle Socks",
@@ -822,7 +822,7 @@
           "price": 10.99,
           "description": "Invisible ankle socks perfect for sneakers, breathable and comfortable.",
           "stock_level": 300,
-          "image_path": "images/accessories_socks_no_show_ankle_socks_20251015_045250.png"
+          "image_path": "images/accessories_socks_no_show_ankle_socks_20251114_195539.png"
         },
         {
           "name": "Dress Socks Set",
@@ -830,7 +830,7 @@
           "price": 16.99,
           "description": "Elegant dress socks in assorted colors, professional business wear essential.",
           "stock_level": 200,
-          "image_path": "images/accessories_socks_dress_socks_set_20251015_045314.png"
+          "image_path": "images/accessories_socks_dress_socks_set_20251114_195601.png"
         },
         {
           "name": "Compression Athletic Socks",
@@ -838,7 +838,7 @@
           "price": 18.99,
           "description": "Performance compression socks for improved circulation and support.",
           "stock_level": 150,
-          "image_path": "images/accessories_socks_compression_athletic_socks_20251015_045339.png"
+          "image_path": "images/accessories_socks_compression_athletic_socks_20251114_195625.png"
         },
         {
           "name": "Thermal Winter Socks",
@@ -846,7 +846,7 @@
           "price": 14.99,
           "description": "Warm thermal socks for cold weather, extra cushioning and insulation.",
           "stock_level": 180,
-          "image_path": "images/accessories_socks_thermal_winter_socks_20251015_045404.png"
+          "image_path": "images/accessories_socks_thermal_winter_socks_20251114_195650.png"
         },
         {
           "name": "Casual Cotton Socks",
@@ -854,7 +854,7 @@
           "price": 9.99,
           "description": "Soft cotton socks in multi-pack, comfortable everyday basics.",
           "stock_level": 280,
-          "image_path": "images/accessories_socks_casual_cotton_socks_20251015_045429.png"
+          "image_path": "images/accessories_socks_casual_cotton_socks_20251114_195718.png"
         },
         {
           "name": "Wool Hiking Socks",
@@ -862,7 +862,7 @@
           "price": 19.99,
           "description": "Merino wool hiking socks, moisture-wicking for outdoor adventures.",
           "stock_level": 140,
-          "image_path": "images/accessories_socks_wool_hiking_socks_20251015_045453.png"
+          "image_path": "images/accessories_socks_wool_hiking_socks_20251114_195804.png"
         },
         {
           "name": "Cozy Slipper Socks",
@@ -870,7 +870,7 @@
           "price": 15.99,
           "description": "Ultra-soft slipper socks with grips, perfect for lounging at home.",
           "stock_level": 160,
-          "image_path": "images/accessories_socks_cozy_slipper_socks_20251015_045518.png"
+          "image_path": "images/accessories_socks_cozy_slipper_socks_20251114_195826.png"
         }
       ],
       "Backpacks & Bags": [
@@ -880,7 +880,7 @@
           "price": 39.99,
           "description": "Durable school backpack with multiple compartments, perfect for books and laptop.",
           "stock_level": 100,
-          "image_path": "images/accessories_backpacks_&_bags_classic_school_backpack_20251015_045543.png"
+          "image_path": "images/accessories_backpacks_&_bags_classic_school_backpack_20251114_195850.png"
         },
         {
           "name": "Laptop Commuter Backpack",
@@ -888,7 +888,7 @@
           "price": 54.99,
           "description": "Professional laptop backpack with padded compartment, ideal for work commute.",
           "stock_level": 85,
-          "image_path": "images/accessories_backpacks_&_bags_laptop_commuter_backpack_20251015_045608.png"
+          "image_path": "images/accessories_backpacks_&_bags_laptop_commuter_backpack_20251114_195912.png"
         },
         {
           "name": "Hiking Daypack",
@@ -896,7 +896,7 @@
           "price": 49.99,
           "description": "Lightweight hiking backpack with hydration sleeve, perfect for outdoor adventures.",
           "stock_level": 75,
-          "image_path": "images/accessories_backpacks_&_bags_hiking_daypack_20251015_045632.png"
+          "image_path": "images/accessories_backpacks_&_bags_hiking_daypack_20251114_195935.png"
         },
         {
           "name": "Mini Fashion Backpack",
@@ -904,7 +904,7 @@
           "price": 34.99,
           "description": "Compact mini backpack with trendy design, stylish and functional.",
           "stock_level": 110,
-          "image_path": "images/accessories_backpacks_&_bags_mini_fashion_backpack_20251015_045657.png"
+          "image_path": "images/accessories_backpacks_&_bags_mini_fashion_backpack_20251114_195959.png"
         },
         {
           "name": "Rolling Travel Backpack",
@@ -912,7 +912,7 @@
           "price": 79.99,
           "description": "Versatile rolling backpack with wheels, perfect for travel and heavy loads.",
           "stock_level": 50,
-          "image_path": "images/accessories_backpacks_&_bags_rolling_travel_backpack_20251015_045722.png"
+          "image_path": "images/accessories_backpacks_&_bags_rolling_travel_backpack_20251114_200024.png"
         },
         {
           "name": "Sports Gym Backpack",
@@ -920,7 +920,7 @@
           "price": 44.99,
           "description": "Spacious gym backpack with separate shoe compartment, ideal for athletes.",
           "stock_level": 90,
-          "image_path": "images/accessories_backpacks_&_bags_sports_gym_backpack_20251015_045756.png"
+          "image_path": "images/accessories_backpacks_&_bags_sports_gym_backpack_20251114_200044.png"
         },
         {
           "name": "Canvas Tote Bag",
@@ -928,7 +928,7 @@
           "price": 24.99,
           "description": "Eco-friendly canvas tote bag, reusable and stylish for shopping or daily use.",
           "stock_level": 140,
-          "image_path": "images/accessories_backpacks_&_bags_canvas_tote_bag_20251015_050351.png"
+          "image_path": "images/accessories_backpacks_&_bags_canvas_tote_bag_20251114_200104.png"
         },
         {
           "name": "Waterproof Dry Bag",
@@ -936,7 +936,7 @@
           "price": 29.99,
           "description": "Fully waterproof dry bag, essential for kayaking and water activities.",
           "stock_level": 80,
-          "image_path": "images/accessories_backpacks_&_bags_waterproof_dry_bag_20251015_050416.png"
+          "image_path": "images/accessories_backpacks_&_bags_waterproof_dry_bag_20251114_200127.png"
         },
         {
           "name": "Crossbody Sling Bag",
@@ -944,7 +944,7 @@
           "price": 34.99,
           "description": "Compact crossbody sling bag, convenient for hands-free carrying.",
           "stock_level": 95,
-          "image_path": "images/accessories_backpacks_&_bags_crossbody_sling_bag_20251015_050441.png"
+          "image_path": "images/accessories_backpacks_&_bags_crossbody_sling_bag_20251114_200147.png"
         }
       ],
       "Gloves": [
@@ -954,7 +954,7 @@
           "price": 16.99,
           "description": "Warm knit gloves for cold weather, soft and comfortable winter essential.",
           "stock_level": 150,
-          "image_path": "images/accessories_gloves_winter_knit_gloves_20251015_050506.png"
+          "image_path": "images/accessories_gloves_winter_knit_gloves_20251114_200208.png"
         },
         {
           "name": "Touchscreen Gloves",
@@ -962,7 +962,7 @@
           "price": 22.99,
           "description": "Smart gloves with touchscreen fingertips, stay connected in cold weather.",
           "stock_level": 130,
-          "image_path": "images/accessories_gloves_touchscreen_gloves_20251015_050530.png"
+          "image_path": "images/accessories_gloves_touchscreen_gloves_20251114_200231.png"
         },
         {
           "name": "Waterproof Winter Gloves",
@@ -970,7 +970,7 @@
           "price": 29.99,
           "description": "Insulated waterproof gloves, perfect for wet Washington winters.",
           "stock_level": 120,
-          "image_path": "images/accessories_gloves_waterproof_winter_gloves_20251015_050555.png"
+          "image_path": "images/accessories_gloves_waterproof_winter_gloves_20251114_200254.png"
         },
         {
           "name": "Fleece Liner Gloves",
@@ -978,7 +978,7 @@
           "price": 12.99,
           "description": "Lightweight fleece liner gloves, ideal for layering or mild weather.",
           "stock_level": 140,
-          "image_path": "images/accessories_gloves_fleece_liner_gloves_20251015_050628.png"
+          "image_path": "images/accessories_gloves_fleece_liner_gloves_20251114_200314.png"
         }
       ],
       "Scarves": [
@@ -988,7 +988,7 @@
           "price": 39.99,
           "description": "Luxurious cashmere blend scarf, soft warmth and elegant style.",
           "stock_level": 80,
-          "image_path": "images/accessories_scarves_cashmere_blend_scarf_20251015_050653.png"
+          "image_path": "images/accessories_scarves_cashmere_blend_scarf_20251114_200334.png"
         },
         {
           "name": "Infinity Loop Scarf",
@@ -996,7 +996,7 @@
           "price": 24.99,
           "description": "Cozy infinity scarf in knit fabric, easy to wear and stylish.",
           "stock_level": 100,
-          "image_path": "images/accessories_scarves_infinity_loop_scarf_20251015_050718.png"
+          "image_path": "images/accessories_scarves_infinity_loop_scarf_20251114_200355.png"
         },
         {
           "name": "Plaid Winter Scarf",
@@ -1004,7 +1004,7 @@
           "price": 19.99,
           "description": "Classic plaid scarf in warm wool blend, Pacific Northwest style.",
           "stock_level": 120,
-          "image_path": "images/accessories_scarves_plaid_winter_scarf_20251015_050743.png"
+          "image_path": "images/accessories_scarves_plaid_winter_scarf_20251114_200416.png"
         },
         {
           "name": "Fleece Neck Gaiter",
@@ -1012,7 +1012,7 @@
           "price": 14.99,
           "description": "Versatile fleece gaiter for neck warmth, perfect for outdoor activities.",
           "stock_level": 140,
-          "image_path": "images/accessories_scarves_fleece_neck_gaiter_20251015_050808.png"
+          "image_path": "images/accessories_scarves_fleece_neck_gaiter_20251114_200437.png"
         }
       ],
       "Belts": [
@@ -1022,7 +1022,7 @@
           "price": 29.99,
           "description": "Classic leather dress belt with silver buckle, professional accessory.",
           "stock_level": 100,
-          "image_path": "images/accessories_belts_leather_dress_belt_20251015_050836.png"
+          "image_path": "images/accessories_belts_leather_dress_belt_20251114_200458.png"
         },
         {
           "name": "Canvas Web Belt",
@@ -1030,7 +1030,7 @@
           "price": 19.99,
           "description": "Casual canvas web belt, adjustable and comfortable for everyday wear.",
           "stock_level": 130,
-          "image_path": "images/accessories_belts_canvas_web_belt_20251015_050901.png"
+          "image_path": "images/accessories_belts_canvas_web_belt_20251114_200518.png"
         },
         {
           "name": "Reversible Belt",
@@ -1038,7 +1038,7 @@
           "price": 34.99,
           "description": "Versatile reversible belt in two colors, maximum wardrobe flexibility.",
           "stock_level": 85,
-          "image_path": "images/accessories_belts_reversible_belt_20251015_050925.png"
+          "image_path": "images/accessories_belts_reversible_belt_20251114_200537.png"
         },
         {
           "name": "Braided Leather Belt",
@@ -1046,7 +1046,7 @@
           "price": 32.99,
           "description": "Stylish braided leather belt, casual sophistication for jeans or chinos.",
           "stock_level": 90,
-          "image_path": "images/accessories_belts_braided_leather_belt_20251015_050951.png"
+          "image_path": "images/accessories_belts_braided_leather_belt_20251114_200558.png"
         }
       ],
       "Sunglasses": [
@@ -1056,7 +1056,7 @@
           "price": 49.99,
           "description": "Timeless aviator style sunglasses with UV protection, iconic look.",
           "stock_level": 110,
-          "image_path": "images/accessories_sunglasses_classic_aviator_sunglasses_20251015_051015.png"
+          "image_path": "images/accessories_sunglasses_classic_aviator_sunglasses_20251114_200616.png"
         },
         {
           "name": "Wayfarer Sunglasses",
@@ -1064,7 +1064,7 @@
           "price": 44.99,
           "description": "Retro wayfarer sunglasses, versatile style for any face shape.",
           "stock_level": 120,
-          "image_path": "images/accessories_sunglasses_wayfarer_sunglasses_20251015_051040.png"
+          "image_path": "images/accessories_sunglasses_wayfarer_sunglasses_20251114_200639.png"
         },
         {
           "name": "Sport Wrap Sunglasses",
@@ -1072,7 +1072,7 @@
           "price": 39.99,
           "description": "Athletic wrap sunglasses with polarized lenses, perfect for outdoor sports.",
           "stock_level": 90,
-          "image_path": "images/accessories_sunglasses_sport_wrap_sunglasses_20251015_051104.png"
+          "image_path": "images/accessories_sunglasses_sport_wrap_sunglasses_20251114_200701.png"
         },
         {
           "name": "Round Frame Sunglasses",
@@ -1080,7 +1080,7 @@
           "price": 42.99,
           "description": "Trendy round frame sunglasses, vintage-inspired modern style.",
           "stock_level": 100,
-          "image_path": "images/accessories_sunglasses_round_frame_sunglasses_20251015_051128.png"
+          "image_path": "images/accessories_sunglasses_round_frame_sunglasses_20251114_200722.png"
         }
       ]
     }

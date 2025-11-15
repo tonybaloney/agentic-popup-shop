@@ -224,7 +224,7 @@
                 </td>
                 <td class="image-col">
                   <img 
-                    :src="item.image_url ? `/images/${item.image_url}` : `/images/${item.sku}.png`" 
+                    :src="item.image_url ? `/images/products/${item.image_url}` : `/images/${item.sku}.png`" 
                     :alt="item.product_name" 
                     class="product-image"
                     @error="handleImageError"

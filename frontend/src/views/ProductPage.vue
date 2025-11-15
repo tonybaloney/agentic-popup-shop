@@ -159,10 +159,10 @@ export default {
       return this.product.category.toLowerCase().replace(/\s+/g, '-');
     },
     productImageUrl() {
-      if (this.imageError) {
+      if (this.imageError || !this.product.imageUrl) {
         return config.placeholderImage;
       }
-      return `/images/${this.product.imageUrl}`;
+      return `/images/products/${this.product.imageUrl}`;
     }
   },
   async mounted() {

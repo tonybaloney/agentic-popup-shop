@@ -194,7 +194,7 @@ const inventoryLoading = ref(false)
 // Computed properties
 const productImageUrl = computed(() => {
   if (product.value && product.value.image_url) {
-    return `/images/${product.value.image_url}`
+    return `/images/products/${product.value.image_url}`
   }
   return `/images/${sku.value}.png`
 })

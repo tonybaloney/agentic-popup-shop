@@ -103,7 +103,7 @@
               <div class="order-items">
                 <div v-for="item in order.items" :key="item.order_item_id" class="order-item">
                   <div class="item-image">
-                    <img v-if="item.image_url" :src="`/images/${item.image_url}`" :alt="item.product_name" />
+                    <img v-if="item.image_url" :src="`/images/products/${item.image_url}`" :alt="item.product_name" />
                     <div v-else class="placeholder-image">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>

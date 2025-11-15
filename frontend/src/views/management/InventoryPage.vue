@@ -143,7 +143,7 @@
                 :class="{ 'low-stock-row': item.is_low_stock }">
               <td class="product-cell">
                 <div class="product-info">
-                  <img v-if="item.image_url" :src="`/images/${item.image_url}`" 
+                  <img v-if="item.image_url" :src="`/images/products/${item.image_url}`" 
                        :alt="item.product_name" class="product-thumb" 
                        @error="handleImageError" />
                   <div class="product-thumb-placeholder" v-else><vibe-icon name="box" size="24"></vibe-icon></div>

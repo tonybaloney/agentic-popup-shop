@@ -56,7 +56,7 @@ export default {
         // If the image_url doesn't start with /, prepend /images/
         return this.product.image_url.startsWith('/') 
           ? this.product.image_url 
-          : `/images/${this.product.image_url}`;
+          : `/images/products/${this.product.image_url}`;
       }
       this.imageError=true;
       return config.placeholderImage;

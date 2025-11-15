@@ -181,6 +181,10 @@ class GptImageGenerator:
     def needs_image(self, product: Dict[str, Any]) -> bool:
         """Check if a product needs an image generated."""
         image_path = product.get('image_path', '')
+        # Check if the image actually exists
+        if image_path and not (self.images_dir / image_path).exists():
+            return True
+
         # Skip products that already have images or were skipped due to policy
         return not image_path or image_path == ''
 
@@ -376,7 +380,7 @@ def main():
 
         if stats['products_without_images'] == 0:
             print("\n✅ All products already have images!")
-            return None
+            # return None
 
         # Ask user for preferences
         print("\n" + "="*50)
