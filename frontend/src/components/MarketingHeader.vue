@@ -15,9 +15,12 @@
         <span class="user-name">{{ userName }}</span>
         <span class="user-role">Marketing Manager</span>
       </div>
-      <div class="user-avatar" @click="handleUserMenu">
+      <div class="user-avatar" @click="navigateToDashboard">
        <vibe-icon name="person"></vibe-icon>
       </div>
+      <button class="logout-btn" @click="handleLogout" title="Logout">
+        Logout
+      </button>
     </div>
   </header>
 </template>
@@ -33,9 +36,8 @@ export default {
     }
   },
   methods: {
-    handleUserMenu() {
-      // Simple user menu for marketing dashboard
-      this.handleLogout();
+    navigateToDashboard() {
+      this.$router.push('/marketing');
     },
     handleLogout() {
       authStore.logout();
@@ -210,6 +212,24 @@ export default {
   color: white;
 }
 
+.logout-btn {
+  background: transparent;
+  border: 2px solid var(--border-color);
+  color: #f0f6fc;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: var(--secondary-color);
+  border-color: var(--accent-color);
+  transform: scale(1.05);
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .app-header {
@@ -263,6 +283,11 @@ export default {
     width: 35px;
     height: 35px;
     font-size: 1.1rem;
+  }
+
+  .logout-btn {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
   }
 }
 </style>

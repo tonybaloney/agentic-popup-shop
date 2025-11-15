@@ -23,9 +23,12 @@
           <span class="user-name">{{ username }}</span>
           <span class="user-role">{{ userRole === 'customer' ? 'Customer' : userRole === 'admin' ? 'Administrator' : 'Store Manager' }}</span>
         </div>
-        <div class="user-avatar" @click="handleUserMenu">
+        <div class="user-avatar" @click="navigateToDashboard">
           <vibe-icon name="person"></vibe-icon>
         </div>
+        <button class="logout-btn" @click="handleLogout" title="Logout">
+          Logout
+        </button>
       </template>
       <template v-else>
         <router-link to="/login" class="login-btn">Login</router-link>
@@ -51,17 +54,6 @@ export default {
     }
   },
   methods: {
-    handleUserMenu() {
-      // Create a simple dropdown menu for user actions
-      const actions = ['Dashboard', 'Logout'];
-      const selectedAction = actions[Math.floor(Math.random() * actions.length)]; // Temporary
-      
-      if (selectedAction === 'Logout') {
-        this.handleLogout();
-      } else {
-        this.navigateToDashboard();
-      }
-    },
     navigateToDashboard() {
       if (this.userRole === 'customer') {
         this.$router.push('/customer/dashboard');
@@ -241,6 +233,24 @@ export default {
   color: white;
 }
 
+.logout-btn {
+  background: transparent;
+  border: 2px solid var(--border-color);
+  color: #f0f6fc;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: var(--secondary-color);
+  border-color: var(--accent-color);
+  transform: scale(1.05);
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .app-header {
@@ -294,6 +304,11 @@ export default {
     width: 35px;
     height: 35px;
     font-size: 1.1rem;
+  }
+
+  .logout-btn {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
   }
 }
 </style>
