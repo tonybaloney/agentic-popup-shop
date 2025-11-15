@@ -107,6 +107,10 @@ builder.AddViteApp("frontend", "./frontend")
     .WithNpm(install: true)
     .WithEnvironment("VITE_CHATKIT_DOMAIN_KEY", envVars["VITE_CHATKIT_DOMAIN_KEY"])
     .WithReference(apiService)
+    .WithEndpoint("http", e =>
+    {
+        e.Port = 28000;
+    })
     .WaitFor(apiService);
 
 builder.Build().Run();
