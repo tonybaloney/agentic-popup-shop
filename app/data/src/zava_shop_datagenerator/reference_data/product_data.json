@@ -324,7 +324,7 @@
           "price": 59.99,
           "description": "Trendy distressed jeans with authentic worn-in look, fashion-forward design.",
           "stock_level": 75,
-          "image_path": "SKIPPED_CONTENT_POLICY"
+          "image_path": "images/apparel_bottoms_jeans_distressed_fashion_jeans_20251114_182726.png"
         },
         {
           "name": "Dark Wash Jeans",
@@ -332,7 +332,7 @@
           "price": 56.99,
           "description": "Sophisticated dark wash jeans, suitable for casual or semi-formal occasions.",
           "stock_level": 100,
-          "image_path": "SKIPPED_CONTENT_POLICY"
+          "image_path": "images/apparel_bottoms_jeans_dark_wash_jeans_20251114_182749.png"
         },
         {
           "name": "Relaxed Fit Comfort Jeans",
@@ -408,7 +408,7 @@
           "price": 32.99,
           "description": "Comfortable chino shorts, perfect for summer and warm days.",
           "stock_level": 90,
-          "image_path": "SKIPPED_CONTENT_POLICY"
+          "image_path": "images/apparel_bottoms_shorts_casual_chino_shorts_20251114_182811.png"
         },
         {
           "name": "Athletic Running Shorts",
@@ -476,7 +476,7 @@
           "price": 89.99,
           "description": "Warm puffer jacket with insulation, perfect for cold weather protection.",
           "stock_level": 65,
-          "image_path": "SKIPPED_CONTENT_POLICY"
+          "image_path": "images/outerwear_jackets_puffer_jacket_20251114_182831.png"
         },
         {
           "name": "Rain Jacket Waterproof",
@@ -492,7 +492,7 @@
           "price": 44.99,
           "description": "Cozy fleece zip jacket, perfect for layering and casual comfort.",
           "stock_level": 90,
-          "image_path": "SKIPPED_CONTENT_POLICY"
+          "image_path": "images/outerwear_jackets_fleece_zip_jacket_20251114_182854.png"
         },
         {
           "name": "Down Parka",
