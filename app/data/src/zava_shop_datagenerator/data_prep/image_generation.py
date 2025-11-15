@@ -17,8 +17,9 @@ import requests
 from dotenv import load_dotenv
 
 # Load environment variables from same directory only
-script_dir = Path(__file__).parent.parent.parent
+script_dir = Path(__file__).parent.parent.parent.parent.parent.parent
 env_path = script_dir / ".env"
+print(f"Loading environment variables from: {env_path}")
 load_dotenv(dotenv_path=env_path, override=True)
 
 
@@ -29,7 +30,7 @@ class GptImageGenerator:
         self.endpoint = os.getenv('AZURE_IMAGE_ENDPOINT')
         self.api_key = os.getenv('AZURE_IMAGE_APIKEY')
         self.api_version = os.getenv('OPENAI_API_VERSION', '2024-02-01')
-        self.deployment = os.getenv('DEPLOYMENT_NAME', 'dall-e-3')
+        self.deployment = os.getenv('DEPLOYMENT_NAME', 'gpt-image-1-mini')
 
         if not self.endpoint:
             raise ValueError("Missing AZURE_IMAGE_ENDPOINT in environment variables")
@@ -40,9 +41,9 @@ class GptImageGenerator:
         # Build the full API URL (ensure no double slashes)
         endpoint = self.endpoint.rstrip('/')
         self.api_url = f"{endpoint}/openai/deployments/{self.deployment}/images/generations?api-version={self.api_version}"        # Paths - relative to script location
-        script_dir = Path(__file__).parent
-        self.product_data_path = script_dir / "product_data.json"
-        self.images_dir = Path("/workspace/images")
+        script_dir = Path(__file__).parent.parent
+        self.product_data_path = script_dir / "reference_data" / "product_data.json"
+        self.images_dir = Path("../../frontend/public/images/products")
 
         # Ensure images directory exists
         self.images_dir.mkdir(exist_ok=True)
@@ -93,9 +94,9 @@ class GptImageGenerator:
         return self.api_key
 
     def generate_image(self, product: Dict[str, Any], category: str, subcategory: str) -> Optional[str]:
-        """Generate an image using DALL-E-3 for a specific product."""
+        """Generate an image for a specific product."""
 
-        image_prompt = f"""A simple realistic image of a "{product['description']}", isolated on a white background, centered, with no shadows."""
+        image_prompt = f"""A simple realistic image of a product with this description \""{product['description']}"\", isolated on a white background, centered, with no shadows."""
 
         try:
             print(f"Generating image for: {product['name']}")
@@ -111,13 +112,11 @@ class GptImageGenerator:
             
             # Prepare request payload for DALL-E-3
             payload = {
-                "model": "dall-e-3",
                 "prompt": image_prompt,
+                "n": 1,
                 "size": "1024x1024",
-                "style": "vivid",
-                "quality": "standard",
-                "response_format": "b64_json",
-                "n": 1
+                "quality": "medium",
+                "output_format": "png"
             }
             
             # Make the API request
@@ -319,15 +318,13 @@ def test_connection():
             "Content-Type": "application/json",
             "Authorization": f"Bearer {generator.api_key}"
         }
-        
+
         payload = {
-            "model": "dall-e-3",
             "prompt": "A simple red apple on white background",
-            "size": "1024x1024", 
-            "style": "vivid",
-            "quality": "standard",
-            "response_format": "b64_json",
-            "n": 1
+            "n": 1,
+            "size": "1024x1024",
+            "quality": "low",
+            "output_format": "png"
         }
         
         response = requests.post(generator.api_url, headers=headers, json=payload, timeout=30)
