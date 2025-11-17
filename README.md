@@ -25,15 +25,10 @@ winget install Microsoft.DotNet.SDK.10
 winget install Python.Python.3.13
 winget install --id=astral-sh.uv  -e
 winget install OpenJS.NodeJS.22
-```
-
-Close the terminal and reopen it so that PATH changes take effect. Then install Aspire:
-
-```powershell
 Invoke-Expression "& { $(Invoke-RestMethod https://aspire.dev/install.ps1) }"
 ```
 
-Then close the terminal again.
+Close the terminal and reopen it so that PATH changes take effect. Clone the repo then you're ready to go.
 
 ## Starting the app
 
@@ -42,3 +37,5 @@ Then close the terminal again.
 3. Open the Aspire dashboard (see console output for URL) to start/stop modules and view logs.
 
 ## Using the app
+
+Once aspire and the services have started, open the URL for the frontend site (`http://localhost:28000/` by default) to navigate the store.
