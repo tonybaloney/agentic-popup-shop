@@ -89,7 +89,10 @@ module keycloak 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
     containerAppsEnvironmentName: containerApps.outputs.environmentName
     containerRegistryName: containerApps.outputs.registryName
     ingressEnabled: true
-    identityType: 'SystemAssigned'
+    identityType: 'UserAssigned'
+    identityName: keycloakIdentity.name
+    userAssignedIdentityResourceId: keycloakIdentity.outputs.resourceId
+    identityPrincipalId: keycloakIdentity.outputs.principalId
     exists: keycloakAppExists
     containerName: 'main'
     containerMinReplicas: 1
@@ -113,6 +116,33 @@ module keycloak 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
   }
 }
 
+module financeMcpIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.3' = {
+  name: 'financemcpidentity'
+  scope: rg
+  params: {
+    name: 'idfinancemcp-${resourceToken}'
+    location: location
+  }
+}
+
+module supplierMcpIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.3' = {
+  name: 'suppliermcpidentity'
+  scope: rg
+  params: {
+    name: 'idsuppliermcp-${resourceToken}'
+    location: location
+  }
+}
+
+module keycloakIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.3' = {
+  name: 'keycloakidentity'
+  scope: rg
+  params: {
+    name: 'idkeycloak-${resourceToken}'
+    location: location
+  }
+}
+
 module financeMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
   name: 'finance-mcp-container-app'
   scope: rg
@@ -123,7 +153,10 @@ module financeMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
     containerAppsEnvironmentName: containerApps.outputs.environmentName
     containerRegistryName: containerApps.outputs.registryName
     ingressEnabled: true
-    identityType: 'SystemAssigned'
+    identityType: 'UserAssigned'
+    identityName: financeMcpIdentity.name
+    userAssignedIdentityResourceId: financeMcpIdentity.outputs.resourceId
+    identityPrincipalId: financeMcpIdentity.outputs.principalId
     exists: financeMcpAppExists
     containerName: 'main'
     containerMinReplicas: 1
@@ -158,7 +191,10 @@ module supplierMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
     containerAppsEnvironmentName: containerApps.outputs.environmentName
     containerRegistryName: containerApps.outputs.registryName
     ingressEnabled: true
-    identityType: 'SystemAssigned'
+    identityType: 'UserAssigned'
+    identityName: supplierMcpIdentity.name
+    userAssignedIdentityResourceId: supplierMcpIdentity.outputs.resourceId
+    identityPrincipalId: supplierMcpIdentity.outputs.principalId
     exists: supplierMcpAppExists
     containerName: 'main'
     containerMinReplicas: 1
@@ -292,7 +328,6 @@ module roleAssignment 'br/public:avm/res/authorization/role-assignment/rg-scope:
     principalType: 'ServicePrincipal'
   }
 }
-
 
 module web 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
   name: 'web-container-app'

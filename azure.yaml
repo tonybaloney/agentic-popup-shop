@@ -13,6 +13,8 @@ services:
     project: ./frontend
     language: js
     host: containerapp
+    docker:
+      remoteBuild: true
   api:
     project: ./app
     language: python
