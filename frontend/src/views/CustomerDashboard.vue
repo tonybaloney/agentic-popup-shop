@@ -134,6 +134,13 @@
                   <span>{{ order.total_items }} item{{ order.total_items !== 1 ? 's' : '' }}</span>
                   <span class="summary-total">Order Total: ${{ formatCurrency(order.order_total) }}</span>
                 </div>
+                <button class="btn btn-return" @click="openReturnForm(order)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="1 4 1 10 7 10"/>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                  </svg>
+                  Return
+                </button>
               </div>
             </div>
           </div>
@@ -158,6 +165,14 @@
       </div>
     </div>
 
+    <!-- Return Form Modal -->
+    <ReturnForm
+      v-if="showReturnForm && selectedOrder"
+      :order="selectedOrder"
+      @close="showReturnForm = false"
+      @return-submitted="onReturnSubmitted"
+    />
+
     <!-- AI Chat Widget -->
     <CustomerChat />
   </div>
@@ -167,17 +182,21 @@
 import { customerService } from '../services/customer';
 import { authStore } from '../stores/auth';
 import CustomerChat from '../components/CustomerChat.vue';
+import ReturnForm from '../components/ReturnForm.vue';
 
 export default {
   name: 'CustomerDashboard',
   components: {
-    CustomerChat
+    CustomerChat,
+    ReturnForm
   },
   data() {
     return {
       loading: true,
       error: null,
       orders: [],
+      showReturnForm: false,
+      selectedOrder: null,
       profile: null,
       customerName: 'Customer'
     };
@@ -238,6 +257,14 @@ export default {
         month: 'long', 
         day: 'numeric' 
       });
+    },
+    openReturnForm(order) {
+      this.selectedOrder = order;
+      this.showReturnForm = true;
+    },
+    onReturnSubmitted(result) {
+      console.log('Return submitted:', result);
+      // Optionally reload orders to reflect the return
     }
   }
 };
@@ -570,6 +597,9 @@ export default {
 .order-summary {
   padding-top: 1rem;
   border-top: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .summary-row {
@@ -578,12 +608,35 @@ export default {
   align-items: center;
   font-size: 0.875rem;
   color: #495057;
+  flex: 1;
 }
 
 .summary-total {
   font-size: 1rem;
   font-weight: 700;
   color: #1a202c;
+}
+
+.btn-return {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  background: #f0f4ff;
+  color: #3b82f6;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 1rem;
+  white-space: nowrap;
+}
+
+.btn-return:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
 }
 
 .back-link-container {

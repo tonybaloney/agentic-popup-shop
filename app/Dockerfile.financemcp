@@ -24,6 +24,8 @@ COPY shared /app/shared
 
 # Copy MCP server code
 COPY mcp /app/mcp
+# Remove .venv if it exists to avoid copying virtual environment files
+RUN rm -rf /app/mcp/.venv && rm -rf /app/mcp/__pycache__ &&  rm -rf /app/mcp/uv.lock
 
 COPY data /workspace/app/data
 
@@ -32,7 +34,7 @@ WORKDIR /app/mcp
 
 # Install dependencies using UV
 # This will install the MCP server and the local shared package
-RUN uv sync --frozen
+RUN uv sync
 
 # Expose port (if needed for HTTP MCP server)
 EXPOSE 8002

@@ -1,18 +1,21 @@
 {
-	"servers": {
-		"aspire": {
-			"command": "aspire",
-			"args": ["mcp", "start"],
-			"type": "stdio"
-		},
-		"zava-supplier-agent": {
-			"url": "http://localhost:28002/mcp",
-			"type": "http"
-		},
-		"zava-finance-agent": {
-			"url": "http://localhost:28001/mcp",
-			"type": "http"
-		}
-	},
-	"inputs": []
+  "servers": {
+    "aspire": {
+      "command": "aspire",
+      "args": [
+        "agent",
+        "mcp"
+      ],
+      "type": "stdio"
+    },
+    "zava-supplier-agent": {
+      "url": "http://localhost:28002/mcp",
+      "type": "http"
+    },
+    "zava-finance-agent": {
+      "url": "http://localhost:28001/mcp",
+      "type": "http"
+    }
+  },
+  "inputs": []
 }

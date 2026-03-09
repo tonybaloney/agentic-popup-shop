@@ -1,6 +1,6 @@
-﻿#:sdk Aspire.AppHost.Sdk@13.1.0
-#:package Aspire.Hosting.JavaScript@13.1.0
-#:package Aspire.Hosting.Python@13.1.0
+﻿#:sdk Aspire.AppHost.Sdk@13.3.0-preview.1.26156.8
+#:package Aspire.Hosting.JavaScript@13.3.0-preview.1.26156.8
+#:package Aspire.Hosting.Python@13.3.0-preview.1.26156.8
 #:package dotenv.net@4.0.0
 
 using dotenv.net;
