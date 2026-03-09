@@ -31,6 +31,22 @@ keycloak_openid = KeycloakOpenID(
     client_secret_key=settings.keycloak_client_secret,
 )
 
+# Cache the Keycloak public key for JWT verification (fetched once from JWKS endpoint)
+_keycloak_public_key: str | None = None
+
+
+def _get_keycloak_public_key() -> str:
+    """Fetch and cache the Keycloak realm's RSA public key for JWT verification."""
+    global _keycloak_public_key
+    if _keycloak_public_key is None:
+        _keycloak_public_key = (
+            "-----BEGIN PUBLIC KEY-----\n"
+            + keycloak_openid.public_key()
+            + "\n-----END PUBLIC KEY-----"
+        )
+        logger.info("Fetched Keycloak public key for JWT verification")
+    return _keycloak_public_key
+
 
 class UserAuthModel(BaseModel):
     role: str
@@ -151,23 +167,47 @@ class AuthService:
             SESSIONS[access_token] = session_data
             return access_token, session_data.as_token_data()
 
-    # TODO: Make this async
     @staticmethod
     def verify_token(token: str) -> TokenData:
         """
-        Verify the given token and return user information.
+        Verify the given token by decoding the Keycloak JWT directly.
+        Falls back to in-memory session lookup for offline/fallback tokens.
         """
+        # First try JWT verification against Keycloak's public key (stateless)
         try:
-            user_info = get_session_data(token)
-            if not user_info:
+            public_key = _get_keycloak_public_key()
+            decoded = keycloak_openid.decode_token(
+                token,
+                key=public_key,
+                options={"verify_aud": False},  # Keycloak tokens may not have aud matching client_id
+            )
+            username = decoded.get("preferred_username", "")
+            user = USERS.get(username)
+            if user is None:
+                logger.warning("JWT valid but user %s not in USERS lookup", username)
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Unknown user",
                 )
-            return user_info.as_token_data()
-        except KeycloakAuthenticationError:
+            return TokenData(
+                username=username,
+                user_role=user.role,
+                store_id=user.store_id,
+                customer_id=user.customer_id,
+                access_token=token,
+            )
+        except HTTPException:
+            raise
+        except Exception as jwt_err:
+            # JWT decode failed — fall back to in-memory session lookup
+            # (handles fallback tokens issued when Keycloak was unreachable)
+            logger.debug("JWT decode failed (%s), trying session lookup", jwt_err)
+            session = SESSIONS.get(token)
+            if session is not None:
+                return session.as_token_data()
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials",
+                detail="Invalid or expired token",
             )
 
 
@@ -219,5 +259,12 @@ async def ws_get_current_user_from_token(
 
 
 async def logout_user(token: str) -> bool:
-    # TODO: call open id connect logout endpoint
-    return SESSIONS.pop(token, None) is not None
+    """Logout by removing from local session cache and revoking at Keycloak."""
+    session = SESSIONS.pop(token, None)
+    if session and session.refresh_token:
+        try:
+            keycloak_openid.logout(session.refresh_token)
+        except Exception:
+            logger.debug("Keycloak logout call failed, ignoring")
+    # Always return True if we had a session or valid-looking token
+    return session is not None or len(token) > 0

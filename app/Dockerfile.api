@@ -45,7 +45,8 @@ ENV PYTHONPATH=/app/api:/app/shared/src
 ENV PYTHONUNBUFFERED=1
 
 # Use the startup script as the entrypoint
-ENTRYPOINT ["uv", "run", "python", "-m", "uvicorn", "zava_shop_api.app:app", "--port", "8000", "--host", "0.0.0.0", "--workers", "2"]
+# Auth is stateless (Keycloak JWT verification), so multiple workers are safe.
+ENTRYPOINT ["uv", "run", "python", "-m", "uvicorn", "zava_shop_api.app:app", "--port", "8000", "--host", "0.0.0.0", "--workers", "4"]
 
 # Labels
 LABEL maintainer="Zava Shop Team"

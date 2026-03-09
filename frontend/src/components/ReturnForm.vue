@@ -183,7 +183,7 @@
                 <polyline points="21 15 16 10 5 21"/>
               </svg>
               <p>Click or drag a photo here</p>
-              <small>JPG, PNG up to 10MB</small>
+              <small>JPG, PNG — automatically compressed for upload</small>
             </div>
             <div v-else class="image-preview">
               <img :src="photoPreview" alt="Return photo preview" />
@@ -362,12 +362,78 @@ export default {
       }
     },
     setPhoto(file) {
-      this.photoFile = file;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        this.photoPreview = e.target.result;
-      };
-      reader.readAsDataURL(file);
+      this.compressImage(file).then((compressed) => {
+        this.photoFile = compressed;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.photoPreview = e.target.result;
+        };
+        reader.readAsDataURL(compressed);
+      });
+    },
+    compressImage(file, maxDimension = 1280, quality = 0.7, maxBytes = 1024 * 1024) {
+      return new Promise((resolve) => {
+        // Skip non-image files
+        if (!file.type.startsWith('image/')) {
+          resolve(file);
+          return;
+        }
+        // Already small enough — skip compression
+        if (file.size <= maxBytes) {
+          resolve(file);
+          return;
+        }
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          let { width, height } = img;
+
+          // Scale down preserving aspect ratio
+          if (width > height) {
+            if (width > maxDimension) {
+              height = Math.round(height * (maxDimension / width));
+              width = maxDimension;
+            }
+          } else {
+            if (height > maxDimension) {
+              width = Math.round(width * (maxDimension / height));
+              height = maxDimension;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Iteratively lower quality until under maxBytes
+          const tryCompress = (q) => {
+            canvas.toBlob(
+              (blob) => {
+                if (blob.size > maxBytes && q > 0.3) {
+                  tryCompress(q - 0.1);
+                } else {
+                  const compressed = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), {
+                    type: 'image/jpeg',
+                    lastModified: Date.now(),
+                  });
+                  resolve(compressed);
+                }
+              },
+              'image/jpeg',
+              q,
+            );
+          };
+          tryCompress(quality);
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve(file); // Fall back to original on error
+        };
+        img.src = url;
+      });
     },
     removePhoto() {
       this.photoFile = null;

@@ -267,6 +267,7 @@ module api 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
     exists: apiAppExists
     containerName: 'main'
     containerMinReplicas: 1
+    containerMaxReplicas: 3
     targetPort: 8000
     env:[
       {
