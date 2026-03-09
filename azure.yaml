@@ -19,16 +19,26 @@ services:
     host: containerapp
     docker:
       path: ./Dockerfile.api
+      remoteBuild: true
   finance-mcp:
     project: ./app
     language: python
     host: containerapp
     docker:
       path: ./Dockerfile.financemcp
+      remoteBuild: true
   supplier-mcp:
     project: ./app
     language: python
     host: containerapp
     docker:
       path: ./Dockerfile.suppliermcp
+      remoteBuild: true
+  keycloak:
+    project: ./auth
+    language: docker
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      remoteBuild: true
   

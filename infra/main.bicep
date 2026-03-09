@@ -12,11 +12,20 @@ param location string
 @description('Chatkit domain key for the application. Get from openai.com')
 param chatkitDomainKey string = ''
 
+@secure()
+@description('Keycloak bootstrap admin password')
+param keycloakAdminPassword string
+
+@secure()
+@description('Keycloak client secret for the zava-api client')
+param keycloakClientSecret string
+
 // Used by azd for upsert/create calls
 param webAppExists bool = false
 param apiAppExists bool = false
 param supplierMcpAppExists bool = false
 param financeMcpAppExists bool = false
+param keycloakAppExists bool = false
 
 param resourceGroupName string = ''
 
@@ -71,6 +80,39 @@ module webIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.
   }
 }
 
+module keycloak 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
+  scope: rg
+  params: {
+    name: 'keycloak-${resourceToken}'
+    tags: union(tags, { 'azd-service-name': 'keycloak' })
+    location: location
+    containerAppsEnvironmentName: containerApps.outputs.environmentName
+    containerRegistryName: containerApps.outputs.registryName
+    ingressEnabled: true
+    identityType: 'SystemAssigned'
+    exists: keycloakAppExists
+    containerName: 'main'
+    containerMinReplicas: 1
+    targetPort: 8080
+    env: [
+      {
+        name: 'KC_BOOTSTRAP_ADMIN_USERNAME'
+        value: 'admin'
+      }
+      {
+        name: 'KC_BOOTSTRAP_ADMIN_PASSWORD'
+        secretRef: 'kc-admin-password'
+      }
+    ]
+    secrets: [
+      {
+        name: 'kc-admin-password'
+        value: keycloakAdminPassword
+      }
+    ]
+  }
+}
+
 module financeMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
   name: 'finance-mcp-container-app'
   scope: rg
@@ -93,6 +135,14 @@ module financeMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
       {
         name: 'PORT'
         value: '80'
+      }
+      {
+        name: 'KEYCLOAK_REALM_URL'
+        value: '${keycloak.outputs.uri}/realms/zava'
+      }
+      {
+        name: 'KEYCLOAK_MCP_SERVER_BASE_URL'
+        value: keycloak.outputs.uri
       }
     ]
   }
@@ -120,6 +170,14 @@ module supplierMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
       {
         name: 'PORT'
         value: '80'
+      }
+      {
+        name: 'KEYCLOAK_REALM_URL'
+        value: '${keycloak.outputs.uri}/realms/zava'
+      }
+      {
+        name: 'KEYCLOAK_MCP_SERVER_BASE_URL'
+        value: keycloak.outputs.uri
       }
     ]
   }
@@ -199,6 +257,28 @@ module api 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
         name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME'
         value: 'gpt-5-mini'
       }
+      {
+        name: 'KEYCLOAK_SERVER_URL'
+        value: '${keycloak.outputs.uri}/auth'
+      }
+      {
+        name: 'KEYCLOAK_REALM'
+        value: 'zava'
+      }
+      {
+        name: 'KEYCLOAK_CLIENT_ID'
+        value: 'zava-api'
+      }
+      {
+        name: 'KEYCLOAK_CLIENT_SECRET'
+        secretRef: 'kc-client-secret'
+      }
+    ]
+    secrets: [
+      {
+        name: 'kc-client-secret'
+        value: keycloakClientSecret
+      }
     ]
   }
 }
@@ -266,4 +346,5 @@ output AZURE_LOCATION string = location
 output AZURE_TENANT_ID string = tenant().tenantId
 output API_BASE_URL string = api.outputs.uri
 output WEB_BASE_URL string = web.outputs.uri
+output KEYCLOAK_BASE_URL string = keycloak.outputs.uri
 output SERVICE_WEB_NAME string = web.outputs.name

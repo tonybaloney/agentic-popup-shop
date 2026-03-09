@@ -20,6 +20,15 @@
     "financeMcpAppExists": {
       "value": "${SERVICE_FINANCE_MCP_RESOURCE_EXISTS=false}"
     },
+    "keycloakAppExists": {
+      "value": "${SERVICE_KEYCLOAK_RESOURCE_EXISTS=false}"
+    },
+    "keycloakAdminPassword": {
+      "value": "${KEYCLOAK_ADMIN_PASSWORD}"
+    },
+    "keycloakClientSecret": {
+      "value": "${KEYCLOAK_CLIENT_SECRET}"
+    },
     "chatkitDomainKey": {
       "value": "${CHATKIT_DOMAIN_KEY}"
     }
