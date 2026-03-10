@@ -20,6 +20,12 @@ param keycloakAdminPassword string
 @description('Keycloak client secret for the zava-api client')
 param keycloakClientSecret string
 
+@description('Name of the AI model to deploy (e.g. gpt-5-mini, Kimi-2.5)')
+param aiModelName string = 'gpt-5-mini'
+
+@description('Version of the AI model to deploy')
+param aiModelVersion string = '2025-08-07'
+
 // Used by azd for upsert/create calls
 param webAppExists bool = false
 param apiAppExists bool = false
@@ -228,10 +234,10 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.6.0' = {
       {
         model: {
           format: 'OpenAI'
-          name: 'gpt-5-mini'
-          version: '2025-08-07'
+          name: aiModelName
+          version: aiModelVersion
         }
-        name: 'gpt-5-mini'
+        name: aiModelName
         sku: {
           capacity: 100
           name: 'GlobalStandard'
@@ -292,7 +298,7 @@ module api 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
       }
       {
         name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME'
-        value: 'gpt-5-mini'
+        value: aiModelName
       }
       {
         name: 'KEYCLOAK_SERVER_URL'

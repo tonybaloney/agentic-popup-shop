@@ -31,6 +31,12 @@
     },
     "chatkitDomainKey": {
       "value": "${CHATKIT_DOMAIN_KEY}"
+    },
+    "aiModelName": {
+      "value": "${AZURE_AI_MODEL_NAME=gpt-5-mini}"
+    },
+    "aiModelVersion": {
+      "value": "${AZURE_AI_MODEL_VERSION=2025-08-07}"
     }
   }
 }
