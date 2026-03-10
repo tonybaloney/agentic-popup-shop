@@ -173,21 +173,48 @@
       @return-submitted="onReturnSubmitted"
     />
 
-    <!-- AI Chat Widget -->
-    <CustomerChat />
+    <!-- Copilot Studio Chat Widget -->
+    <div v-if="copilotStudioUrl" class="copilot-chat-container">
+      <button
+        v-if="!chatOpen"
+        class="copilot-toggle-btn"
+        @click="chatOpen = true"
+        aria-label="Open chat"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </button>
+
+      <div v-if="chatOpen" class="copilot-chat-panel">
+        <div class="copilot-chat-header">
+          <h3>Zava Assistant</h3>
+          <button @click="chatOpen = false" class="copilot-close-btn" aria-label="Close chat">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <iframe
+          :src="copilotStudioUrl"
+          frameborder="0"
+          class="copilot-chat-iframe"
+          title="Zava Assistant"
+        ></iframe>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { customerService } from '../services/customer';
 import { authStore } from '../stores/auth';
-import CustomerChat from '../components/CustomerChat.vue';
 import ReturnForm from '../components/ReturnForm.vue';
 
 export default {
   name: 'CustomerDashboard',
   components: {
-    CustomerChat,
     ReturnForm
   },
   data() {
@@ -197,6 +224,7 @@ export default {
       orders: [],
       showReturnForm: false,
       selectedOrder: null,
+      chatOpen: false,
       profile: null,
       customerName: 'Customer'
     };
@@ -218,6 +246,9 @@ export default {
           return sum + order.items.reduce((itemSum, item) => itemSum + item.discount_amount, 0);
         }, 0)
       };
+    },
+    copilotStudioUrl() {
+      return window.ENV?.COPILOT_STUDIO_URL || '';
     }
   },
   mounted() {
@@ -688,7 +719,89 @@ export default {
   margin-bottom: 1rem;
 }
 
+/* Copilot Studio Chat Widget */
+.copilot-chat-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 1000;
+}
+
+.copilot-toggle-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.copilot-toggle-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.55);
+}
+
+.copilot-chat-panel {
+  width: 400px;
+  height: 560px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.copilot-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.copilot-chat-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.copilot-close-btn {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+
+.copilot-close-btn:hover {
+  opacity: 1;
+}
+
+.copilot-chat-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+}
+
 @media (max-width: 768px) {
+  .copilot-chat-panel {
+    width: calc(100vw - 2rem);
+    height: 70vh;
+    right: 0;
+  }
+
   .welcome-title {
     font-size: 1.5rem;
   }

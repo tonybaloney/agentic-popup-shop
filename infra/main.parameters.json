@@ -32,6 +32,9 @@
     "chatkitDomainKey": {
       "value": "${CHATKIT_DOMAIN_KEY}"
     },
+    "copilotStudioUrl": {
+      "value": "${COPILOT_STUDIO_URL=}"
+    },
     "aiModelName": {
       "value": "${AZURE_AI_MODEL_NAME=gpt-5-mini}"
     },

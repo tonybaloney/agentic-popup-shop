@@ -19,7 +19,8 @@ cat > /usr/share/nginx/html/env.js <<EOF
 // This file is generated at container startup
 window.ENV = {
   CHATKIT_DOMAIN_KEY: '${VITE_CHATKIT_DOMAIN_KEY:-}',
-  APPLICATIONINSIGHTS_CONNECTION_STRING: '${APPLICATIONINSIGHTS_CONNECTION_STRING:-}'
+  APPLICATIONINSIGHTS_CONNECTION_STRING: '${APPLICATIONINSIGHTS_CONNECTION_STRING:-}',
+  COPILOT_STUDIO_URL: '${COPILOT_STUDIO_URL:-}'
 };
 console.log('Runtime environment loaded:', window.ENV);
 EOF

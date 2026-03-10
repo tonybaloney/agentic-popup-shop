@@ -20,6 +20,9 @@ param keycloakAdminPassword string
 @description('Keycloak client secret for the zava-api client')
 param keycloakClientSecret string
 
+@description('Copilot Studio webchat iframe URL. Leave empty to disable the chat widget.')
+param copilotStudioUrl string = ''
+
 @description('Name of the AI model to deploy (e.g. gpt-5-mini, Kimi-2.5)')
 param aiModelName string = 'gpt-5-mini'
 
@@ -365,6 +368,10 @@ module web 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
       {
         name: 'API_HOST'
         value: replace(api.outputs.uri, 'https://', '')
+      }
+      {
+        name: 'COPILOT_STUDIO_URL'
+        value: copilotStudioUrl
       }
     ]
   }
