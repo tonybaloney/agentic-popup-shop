@@ -15,7 +15,7 @@ from agent_framework_azure_ai import AzureAIClient
 from azure.identity.aio import DefaultAzureCredential
 from azure.core.credentials_async import AsyncTokenCredential
 
-from zava_shop_agents import MCPStreamableHTTPToolOTEL, StrictModel
+from zava_shop_agents import MCPStreamableHTTPToolOTEL, STORE_AGENTS, StrictModel
 
 
 WORKFLOW_AGENT_DESCRIPTION = "Stock Management Workflow Agent"
@@ -64,7 +64,7 @@ class StockExtractor(Executor):
             model_id=DEFAULT_MODEL,
             tools=tools,
             tool_choice='required',
-            store=True,
+            store=STORE_AGENTS,
         )
         super().__init__(id=_id)
 
@@ -93,7 +93,7 @@ class ContextExecutor(Executor):
             description=WORKFLOW_AGENT_DESCRIPTION,
             instructions=("You look at the context to prioritize restocking items."),
             model_id=DEFAULT_MODEL,
-            store=True,
+            store=STORE_AGENTS,
         )
         # Associate the agent with this executor node. The base Executor stores it on self.agent.
         super().__init__(id=_id)
@@ -135,7 +135,7 @@ class Summarizer(Executor):
                 "Look at the specific user instructions and context to provide a tailored summary."
             ),
             model_id=DEFAULT_MODEL,
-            store=True,
+            store=STORE_AGENTS,
         )
         super().__init__(id=_id)
 

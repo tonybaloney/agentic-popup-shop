@@ -25,6 +25,11 @@ def get_or_create_eventloop():
 
 
 
+#: When True, agent definitions are persisted to Azure AI Agents Service.
+#: Set to True once your endpoint supports the required API version.
+STORE_AGENTS: bool = False
+
+
 class StrictModel(BaseModel):
     """Base model with strict validation that rejects extra fields."""
 
