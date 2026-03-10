@@ -36,9 +36,6 @@ os.environ.setdefault("SQLITE_DATABASE_PATH", ":memory:")
 
 from zava_shop_api.openid_auth import (
     AuthService,
-    SessionData,
-    get_session_data,
-    SESSIONS,
 )
 from zava_shop_api.models import TokenData
 
@@ -66,57 +63,6 @@ class TestTokenDataHasAccessToken:
         assert token_data.username == "test_user"
         assert token_data.user_role == "store_manager"
         assert token_data.store_id == 1
-
-
-class TestSessionDataPassesToken:
-    """Test that SessionData.as_token_data() includes the original token."""
-
-    def test_as_token_data_includes_access_token(self):
-        """SessionData.as_token_data() should include the original Keycloak token."""
-        session = SessionData(
-            token="keycloak-access-token-xyz",
-            refresh_token="keycloak-refresh-token",
-            expires_at=9999999999,
-            role="store_manager",
-            store_id=1,
-            customer_id=None,
-            username="manager1",
-        )
-
-        token_data = session.as_token_data()
-
-        assert token_data.access_token == "keycloak-access-token-xyz"
-        assert token_data.username == "manager1"
-        assert token_data.user_role == "store_manager"
-        assert token_data.store_id == 1
-
-
-class TestGetCurrentUserReturnsToken:
-    """Test that get_current_user dependency returns access_token in TokenData."""
-
-    @pytest.mark.integration
-    @pytest.mark.skipif(
-        not KEYCLOAK_AVAILABLE,
-        reason="Requires running Keycloak server"
-    )
-    def test_get_current_user_with_valid_session(self, test_client: TestClient):
-        """After login, accessing protected endpoints should have access_token in TokenData."""
-        # Login to get a real token
-        login_response = test_client.post(
-            "/api/login",
-            json={"username": "manager1", "password": "manager123"}
-        )
-        assert login_response.status_code == 200
-        access_token = login_response.json()["access_token"]
-
-        # Verify the token is stored in the session
-        session_data = get_session_data(access_token)
-        assert session_data is not None
-        assert session_data.token == access_token
-
-        # Verify as_token_data() returns the access_token
-        token_data = session_data.as_token_data()
-        assert token_data.access_token == access_token
 
 
 class TestWorkflowReceivesToken:
@@ -297,30 +243,3 @@ class TestTokenSecurityConstraints:
         # Token should be a non-empty string
         assert isinstance(data["access_token"], str)
         assert len(data["access_token"]) > 10
-
-    @pytest.mark.integration
-    @pytest.mark.skipif(
-        not KEYCLOAK_AVAILABLE,
-        reason="Requires running Keycloak server"
-    )
-    def test_session_stores_token_securely(self, test_client: TestClient):
-        """Session storage should maintain the token for downstream use."""
-        response = test_client.post(
-            "/api/login",
-            json={"username": "manager1", "password": "manager123"}
-        )
-        token = response.json()["access_token"]
-
-        # Token should be stored in session
-        session = get_session_data(token)
-        assert session is not None
-        assert session.token == token
-
-        # Logout should clear the session
-        test_client.post(
-            "/api/logout",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-
-        # Session should be cleared (token lookup may return None)
-        # Note: Actual behavior depends on logout implementation

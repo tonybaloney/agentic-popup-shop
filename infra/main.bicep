@@ -230,20 +230,20 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.6.0' = {
   name: 'ai-foundry'
   params: {
     baseName: substring(resourceToken, 0, 12)
-    aiModelDeployments: [
-      {
-        model: {
-          format: 'OpenAI'
-          name: aiModelName
-          version: aiModelVersion
-        }
-        name: aiModelName
-        sku: {
-          capacity: 100
-          name: 'GlobalStandard'
-        }
-      }
-    ]
+    // aiModelDeployments: [
+    //   {
+    //     model: {
+    //       format: 'OpenAI'
+    //       name: aiModelName
+    //       version: aiModelVersion
+    //     }
+    //     name: aiModelName
+    //     sku: {
+    //       capacity: 20
+    //       name: 'GlobalStandard'
+    //     }
+    //   }
+    // ]
   }
 }
 
@@ -283,6 +283,18 @@ module api 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
       {
         name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
         value: monitoring.outputs.applicationInsightsConnectionString
+      }
+      {
+        name: 'OTEL_TRACES_EXPORTER'
+        value: 'azure_monitor'
+      }
+      {
+        name: 'OTEL_METRICS_EXPORTER'
+        value: 'azure_monitor'
+      }
+      {
+        name: 'OTEL_LOGS_EXPORTER'
+        value: 'azure_monitor'
       }
       {
         name: 'FINANCE_MCP_HTTP'

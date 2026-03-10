@@ -5,6 +5,7 @@ This module provides shared fixtures and configuration for all tests.
 """
 
 import os
+from unittest.mock import patch
 
 # Set required environment variables before any other imports
 # These are needed by Settings class in openid_auth.py
@@ -18,23 +19,70 @@ import pytest
 from fastapi.testclient import TestClient
 from typing import Generator
 
+from zava_shop_api.models import TokenData
+from zava_shop_api.openid_auth import USERS
+
+
+_TEST_PASSWORDS: dict[str, str] = {
+    "admin": "admin123",
+    "manager1": "manager123",
+    "manager2": "manager123",
+    "stacey": "stacey123",
+    "tracey.lopez.4": "tracey123",
+    "marketing": "marketing123",
+}
+
+
+def _make_fake_authenticate(username: str, password: str) -> tuple[str, TokenData]:
+    """Fake authenticate_user that doesn't need Keycloak."""
+    from fastapi import HTTPException, status as http_status
+
+    user = USERS.get(username)
+    expected_pw = _TEST_PASSWORDS.get(username)
+    if user is None or expected_pw is None or expected_pw != password:
+        raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
+    fake_token = f"fake-jwt-{username}"
+    return fake_token, TokenData(
+        username=username,
+        user_role=user.role,
+        store_id=user.store_id,
+        customer_id=user.customer_id,
+        access_token=fake_token,
+    )
+
+
+def _make_fake_verify(token: str) -> TokenData:
+    """Fake verify_token that accepts fake-jwt-* tokens."""
+    from fastapi import HTTPException
+
+    if token.startswith("fake-jwt-"):
+        username = token.removeprefix("fake-jwt-")
+        user = USERS.get(username)
+        if user:
+            return TokenData(
+                username=username,
+                user_role=user.role,
+                store_id=user.store_id,
+                customer_id=user.customer_id,
+                access_token=token,
+            )
+    raise HTTPException(status_code=401, detail="Invalid or expired token")
+
 
 @pytest.fixture(scope="module")
 def test_client() -> Generator[TestClient, None, None]:
     """
     Create a TestClient for the FastAPI application.
-    
-    This fixture provides a test client that can be used to make
-    requests to the API without actually running the server.
-    
-    Yields:
-        TestClient: A test client for making API requests
+
+    Patches AuthService so tests don't require a running Keycloak server.
     """
-    # Import here to avoid circular imports and ensure fresh app instance
-    from zava_shop_api.app import app
-    
-    with TestClient(app) as client:
-        yield client
+    with (
+        patch("zava_shop_api.openid_auth.AuthService.authenticate_user", side_effect=_make_fake_authenticate),
+        patch("zava_shop_api.openid_auth.AuthService.verify_token", side_effect=_make_fake_verify),
+    ):
+        from zava_shop_api.app import app
+        with TestClient(app) as client:
+            yield client
 
 
 @pytest.fixture(scope="function")
