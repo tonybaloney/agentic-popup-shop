@@ -39,9 +39,6 @@ from zava_shop_agents import StrictModel
 
 WORKFLOW_AGENT_DESCRIPTION = "Product Return Workflow Agent"
 
-# Use gpt-5-mini for photo verification (multimodal)
-MULTIMODAL_MODEL = os.environ.get("AZURE_AI_MULTIMODAL_MODEL_DEPLOYMENT_NAME", "gpt-5-mini")
-# Use the default model for text-only tasks
 DEFAULT_MODEL = os.environ.get("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-5-mini")
 
 
@@ -280,7 +277,7 @@ class PhotoVerificationExecutor(Executor):
                 "7. Explain your reasoning in 'confidence_notes'.\n\n"
                 "Be reasonable — items don't need perfect labels, just visual plausibility."
             ),
-            model_id=MULTIMODAL_MODEL,
+            model_id=DEFAULT_MODEL,
             store=True,
         )
         super().__init__(id=_id)
@@ -436,7 +433,7 @@ def build_workflow(
 
     intake = ReturnIntakeExecutor(make_client(), agent_suffix=agent_suffix)
     policy = PolicyValidationExecutor(make_client(), agent_suffix=agent_suffix)
-    photo_verify = PhotoVerificationExecutor(make_client(MULTIMODAL_MODEL), agent_suffix=agent_suffix)
+    photo_verify = PhotoVerificationExecutor(make_client(DEFAULT_MODEL), agent_suffix=agent_suffix)
     approval = ReturnApprovalExecutor(make_client(), agent_suffix=agent_suffix)
 
     workflow = (

@@ -29,23 +29,6 @@ keycloak_openid = KeycloakOpenID(
     client_secret_key=settings.keycloak_client_secret,
 )
 
-# Cache the Keycloak public key for JWT verification (fetched once from JWKS endpoint)
-_keycloak_public_key: str | None = None
-
-
-def _get_keycloak_public_key() -> str:
-    """Fetch and cache the Keycloak realm's RSA public key for JWT verification."""
-    global _keycloak_public_key
-    if _keycloak_public_key is None:
-        _keycloak_public_key = (
-            "-----BEGIN PUBLIC KEY-----\n"
-            + keycloak_openid.public_key()
-            + "\n-----END PUBLIC KEY-----"
-        )
-        logger.info("Fetched Keycloak public key for JWT verification")
-    return _keycloak_public_key
-
-
 def _token_data_from_claims(decoded: dict, access_token: str) -> TokenData:
     """Build TokenData from JWT claims.
 
@@ -91,13 +74,9 @@ class AuthService:
                 )
 
             access_token = token["access_token"]
-            # Decode without verification — we just minted this token
-            public_key = _get_keycloak_public_key()
-            decoded = keycloak_openid.decode_token(
-                access_token,
-                key=public_key,
-                options={"verify_aud": False},
-            )
+            # Decode the token we just minted to read the claims.
+            # validate=False skips signature check (we trust our own Keycloak).
+            decoded = keycloak_openid.decode_token(access_token, validate=False)
             token_data = _token_data_from_claims(decoded, access_token)
             return access_token, token_data
         except HTTPException:
@@ -115,12 +94,9 @@ class AuthService:
         Fully stateless — role, store_id, customer_id come from JWT claims.
         """
         try:
-            public_key = _get_keycloak_public_key()
-            decoded = keycloak_openid.decode_token(
-                token,
-                key=public_key,
-                options={"verify_aud": False},
-            )
+            # validate=True (default) fetches the Keycloak public key and
+            # verifies the JWT signature + expiration automatically.
+            decoded = keycloak_openid.decode_token(token)
             return _token_data_from_claims(decoded, token)
         except HTTPException:
             raise
