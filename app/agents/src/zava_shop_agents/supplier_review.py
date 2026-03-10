@@ -21,7 +21,7 @@ from agent_framework_azure_ai import AzureAIClient
 from azure.core.credentials_async import AsyncTokenCredential
 from azure.identity.aio import DefaultAzureCredential
 
-from zava_shop_agents import MCPStreamableHTTPToolOTEL, STORE_AGENTS, StrictModel
+from zava_shop_agents import MCPStreamableHTTPToolOTEL, StrictModel
 
 DEFAULT_MODEL = os.environ.get("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-5-mini")
 
@@ -112,7 +112,7 @@ class AggregateInsights(Executor):
             model_id=DEFAULT_MODEL,
             tools=tools,
             tool_choice="required",
-            store=STORE_AGENTS,
+            store=True,
         )
         super().__init__(id=_id)
 
@@ -167,7 +167,7 @@ class NegotiatorSummarizerExecutor(Executor):
             model_id=DEFAULT_MODEL,
             tools=tools,
             tool_choice="required",
-            store=STORE_AGENTS,
+            store=True,
         )
         super().__init__(id=_id)
 
@@ -192,7 +192,7 @@ class ReviewAndDismissExecutor(Executor):
             model_id=DEFAULT_MODEL,
             tools=tools,
             tool_choice="required",
-            store=STORE_AGENTS,
+            store=True,
         )
         super().__init__(id=_id)
 

@@ -35,7 +35,7 @@ from azure.core.credentials_async import AsyncTokenCredential
 from azure.identity.aio import DefaultAzureCredential
 from pydantic import BaseModel, Field
 
-from zava_shop_agents import STORE_AGENTS, StrictModel
+from zava_shop_agents import StrictModel
 
 WORKFLOW_AGENT_DESCRIPTION = "Product Return Workflow Agent"
 
@@ -139,7 +139,7 @@ class ReturnIntakeExecutor(Executor):
                 "Always set the quantity field on every item in the items list."
             ),
             model_id=DEFAULT_MODEL,
-            store=STORE_AGENTS,
+            store=True,
         )
         super().__init__(id=_id)
 
@@ -206,7 +206,7 @@ class PolicyValidationExecutor(Executor):
                 "- Always provide helpful, friendly feedback in the 'feedback' field."
             ),
             model_id=DEFAULT_MODEL,
-            store=STORE_AGENTS,
+            store=True,
         )
         super().__init__(id=_id)
 
@@ -278,7 +278,7 @@ class PhotoVerificationExecutor(Executor):
                 "Be reasonable — items don't need perfect labels, just visual plausibility."
             ),
             model_id=DEFAULT_MODEL,
-            store=STORE_AGENTS,
+            store=True,
         )
         super().__init__(id=_id)
 
@@ -355,7 +355,7 @@ class ReturnApprovalExecutor(Executor):
                 "- If the return is denied, explain why and what the customer can do next."
             ),
             model_id=DEFAULT_MODEL,
-            store=STORE_AGENTS,
+            store=True,
         )
         super().__init__(id=_id)
 

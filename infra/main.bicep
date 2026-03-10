@@ -230,20 +230,20 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.6.0' = {
   name: 'ai-foundry'
   params: {
     baseName: substring(resourceToken, 0, 12)
-    // aiModelDeployments: [
-    //   {
-    //     model: {
-    //       format: 'OpenAI'
-    //       name: aiModelName
-    //       version: aiModelVersion
-    //     }
-    //     name: aiModelName
-    //     sku: {
-    //       capacity: 20
-    //       name: 'GlobalStandard'
-    //     }
-    //   }
-    // ]
+    aiModelDeployments: [
+      {
+        model: {
+          format: 'OpenAI'
+          name: aiModelName
+          version: aiModelVersion
+        }
+        name: aiModelName
+        sku: {
+          capacity: 20
+          name: 'GlobalStandard'
+        }
+      }
+    ]
   }
 }
 
