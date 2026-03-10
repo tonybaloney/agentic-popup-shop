@@ -4,8 +4,15 @@ FastAPI Backend for Popup Store
 Provides REST API endpoints for the frontend application.
 """
 
-from opentelemetry.instrumentation.auto_instrumentation import initialize
-initialize()
+import os
+
+if os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+    from azure.monitor.opentelemetry import configure_azure_monitor
+    configure_azure_monitor()
+else:
+    # Local dev: use generic OTLP exporter (Aspire collector on localhost:4317)
+    from opentelemetry.instrumentation.auto_instrumentation import initialize
+    initialize()
 
 import logging
 from contextlib import asynccontextmanager

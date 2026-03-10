@@ -20,16 +20,17 @@ from fastapi.testclient import TestClient
 from typing import Generator
 
 from zava_shop_api.models import TokenData
-from zava_shop_api.openid_auth import USERS
 
 
-_TEST_PASSWORDS: dict[str, str] = {
-    "admin": "admin123",
-    "manager1": "manager123",
-    "manager2": "manager123",
-    "stacey": "stacey123",
-    "tracey.lopez.4": "tracey123",
-    "marketing": "marketing123",
+# Mirror the user attributes defined in auth/realm.json so tests
+# don't need a running Keycloak instance.
+_TEST_USERS: dict[str, dict] = {
+    "admin":          {"password": "admin123",     "role": "admin",         "store_id": None, "customer_id": None},
+    "manager1":       {"password": "manager123",   "role": "store_manager", "store_id": 1,    "customer_id": None},
+    "manager2":       {"password": "manager123",   "role": "store_manager", "store_id": 2,    "customer_id": None},
+    "stacey":         {"password": "stacey123",    "role": "customer",      "store_id": 1,    "customer_id": 4},
+    "tracey.lopez.4": {"password": "tracey123",    "role": "customer",      "store_id": 1,    "customer_id": 4},
+    "marketing":      {"password": "marketing123", "role": "marketing",     "store_id": None, "customer_id": None},
 }
 
 
@@ -37,16 +38,15 @@ def _make_fake_authenticate(username: str, password: str) -> tuple[str, TokenDat
     """Fake authenticate_user that doesn't need Keycloak."""
     from fastapi import HTTPException, status as http_status
 
-    user = USERS.get(username)
-    expected_pw = _TEST_PASSWORDS.get(username)
-    if user is None or expected_pw is None or expected_pw != password:
+    info = _TEST_USERS.get(username)
+    if info is None or info["password"] != password:
         raise HTTPException(status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
     fake_token = f"fake-jwt-{username}"
     return fake_token, TokenData(
         username=username,
-        user_role=user.role,
-        store_id=user.store_id,
-        customer_id=user.customer_id,
+        user_role=info["role"],
+        store_id=info["store_id"],
+        customer_id=info["customer_id"],
         access_token=fake_token,
     )
 
@@ -57,13 +57,13 @@ def _make_fake_verify(token: str) -> TokenData:
 
     if token.startswith("fake-jwt-"):
         username = token.removeprefix("fake-jwt-")
-        user = USERS.get(username)
-        if user:
+        info = _TEST_USERS.get(username)
+        if info:
             return TokenData(
                 username=username,
-                user_role=user.role,
-                store_id=user.store_id,
-                customer_id=user.customer_id,
+                user_role=info["role"],
+                store_id=info["store_id"],
+                customer_id=info["customer_id"],
                 access_token=token,
             )
     raise HTTPException(status_code=401, detail="Invalid or expired token")

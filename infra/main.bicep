@@ -285,18 +285,6 @@ module api 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
         value: monitoring.outputs.applicationInsightsConnectionString
       }
       {
-        name: 'OTEL_TRACES_EXPORTER'
-        value: 'azure_monitor'
-      }
-      {
-        name: 'OTEL_METRICS_EXPORTER'
-        value: 'azure_monitor'
-      }
-      {
-        name: 'OTEL_LOGS_EXPORTER'
-        value: 'azure_monitor'
-      }
-      {
         name: 'FINANCE_MCP_HTTP'
         value: financeMcp.outputs.uri
       }

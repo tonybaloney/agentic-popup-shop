@@ -6,7 +6,6 @@ from keycloak.exceptions import KeycloakAuthenticationError
 from zava_shop_api.models import TokenData
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import BaseModel
 
 
 class Settings(BaseSettings):
@@ -47,27 +46,31 @@ def _get_keycloak_public_key() -> str:
     return _keycloak_public_key
 
 
-class UserAuthModel(BaseModel):
-    role: str
-    store_id: int | None
-    customer_id: int | None = None
+def _token_data_from_claims(decoded: dict, access_token: str) -> TokenData:
+    """Build TokenData from JWT claims.
 
+    The Keycloak 'zava:profile' client scope maps user attributes
+    (role, store_id, customer_id) into the access-token claims.
+    """
+    username = decoded.get("preferred_username", "")
+    role = decoded.get("role", "")
+    store_id_raw = decoded.get("store_id")
+    customer_id_raw = decoded.get("customer_id")
 
-# TODO : Use lookups in database
-USERS: dict[str, UserAuthModel] = {
-    "admin": UserAuthModel(role="admin", store_id=None),
-    "manager1": UserAuthModel(
-        role="store_manager",
-        store_id=1,  # NYC Times Square
-    ),
-    "manager2": UserAuthModel(
-        role="store_manager",
-        store_id=2,  # SF Union Square
-    ),
-    "stacey": UserAuthModel(role="customer", store_id=1, customer_id=4),
-    "tracey.lopez.4": UserAuthModel(role="customer", store_id=1, customer_id=4),
-    "marketing": UserAuthModel(role="marketing", store_id=None),
-}
+    if not username or not role:
+        logger.warning("JWT missing required claims (preferred_username=%s, role=%s)", username, role)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token missing required claims",
+        )
+
+    return TokenData(
+        username=username,
+        user_role=role,
+        store_id=int(store_id_raw) if store_id_raw is not None else None,
+        customer_id=int(customer_id_raw) if customer_id_raw is not None else None,
+        access_token=access_token,
+    )
 
 
 class AuthService:
@@ -75,14 +78,10 @@ class AuthService:
     def authenticate_user(username: str, password: str) -> tuple[str, TokenData]:
         """
         Authenticate the user using Keycloak and return an access token.
-        """
-        user = USERS.get(username, None)
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid username or password",
-            )
 
+        Role, store_id, and customer_id are read from JWT claims
+        (populated by Keycloak user attributes via the zava:profile scope).
+        """
         try:
             token = keycloak_openid.token(username, password)
             if not token:
@@ -91,14 +90,18 @@ class AuthService:
                     detail="Invalid username or password",
                 )
 
-            token_data = TokenData(
-                username=username,
-                user_role=user.role,
-                store_id=user.store_id,
-                customer_id=user.customer_id,
-                access_token=token["access_token"],
+            access_token = token["access_token"]
+            # Decode without verification — we just minted this token
+            public_key = _get_keycloak_public_key()
+            decoded = keycloak_openid.decode_token(
+                access_token,
+                key=public_key,
+                options={"verify_aud": False},
             )
-            return token["access_token"], token_data
+            token_data = _token_data_from_claims(decoded, access_token)
+            return access_token, token_data
+        except HTTPException:
+            raise
         except KeycloakAuthenticationError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -109,7 +112,7 @@ class AuthService:
     def verify_token(token: str) -> TokenData:
         """
         Verify the given token by decoding the Keycloak JWT directly.
-        Fully stateless — no server-side session storage required.
+        Fully stateless — role, store_id, customer_id come from JWT claims.
         """
         try:
             public_key = _get_keycloak_public_key()
@@ -118,21 +121,7 @@ class AuthService:
                 key=public_key,
                 options={"verify_aud": False},
             )
-            username = decoded.get("preferred_username", "")
-            user = USERS.get(username)
-            if user is None:
-                logger.warning("JWT valid but user %s not in USERS lookup", username)
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Unknown user",
-                )
-            return TokenData(
-                username=username,
-                user_role=user.role,
-                store_id=user.store_id,
-                customer_id=user.customer_id,
-                access_token=token,
-            )
+            return _token_data_from_claims(decoded, token)
         except HTTPException:
             raise
         except Exception as jwt_err:

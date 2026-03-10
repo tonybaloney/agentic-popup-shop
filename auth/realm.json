@@ -14,7 +14,8 @@
   "accessCodeLifespanLogin": 1800,
   "defaultDefaultClientScopes": [
     "openid",
-    "zava:access"
+    "zava:access",
+    "zava:profile"
   ],
   "clientScopes": [
     {
@@ -61,6 +62,73 @@
           }
         }
       ]
+    },
+    {
+      "name": "zava:profile",
+      "description": "Zava user profile claims — username, role, store_id, customer_id",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "preferred_username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "role",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "role",
+            "claim.name": "role",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "store_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "store_id",
+            "claim.name": "store_id",
+            "jsonType.label": "int",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "customer_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "customer_id",
+            "claim.name": "customer_id",
+            "jsonType.label": "int",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
     }
   ],
   "clients": [
@@ -104,6 +172,23 @@
   ],
   "users": [
     {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@example.com",
+      "firstName": "Admin",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "role": ["admin"]
+      }
+    },
+    {
       "username": "stacey",
       "enabled": true,
       "email": "stacey@example.com",
@@ -115,7 +200,31 @@
           "value": "stacey123",
           "temporary": false
         }
-      ]
+      ],
+      "attributes": {
+        "role": ["customer"],
+        "store_id": ["1"],
+        "customer_id": ["4"]
+      }
+    },
+    {
+      "username": "tracey.lopez.4",
+      "enabled": true,
+      "email": "tracey.lopez.4@example.com",
+      "firstName": "Tracey",
+      "lastName": "Lopez",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "tracey123",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "role": ["customer"],
+        "store_id": ["1"],
+        "customer_id": ["4"]
+      }
     },
     {
       "username": "manager1",
@@ -129,7 +238,46 @@
           "value": "manager123",
           "temporary": false
         }
-      ]
+      ],
+      "attributes": {
+        "role": ["store_manager"],
+        "store_id": ["1"]
+      }
+    },
+    {
+      "username": "manager2",
+      "enabled": true,
+      "email": "manager2@example.com",
+      "firstName": "Manager",
+      "lastName": "Two",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "manager123",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "role": ["store_manager"],
+        "store_id": ["2"]
+      }
+    },
+    {
+      "username": "marketing",
+      "enabled": true,
+      "email": "marketing@example.com",
+      "firstName": "Marketing",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "marketing123",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "role": ["marketing"]
+      }
     }
   ],
   "components": {
