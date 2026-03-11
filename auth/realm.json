@@ -12,6 +12,31 @@
   "accessCodeLifespan": 60,
   "accessCodeLifespanUserAction": 300,
   "accessCodeLifespanLogin": 1800,
+  "roles": {
+    "realm": [
+      {
+        "name": "offline_access",
+        "description": "${role_offline-access}",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "uma_authorization",
+        "description": "${role_uma_authorization}",
+        "composite": false,
+        "clientRole": false
+      }
+    ]
+  },
+  "defaultRole": {
+    "name": "default-roles-zava",
+    "composites": {
+      "realm": [
+        "offline_access",
+        "uma_authorization"
+      ]
+    }
+  },
   "defaultDefaultClientScopes": [
     "openid",
     "zava:access",
@@ -207,7 +232,8 @@
       ],
       "attributes": {
         "role": ["admin"]
-      }
+      },
+      "realmRoles": ["default-roles-zava", "offline_access"]
     },
     {
       "username": "stacey",
@@ -226,7 +252,8 @@
         "role": ["customer"],
         "store_id": ["1"],
         "customer_id": ["4"]
-      }
+      },
+      "realmRoles": ["default-roles-zava", "offline_access"]
     },
     {
       "username": "tracey.lopez.4",
@@ -245,7 +272,8 @@
         "role": ["customer"],
         "store_id": ["1"],
         "customer_id": ["4"]
-      }
+      },
+      "realmRoles": ["default-roles-zava", "offline_access"]
     },
     {
       "username": "manager1",
@@ -263,7 +291,8 @@
       "attributes": {
         "role": ["store_manager"],
         "store_id": ["1"]
-      }
+      },
+      "realmRoles": ["default-roles-zava", "offline_access"]
     },
     {
       "username": "manager2",
@@ -281,7 +310,8 @@
       "attributes": {
         "role": ["store_manager"],
         "store_id": ["2"]
-      }
+      },
+      "realmRoles": ["default-roles-zava", "offline_access"]
     },
     {
       "username": "marketing",
@@ -298,7 +328,8 @@
       ],
       "attributes": {
         "role": ["marketing"]
-      }
+      },
+      "realmRoles": ["default-roles-zava", "offline_access"]
     }
   ],
   "components": {
@@ -321,7 +352,14 @@
             "host.docker.internal",
             "vscode.dev",
             "insiders.vscode.dev",
-            "code.visualstudio.com"
+            "code.visualstudio.com",
+            "*.azurecontainerapps.io",
+            "copilotstudio.microsoft.com",
+            "*.copilotstudio.microsoft.com",
+            "api.powerva.microsoft.com",
+            "*.api.powerva.microsoft.com",
+            "authorization-manager.consent.azure-apim.net",
+            "*.consent.azure-apim.net"
           ]
         }
       },

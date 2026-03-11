@@ -340,6 +340,48 @@ azd up
 
 If `COPILOT_STUDIO_URL` is not set, the chat widget is hidden.
 
+### Copilot Studio MCP Server with DCR (Dynamic Client Registration)
+
+The MCP servers (Finance, Supplier, Customer) support **OAuth 2.0 with Dynamic Client Registration (DCR)** so that Copilot Studio can automatically discover and authenticate against them. This uses the MCP OAuth architecture defined in **RFC 9728** (Protected Resource Metadata) and **RFC 7591** (Dynamic Client Registration).
+
+#### How it works
+
+1. **Copilot Studio** connects to the MCP server URL (e.g., `https://<CUSTOMER_MCP_URL>/mcp`)
+2. The MCP server advertises its OAuth metadata at `/.well-known/oauth-protected-resource/mcp`
+3. Copilot Studio discovers the authorization server at `/.well-known/oauth-authorization-server`
+4. Copilot Studio registers itself as a client via the `/register` DCR proxy endpoint
+5. The DCR proxy forwards to Keycloak and fixes `token_endpoint_auth_method` from `client_secret_basic` to `client_secret_post` (required by MCP)
+6. Copilot Studio authenticates the user via the standard OAuth 2.0 authorization code flow
+7. The MCP server validates the JWT access token against Keycloak's JWKS keys
+
+#### Adding an MCP server action in Copilot Studio
+
+1. In your Copilot Studio agent, go to **Actions** → **Add an action**
+2. Select **MCP Server (preview)**
+3. Enter the MCP server URL: `https://<MCP_SERVER_URL>/mcp`
+4. Copilot Studio will auto-discover the OAuth endpoints via DCR
+5. When prompted to log in, use one of the test Keycloak users (e.g., `stacey` / `stacey123`)
+
+#### Keycloak requirements for DCR
+
+The following Keycloak configuration is required for DCR to work (already set in `auth/realm.json`):
+
+| Setting | Value | Why |
+|---|---|---|
+| **Trusted Hosts** | `*.azurecontainerapps.io`, `authorization-manager.consent.azure-apim.net`, `*.consent.azure-apim.net`, `copilotstudio.microsoft.com`, `*.copilotstudio.microsoft.com` | Keycloak's client registration policy validates `redirect_uris` against trusted hosts. Copilot Studio uses `authorization-manager.consent.azure-apim.net` as its redirect domain. |
+| **`offline_access` role** | Assigned to all users via `default-roles-zava` | Copilot Studio requests the `offline_access` scope during authorization. Without this realm role, Keycloak rejects the token exchange with "Offline tokens not allowed". |
+| **`client-uris-must-match`** | `true` | DCR requests must use redirect URIs matching a trusted host. |
+| **`host-sending-registration-request-must-match`** | `false` | The DCR request originates from Copilot Studio's infrastructure, not from the trusted host itself. |
+
+#### Troubleshooting DCR
+
+| Error | Cause | Fix |
+|---|---|---|
+| `insufficient_scope` / "Policy 'Trusted Hosts' rejected request" | The `redirect_uris` in the DCR request don't match any trusted host | Add the domain to `trusted-hosts` in `auth/realm.json` and update live Keycloak via Admin API |
+| "Offline tokens not allowed for the user or client" | User is missing the `offline_access` realm role | Assign `offline_access` and `default-roles-zava` roles to the user via Keycloak Admin Console or API |
+| `401` on `/mcp` | Token verification failed — wrong audience, expired token, or missing scopes | Ensure the token has `aud: mcp-server` and scopes `openid zava:access` |
+| `404` on `/.well-known/oauth-protected-resource` | Wrong path — RFC 9728 appends the resource path | Use `/.well-known/oauth-protected-resource/mcp` (note the `/mcp` suffix) |
+
 ## Requirements
 
 The easiest way to fulfill the requirements is to launch this as a Code Space or DevContainer, then you can skip this section.
