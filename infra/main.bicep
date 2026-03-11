@@ -105,6 +105,7 @@ module keycloak 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
     exists: keycloakAppExists
     containerName: 'main'
     containerMinReplicas: 1
+    containerMaxReplicas: 1
     targetPort: 8080
     env: [
       {
@@ -234,18 +235,18 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.6.0' = {
   params: {
     baseName: substring(resourceToken, 0, 12)
     aiModelDeployments: [
-      {
-        model: {
-          format: 'OpenAI'
-          name: aiModelName
-          version: aiModelVersion
-        }
-        name: aiModelName
-        sku: {
-          capacity: 20
-          name: 'GlobalStandard'
-        }
-      }
+      // {
+      //   model: {
+      //     format: 'OpenAI'
+      //     name: aiModelName
+      //     version: aiModelVersion
+      //   }
+      //   name: aiModelName
+      //   sku: {
+      //     capacity: 100
+      //     name: 'GlobalStandard'
+      //   }
+      // }
     ]
   }
 }

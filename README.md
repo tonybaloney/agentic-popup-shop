@@ -284,6 +284,62 @@ graph TD
 > This template comes with a Keycloak Docker image to mimic OAuth2 claims and login. The role of the Keycloak IdP is to show how to authenticate frontend through to the MCP.
 > It has hardcoded usernames and passwords. Only use this for development.
 
+### Copilot Studio OAuth 2.0 Configuration
+
+The customer-facing chat widget can be powered by a [Copilot Studio](https://copilotstudio.microsoft.com) agent. To let the agent authenticate users against the deployed Keycloak instance, configure **Manual Authentication** (Generic OAuth2) in the Copilot Studio **Settings → Security → Authentication** page.
+
+See the [Entra External ID + Copilot Studio tutorial](https://devblogs.microsoft.com/identity/integrate-copilot-studio-with-external-id/) for the general pattern — the table below adapts it for Keycloak.
+
+Replace `<KEYCLOAK_BASE_URL>` below with your deployed Keycloak host (the `KEYCLOAK_BASE_URL` output from `azd up`).
+
+| Field | Value |
+|---|---|
+| **Service provider** | `Generic OAuth2` |
+| **Client ID** | `copilot-studio` |
+| **Client secret** | `copilot-studio-secret-change-me` |
+| **Scope list delimiter** | `,` (comma) — Copilot Studio joins scopes with this delimiter before substituting `{Scopes}` |
+| **Authorization URL template** | `https://<KEYCLOAK_BASE_URL>/realms/zava/protocol/openid-connect/auth` |
+| **Authorization URL query string template** | `?client_id={ClientId}&redirect_uri={RedirectUrl}&scope={Scopes}&response_type=code&state={State}` |
+| **Token URL template** | `https://<KEYCLOAK_BASE_URL>/realms/zava/protocol/openid-connect/token` |
+| **Token URL query string template** | `?` |
+| **Token body template** | `client_id={ClientId}&client_secret={ClientSecret}&redirect_uri={RedirectUrl}&grant_type=authorization_code&code={Code}` |
+| **Refresh URL template** | `https://<KEYCLOAK_BASE_URL>/realms/zava/protocol/openid-connect/token` |
+| **Refresh URL query string template** | `?` |
+| **Refresh body template** | `client_id={ClientId}&client_secret={ClientSecret}&redirect_uri={RedirectUrl}&grant_type=refresh_token&refresh_token={RefreshToken}` |
+| **Scopes** | `openid zava:profile` |
+
+Copilot Studio replaces the following built-in variables at runtime:
+
+| Variable | Populated from |
+|---|---|
+| `{ClientId}` | The **Client ID** field |
+| `{ClientSecret}` | The **Client secret** field |
+| `{RedirectUrl}` | The redirect URL shown at the top of the auth settings page |
+| `{Scopes}` | The **Scopes** field (delimiter-joined) |
+| `{State}` | Auto-generated CSRF state value |
+| `{Code}` | The authorization code received after user login |
+| `{RefreshToken}` | The refresh token from the previous token response |
+
+> [!IMPORTANT]
+> **Body templates are required.** Without `Token body template` and `Refresh body template`, the Bot Framework token service cannot exchange the authorization code for tokens and will return a 500 error.
+
+> [!NOTE]
+> - The `{State}` parameter in the authorization query string is **required**. Without it, Keycloak won't echo the state value back and the token service will reject the callback with a "Missing required query string parameter: state" error.
+> - Token and refresh query string templates should be `?` (just a question mark), not empty.
+
+**OpenID Connect vs OAuth 2.0:** Keycloak's `openid-connect` protocol exposes standard OAuth 2.0 endpoints. Copilot Studio's "Generic OAuth2" provider works with both — no separate OIDC configuration is needed.
+
+The dedicated `copilot-studio` client in Keycloak is pre-configured with the Bot Framework redirect URI (`https://token.botframework.com/.auth/web/redirect`).
+
+To enable the chat widget in the frontend, set the Copilot Studio webchat iframe URL:
+
+```console
+azd env set COPILOT_STUDIO_URL "https://copilotstudio.microsoft.com/environments/<ENV_ID>/bots/<BOT_ID>/webchat?__version__=2"
+azd up
+```
+
+If `COPILOT_STUDIO_URL` is not set, the chat widget is hidden.
+
 ## Requirements
 
 The easiest way to fulfill the requirements is to launch this as a Code Space or DevContainer, then you can skip this section.

@@ -168,6 +168,27 @@
       "webOrigins": [
         "*"
       ]
+    },
+    {
+      "clientId": "copilot-studio",
+      "name": "Copilot Studio Agent",
+      "enabled": true,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "publicClient": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "copilot-studio-secret-change-me",
+      "redirectUris": [
+        "https://token.botframework.com/.auth/web/redirect"
+      ],
+      "webOrigins": [
+        "https://token.botframework.com"
+      ]
     }
   ],
   "users": [
