@@ -47,6 +47,29 @@ services:
     networks:
       - zava-network
 
+  # Customer MCP Server
+  customer-mcp:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.customermcp
+    container_name: zava-customer-mcp
+    ports:
+      - "8003:8002"
+    environment:
+      - PORT=8002
+      - DEV_GUEST_TOKEN=${DEV_GUEST_TOKEN}
+      - APPLICATIONINSIGHTS_CONNECTION_STRING=${APPLICATIONINSIGHTS_CONNECTION_STRING}
+      - OTEL_PYTHON_EXCLUDED_URLS=/health
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - zava-network
+
   # API Server
   api:
     build:

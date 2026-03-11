@@ -50,6 +50,20 @@ var supplierMcp = builder.AddPythonModule("supplier-mcp", "./app/mcp/", "zava_sh
     .WithTracing(appInsightsConnectionString)
     .WithExternalHttpEndpoints();
 
+var customerMcp = builder.AddPythonModule("customer-mcp", "./app/mcp/", "zava_shop_mcp.customer_server")
+    .WithUv()
+    .WithHttpEndpoint(env: "PORT")
+    .WithEndpoint("http", e =>
+    {
+        e.Port = 28003;
+    })
+    .WithHttpHealthCheck("/health")
+    .WithEnvironment("OTEL_PYTHON_EXCLUDED_URLS", "/health")
+    .WithEnvironment("KEYCLOAK_REALM_URL", $"{authServer.GetEndpoint("http")}/realms/zava")
+    .WithEnvironment("KEYCLOAK_MCP_SERVER_BASE_URL", authServer.GetEndpoint("http"))
+    .WithTracing(appInsightsConnectionString)
+    .WithExternalHttpEndpoints();
+
 var agentDev = builder.AddPythonModule("agent-dev", "./app/agents/", "zava_shop_agents")
     .WithUv(args: ["sync", "--prerelease=allow", "--link-mode=copy"])
     .WithHttpEndpoint(env: "PORT")

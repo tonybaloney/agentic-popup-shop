@@ -34,6 +34,7 @@ param webAppExists bool = false
 param apiAppExists bool = false
 param supplierMcpAppExists bool = false
 param financeMcpAppExists bool = false
+param customerMcpAppExists bool = false
 param keycloakAppExists bool = false
 
 param resourceGroupName string = ''
@@ -144,6 +145,15 @@ module supplierMcpIdentity 'br/public:avm/res/managed-identity/user-assigned-ide
   }
 }
 
+module customerMcpIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.3' = {
+  name: 'customermcpidentity'
+  scope: rg
+  params: {
+    name: 'idcustomermcp-${resourceToken}'
+    location: location
+  }
+}
+
 module keycloakIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.3' = {
   name: 'keycloakidentity'
   scope: rg
@@ -206,6 +216,44 @@ module supplierMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
     userAssignedIdentityResourceId: supplierMcpIdentity.outputs.resourceId
     identityPrincipalId: supplierMcpIdentity.outputs.principalId
     exists: supplierMcpAppExists
+    containerName: 'main'
+    containerMinReplicas: 1
+    env:[
+      {
+        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+        value: monitoring.outputs.applicationInsightsConnectionString
+      }
+      {
+        name: 'PORT'
+        value: '80'
+      }
+      {
+        name: 'KEYCLOAK_REALM_URL'
+        value: '${keycloak.outputs.uri}/realms/zava'
+      }
+      {
+        name: 'KEYCLOAK_MCP_SERVER_BASE_URL'
+        value: keycloak.outputs.uri
+      }
+    ]
+  }
+}
+
+module customerMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
+  name: 'customer-mcp-container-app'
+  scope: rg
+  params: {
+    name: 'customer-mcp-${resourceToken}'
+    tags: union(tags, { 'azd-service-name': 'customer-mcp' })
+    location: location
+    containerAppsEnvironmentName: containerApps.outputs.environmentName
+    containerRegistryName: containerApps.outputs.registryName
+    ingressEnabled: true
+    identityType: 'UserAssigned'
+    identityName: customerMcpIdentity.name
+    userAssignedIdentityResourceId: customerMcpIdentity.outputs.resourceId
+    identityPrincipalId: customerMcpIdentity.outputs.principalId
+    exists: customerMcpAppExists
     containerName: 'main'
     containerMinReplicas: 1
     env:[
