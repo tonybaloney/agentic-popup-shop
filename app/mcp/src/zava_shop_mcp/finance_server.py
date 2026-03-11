@@ -8,13 +8,18 @@ finance agents with order policies, contracts, sales analysis, and inventory.
 The server uses pre-written SQL queries (not dynamically generated SQL) with SQLite ORM.
 """
 
-from opentelemetry.instrumentation.auto_instrumentation import initialize
+import os
+
+if os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+    from azure.monitor.opentelemetry import configure_azure_monitor
+    configure_azure_monitor()
+else:
+    # Local dev: use generic OTLP exporter (Aspire collector on localhost:4317)
+    from opentelemetry.instrumentation.auto_instrumentation import initialize
+    initialize()
 
 from zava_shop_mcp.keycloak_provider import KeycloakAuthProvider
-
-initialize()
 import logging
-import os
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from typing import AsyncIterator, Optional

@@ -10,17 +10,23 @@ This MCP server provides tools to support a Supplier Agent with the following ca
 
 Uses pre-written SQL queries from supplier_sqlite.py for all database operations.
 """
-from zava_shop_mcp.keycloak_provider import KeycloakAuthProvider
+import os
 
-from opentelemetry.instrumentation.auto_instrumentation import initialize
-initialize()
+if os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+    from azure.monitor.opentelemetry import configure_azure_monitor
+    configure_azure_monitor()
+else:
+    # Local dev: use generic OTLP exporter (Aspire collector on localhost:4317)
+    from opentelemetry.instrumentation.auto_instrumentation import initialize
+    initialize()
+
+from zava_shop_mcp.keycloak_provider import KeycloakAuthProvider
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 from fastmcp.server.auth import AccessToken
 from fastmcp import FastMCP
 from zava_shop_shared.supplier_sqlite import SupplierSQLiteProvider
 from pydantic import Field
 from typing import Annotated, AsyncIterator
-import os
 from datetime import datetime, timezone, timedelta
 import logging
 from contextlib import asynccontextmanager
