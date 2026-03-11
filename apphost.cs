@@ -32,7 +32,6 @@ var financeMcp = builder.AddPythonModule("finance-mcp", "./app/mcp/", "zava_shop
     .WithHttpHealthCheck("/health")
     .WithEnvironment("OTEL_PYTHON_EXCLUDED_URLS", "/health")
     .WithEnvironment("KEYCLOAK_REALM_URL", $"{authServer.GetEndpoint("http")}/realms/zava")
-    .WithEnvironment("KEYCLOAK_MCP_SERVER_BASE_URL", authServer.GetEndpoint("http"))
     .WithTracing(appInsightsConnectionString)
     .WithExternalHttpEndpoints();
 
@@ -46,7 +45,6 @@ var supplierMcp = builder.AddPythonModule("supplier-mcp", "./app/mcp/", "zava_sh
     .WithHttpHealthCheck("/health")
     .WithEnvironment("OTEL_PYTHON_EXCLUDED_URLS", "/health")
     .WithEnvironment("KEYCLOAK_REALM_URL", $"{authServer.GetEndpoint("http")}/realms/zava")
-    .WithEnvironment("KEYCLOAK_MCP_SERVER_BASE_URL", authServer.GetEndpoint("http"))
     .WithTracing(appInsightsConnectionString)
     .WithExternalHttpEndpoints();
 
@@ -60,7 +58,6 @@ var customerMcp = builder.AddPythonModule("customer-mcp", "./app/mcp/", "zava_sh
     .WithHttpHealthCheck("/health")
     .WithEnvironment("OTEL_PYTHON_EXCLUDED_URLS", "/health")
     .WithEnvironment("KEYCLOAK_REALM_URL", $"{authServer.GetEndpoint("http")}/realms/zava")
-    .WithEnvironment("KEYCLOAK_MCP_SERVER_BASE_URL", authServer.GetEndpoint("http"))
     .WithTracing(appInsightsConnectionString)
     .WithExternalHttpEndpoints();
 

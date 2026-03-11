@@ -193,10 +193,6 @@ module financeMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
         name: 'KEYCLOAK_REALM_URL'
         value: '${keycloak.outputs.uri}/realms/zava'
       }
-      {
-        name: 'KEYCLOAK_MCP_SERVER_BASE_URL'
-        value: keycloak.outputs.uri
-      }
     ]
   }
 }
@@ -231,10 +227,6 @@ module supplierMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
         name: 'KEYCLOAK_REALM_URL'
         value: '${keycloak.outputs.uri}/realms/zava'
       }
-      {
-        name: 'KEYCLOAK_MCP_SERVER_BASE_URL'
-        value: keycloak.outputs.uri
-      }
     ]
   }
 }
@@ -268,10 +260,6 @@ module customerMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
       {
         name: 'KEYCLOAK_REALM_URL'
         value: '${keycloak.outputs.uri}/realms/zava'
-      }
-      {
-        name: 'KEYCLOAK_MCP_SERVER_BASE_URL'
-        value: keycloak.outputs.uri
       }
     ]
   }
