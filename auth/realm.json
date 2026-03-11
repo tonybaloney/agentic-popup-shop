@@ -209,10 +209,12 @@
       "clientAuthenticatorType": "client-secret",
       "secret": "copilot-studio-secret-change-me",
       "redirectUris": [
-        "https://token.botframework.com/.auth/web/redirect"
+        "https://token.botframework.com/.auth/web/redirect",
+        "https://global.consent.azure-apim.net/redirect/*"
       ],
       "webOrigins": [
-        "https://token.botframework.com"
+        "https://token.botframework.com",
+        "https://global.consent.azure-apim.net"
       ]
     }
   ],
