@@ -12,11 +12,30 @@ param location string
 @description('Chatkit domain key for the application. Get from openai.com')
 param chatkitDomainKey string = ''
 
+@secure()
+@description('Keycloak bootstrap admin password')
+param keycloakAdminPassword string
+
+@secure()
+@description('Keycloak client secret for the zava-api client')
+param keycloakClientSecret string
+
+@description('Copilot Studio webchat iframe URL. Leave empty to disable the chat widget.')
+param copilotStudioUrl string = ''
+
+@description('Name of the AI model to deploy (e.g. gpt-5-mini, Kimi-2.5)')
+param aiModelName string = 'gpt-5-mini'
+
+@description('Version of the AI model to deploy')
+param aiModelVersion string = '2025-08-07'
+
 // Used by azd for upsert/create calls
 param webAppExists bool = false
 param apiAppExists bool = false
 param supplierMcpAppExists bool = false
 param financeMcpAppExists bool = false
+param customerMcpAppExists bool = false
+param keycloakAppExists bool = false
 
 param resourceGroupName string = ''
 
@@ -71,6 +90,79 @@ module webIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.
   }
 }
 
+module keycloak 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
+  scope: rg
+  params: {
+    name: 'keycloak-${resourceToken}'
+    tags: union(tags, { 'azd-service-name': 'keycloak' })
+    location: location
+    containerAppsEnvironmentName: containerApps.outputs.environmentName
+    containerRegistryName: containerApps.outputs.registryName
+    ingressEnabled: true
+    identityType: 'UserAssigned'
+    identityName: keycloakIdentity.name
+    userAssignedIdentityResourceId: keycloakIdentity.outputs.resourceId
+    identityPrincipalId: keycloakIdentity.outputs.principalId
+    exists: keycloakAppExists
+    containerName: 'main'
+    containerMinReplicas: 1
+    containerMaxReplicas: 1
+    targetPort: 8080
+    env: [
+      {
+        name: 'KC_BOOTSTRAP_ADMIN_USERNAME'
+        value: 'admin'
+      }
+      {
+        name: 'KC_BOOTSTRAP_ADMIN_PASSWORD'
+        secretRef: 'kc-admin-password'
+      }
+    ]
+    secrets: [
+      {
+        name: 'kc-admin-password'
+        value: keycloakAdminPassword
+      }
+    ]
+  }
+}
+
+module financeMcpIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.3' = {
+  name: 'financemcpidentity'
+  scope: rg
+  params: {
+    name: 'idfinancemcp-${resourceToken}'
+    location: location
+  }
+}
+
+module supplierMcpIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.3' = {
+  name: 'suppliermcpidentity'
+  scope: rg
+  params: {
+    name: 'idsuppliermcp-${resourceToken}'
+    location: location
+  }
+}
+
+module customerMcpIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.3' = {
+  name: 'customermcpidentity'
+  scope: rg
+  params: {
+    name: 'idcustomermcp-${resourceToken}'
+    location: location
+  }
+}
+
+module keycloakIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.3' = {
+  name: 'keycloakidentity'
+  scope: rg
+  params: {
+    name: 'idkeycloak-${resourceToken}'
+    location: location
+  }
+}
+
 module financeMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
   name: 'finance-mcp-container-app'
   scope: rg
@@ -81,7 +173,10 @@ module financeMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
     containerAppsEnvironmentName: containerApps.outputs.environmentName
     containerRegistryName: containerApps.outputs.registryName
     ingressEnabled: true
-    identityType: 'SystemAssigned'
+    identityType: 'UserAssigned'
+    identityName: financeMcpIdentity.name
+    userAssignedIdentityResourceId: financeMcpIdentity.outputs.resourceId
+    identityPrincipalId: financeMcpIdentity.outputs.principalId
     exists: financeMcpAppExists
     containerName: 'main'
     containerMinReplicas: 1
@@ -93,6 +188,10 @@ module financeMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
       {
         name: 'PORT'
         value: '80'
+      }
+      {
+        name: 'KEYCLOAK_REALM_URL'
+        value: '${keycloak.outputs.uri}/realms/zava'
       }
     ]
   }
@@ -108,7 +207,10 @@ module supplierMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
     containerAppsEnvironmentName: containerApps.outputs.environmentName
     containerRegistryName: containerApps.outputs.registryName
     ingressEnabled: true
-    identityType: 'SystemAssigned'
+    identityType: 'UserAssigned'
+    identityName: supplierMcpIdentity.name
+    userAssignedIdentityResourceId: supplierMcpIdentity.outputs.resourceId
+    identityPrincipalId: supplierMcpIdentity.outputs.principalId
     exists: supplierMcpAppExists
     containerName: 'main'
     containerMinReplicas: 1
@@ -121,6 +223,44 @@ module supplierMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
         name: 'PORT'
         value: '80'
       }
+      {
+        name: 'KEYCLOAK_REALM_URL'
+        value: '${keycloak.outputs.uri}/realms/zava'
+      }
+    ]
+  }
+}
+
+module customerMcp 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
+  name: 'customer-mcp-container-app'
+  scope: rg
+  params: {
+    name: 'customer-mcp-${resourceToken}'
+    tags: union(tags, { 'azd-service-name': 'customer-mcp' })
+    location: location
+    containerAppsEnvironmentName: containerApps.outputs.environmentName
+    containerRegistryName: containerApps.outputs.registryName
+    ingressEnabled: true
+    identityType: 'UserAssigned'
+    identityName: customerMcpIdentity.name
+    userAssignedIdentityResourceId: customerMcpIdentity.outputs.resourceId
+    identityPrincipalId: customerMcpIdentity.outputs.principalId
+    exists: customerMcpAppExists
+    containerName: 'main'
+    containerMinReplicas: 1
+    env:[
+      {
+        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+        value: monitoring.outputs.applicationInsightsConnectionString
+      }
+      {
+        name: 'PORT'
+        value: '80'
+      }
+      {
+        name: 'KEYCLOAK_REALM_URL'
+        value: '${keycloak.outputs.uri}/realms/zava'
+      }
     ]
   }
 }
@@ -131,18 +271,18 @@ module aiFoundry 'br/public:avm/ptn/ai-ml/ai-foundry:0.6.0' = {
   params: {
     baseName: substring(resourceToken, 0, 12)
     aiModelDeployments: [
-      {
-        model: {
-          format: 'OpenAI'
-          name: 'gpt-5-mini'
-          version: '2025-08-07'
-        }
-        name: 'gpt-5-mini'
-        sku: {
-          capacity: 100
-          name: 'GlobalStandard'
-        }
-      }
+      // {
+      //   model: {
+      //     format: 'OpenAI'
+      //     name: aiModelName
+      //     version: aiModelVersion
+      //   }
+      //   name: aiModelName
+      //   sku: {
+      //     capacity: 100
+      //     name: 'GlobalStandard'
+      //   }
+      // }
     ]
   }
 }
@@ -173,6 +313,7 @@ module api 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
     exists: apiAppExists
     containerName: 'main'
     containerMinReplicas: 1
+    containerMaxReplicas: 3
     targetPort: 8000
     env:[
       {
@@ -197,7 +338,29 @@ module api 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
       }
       {
         name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME'
-        value: 'gpt-5-mini'
+        value: aiModelName
+      }
+      {
+        name: 'KEYCLOAK_SERVER_URL'
+        value: '${keycloak.outputs.uri}/auth'
+      }
+      {
+        name: 'KEYCLOAK_REALM'
+        value: 'zava'
+      }
+      {
+        name: 'KEYCLOAK_CLIENT_ID'
+        value: 'zava-api'
+      }
+      {
+        name: 'KEYCLOAK_CLIENT_SECRET'
+        secretRef: 'kc-client-secret'
+      }
+    ]
+    secrets: [
+      {
+        name: 'kc-client-secret'
+        value: keycloakClientSecret
       }
     ]
   }
@@ -212,7 +375,6 @@ module roleAssignment 'br/public:avm/res/authorization/role-assignment/rg-scope:
     principalType: 'ServicePrincipal'
   }
 }
-
 
 module web 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
   name: 'web-container-app'
@@ -244,6 +406,10 @@ module web 'br/public:avm/ptn/azd/container-app-upsert:0.2.0' = {
         name: 'API_HOST'
         value: replace(api.outputs.uri, 'https://', '')
       }
+      {
+        name: 'COPILOT_STUDIO_URL'
+        value: copilotStudioUrl
+      }
     ]
   }
 }
@@ -266,4 +432,5 @@ output AZURE_LOCATION string = location
 output AZURE_TENANT_ID string = tenant().tenantId
 output API_BASE_URL string = api.outputs.uri
 output WEB_BASE_URL string = web.outputs.uri
+output KEYCLOAK_BASE_URL string = keycloak.outputs.uri
 output SERVICE_WEB_NAME string = web.outputs.name

@@ -156,6 +156,58 @@ def render_order_widget(data: OrderResponse) -> WidgetRoot:
     )
 
 
+def render_return_widget(data: OrderResponse) -> WidgetRoot:
+    """Render a ChatKit widget card prompting the customer to complete a return."""
+    item_rows = [
+        Row(
+            align="center",
+            children=[
+                Col(
+                    children=[
+                        Text(value=order_item.product_name, size="md", weight="semibold", color="emphasis"),
+                        Text(
+                            value=f"Qty {order_item.quantity} · ${order_item.total_amount:.2f}",
+                            size="sm",
+                            color="secondary",
+                        ),
+                    ]
+                )
+            ],
+        )
+        for order_item in data.items
+    ]
+
+    return Card(
+        size="sm",
+        children=[
+            Text(
+                value=f"📦 Return — Order #{data.order_id}",
+                size="lg",
+                weight="bold",
+                color="emphasis",
+            ),
+            Text(
+                value=(
+                    "To complete your return, click the Return button on your order in the dashboard. "
+                    "For full-order returns you will need to upload a photo of the items in the box."
+                ),
+                size="sm",
+                color="secondary",
+            ),
+            Divider(flush=True),
+            Col(children=item_rows),
+            Divider(flush=True),
+            Row(
+                children=[
+                    Text(value="Order Total", weight="semibold", size="sm"),
+                    Spacer(),
+                    Text(value=f"${data.order_total:.2f}", weight="semibold", size="sm"),
+                ]
+            ),
+        ],
+    )
+
+
 class ZavaShopChatKitServer(ChatKitServer):
     """Custom ChatKit server for Zava Shop customer assistance."""
 
@@ -176,8 +228,11 @@ class ZavaShopChatKitServer(ChatKitServer):
             name="zava-customer-agent",
             description="AI chat assistant for Zava Shop customers",
             instructions=(
-                "You are a helpful assistant. "
+                "You are a helpful assistant for Zava Shop customers. "
                 "Provide concise answers to user questions. "
+                "If a customer wants to return a product or order, use the initiate_return tool "
+                "to start the return process. First retrieve their orders so you know which order "
+                "they are referring to, then call initiate_return with the order_id. "
                 "If you don't know the answer, say 'I don't know'."
             ),
         )
@@ -198,6 +253,7 @@ class ZavaShopChatKitServer(ChatKitServer):
             raise ValueError("No user message provided")
 
         orders: list[OrderResponse] = []
+        return_initiated_order_id: list[int] = []
 
         @tool
         async def get_orders(limit: int = 5) -> dict:
@@ -219,8 +275,29 @@ class ZavaShopChatKitServer(ChatKitServer):
                 # Convert to dict for AI function return
                 return orders_response.model_dump()
 
+        @tool
+        async def initiate_return(order_id: int) -> dict:
+            """
+            Initiate a product return for a specific order.
+            Call this when the customer says they want to return a product, return an order,
+            or asks about the return process. First retrieve their orders using get_orders
+            to identify the correct order_id, then call this function.
+            This will display a return form widget in the chat where the customer can
+            choose full or partial return and upload a photo if needed.
+            """
+            return_initiated_order_id.append(order_id)
+            return {
+                "status": "return_form_displayed",
+                "order_id": order_id,
+                "message": (
+                    f"I've opened the return form for order #{order_id}. "
+                    "You can choose to return the full order or specific items. "
+                    "For full-order returns, you'll need to upload a photo of the items in the box."
+                ),
+            }
+
         async for event in stream_agent_response(
-            self.agent.run(agent_messages, tools=[get_orders], stream=True),
+            self.agent.run(agent_messages, tools=[get_orders, initiate_return], stream=True),
             thread_id=thread.id,
         ):
             yield event
@@ -234,6 +311,20 @@ class ZavaShopChatKitServer(ChatKitServer):
                     copy_text=f"Order #{order.order_id}: {order.total_items} from {order.store_name}, Total: ${order.order_total}",
                 ):
                     yield widget_event
+
+        # If a return was initiated, render a return form widget
+        if return_initiated_order_id:
+            for oid in return_initiated_order_id:
+                # Find the matching order to show details
+                matching = [o for o in orders if o.order_id == oid]
+                if matching:
+                    return_widget = render_return_widget(matching[0])
+                    async for widget_event in stream_widget(
+                        thread_id=thread.id,
+                        widget=return_widget,
+                        copy_text=f"Return initiated for Order #{oid}",
+                    ):
+                        yield widget_event
 
 
 # Initialize server

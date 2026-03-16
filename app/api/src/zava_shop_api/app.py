@@ -4,8 +4,15 @@ FastAPI Backend for Popup Store
 Provides REST API endpoints for the frontend application.
 """
 
-from opentelemetry.instrumentation.auto_instrumentation import initialize
-initialize()
+import os
+
+if os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+    from azure.monitor.opentelemetry import configure_azure_monitor
+    configure_azure_monitor()
+else:
+    # Local dev: use generic OTLP exporter (Aspire collector on localhost:4317)
+    from opentelemetry.instrumentation.auto_instrumentation import initialize
+    initialize()
 
 import logging
 from contextlib import asynccontextmanager
@@ -22,6 +29,7 @@ from fastapi_cache.decorator import cache
 from zava_shop_api.routers.chatkit import router as chatkit_router
 from zava_shop_api.routers.management import router as management_router
 from zava_shop_api.routers.products import router as products_router
+from zava_shop_api.routers.returns import router as returns_router
 from zava_shop_api.routers.users import router as users_router
 
 from zava_shop_shared.config import Config
@@ -165,6 +173,7 @@ app.add_middleware(
 app.include_router(chatkit_router)
 app.include_router(management_router)
 app.include_router(products_router)
+app.include_router(returns_router)
 app.include_router(users_router)
 
 # Health check endpoint

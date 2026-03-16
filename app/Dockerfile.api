@@ -25,25 +25,28 @@ COPY agents /app/agents
 
 # Copy API server code
 COPY api /app/api
+# Remove .venv if it exists to avoid copying virtual environment files
+RUN rm -rf /app/api/.venv && rm -rf /app/api/__pycache__ &&  rm -rf /app/api/uv.lock
 
 COPY data /workspace/app/data
 
-# Set working directory to MCP server
+# Set working directory to API server
 WORKDIR /app/api
 
 # Install dependencies using UV
-# This will install the MCP server and the local shared package
-RUN uv sync --prerelease=allow --frozen
+# This will install the API server and the local shared package
+RUN uv sync --prerelease=allow
 
-# Expose port (if needed for HTTP MCP server)
+# Expose port (if needed for HTTP API server)
 EXPOSE 8000
 
-# Set environment variables for the MCP server
-ENV PYTHONPATH=/app/mcp:/app/shared/src
+# Set environment variables for the API server
+ENV PYTHONPATH=/app/api:/app/shared/src
 ENV PYTHONUNBUFFERED=1
 
 # Use the startup script as the entrypoint
-ENTRYPOINT ["uv", "run", "python", "-m", "uvicorn", "zava_shop_api.app:app", "--port", "8000", "--host", "0.0.0.0", "--workers", "2"]
+# Auth is stateless (Keycloak JWT verification), so multiple workers are safe.
+ENTRYPOINT ["uv", "run", "python", "-m", "uvicorn", "zava_shop_api.app:app", "--port", "8000", "--host", "0.0.0.0", "--workers", "4"]
 
 # Labels
 LABEL maintainer="Zava Shop Team"

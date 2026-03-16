@@ -1,13 +1,11 @@
 import logging
-from secrets import token_urlsafe
 from typing import Annotated, Optional
 from fastapi import Cookie, Header, HTTPException, Query, WebSocket, WebSocketException, status
 from keycloak import KeycloakOpenID
-from keycloak.exceptions import KeycloakAuthenticationError, KeycloakConnectionError
+from keycloak.exceptions import KeycloakAuthenticationError
 from zava_shop_api.models import TokenData
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import BaseModel
 
 
 class Settings(BaseSettings):
@@ -31,80 +29,42 @@ keycloak_openid = KeycloakOpenID(
     client_secret_key=settings.keycloak_client_secret,
 )
 
+def _token_data_from_claims(decoded: dict, access_token: str) -> TokenData:
+    """Build TokenData from JWT claims.
 
-class UserAuthModel(BaseModel):
-    role: str
-    store_id: int | None
-    customer_id: int | None = None
+    The Keycloak 'zava:profile' client scope maps user attributes
+    (role, store_id, customer_id) into the access-token claims.
+    """
+    username = decoded.get("preferred_username", "")
+    role = decoded.get("role", "")
+    store_id_raw = decoded.get("store_id")
+    customer_id_raw = decoded.get("customer_id")
 
-
-# TODO : Use lookups in database
-USERS: dict[str, UserAuthModel] = {
-    "admin": UserAuthModel(role="admin", store_id=None),
-    "manager1": UserAuthModel(
-        role="store_manager",
-        store_id=1,  # NYC Times Square
-    ),
-    "manager2": UserAuthModel(
-        role="store_manager",
-        store_id=2,  # SF Union Square
-    ),
-    "stacey": UserAuthModel(role="customer", store_id=1, customer_id=4),
-    "tracey.lopez.4": UserAuthModel(role="customer", store_id=1, customer_id=4),
-    "marketing": UserAuthModel(role="marketing", store_id=None),
-}
-
-USER_PASSWORDS: dict[str, str] = {
-    "admin": "admin123",
-    "manager1": "manager123",
-    "manager2": "manager123",
-    "stacey": "stacey123",
-    "tracey.lopez.4": "tracey123",
-    "marketing": "marketing123",
-}
-
-
-class SessionData(BaseModel):
-    token: str
-    refresh_token: str
-    expires_at: int
-    role: str
-    store_id: int | None
-    customer_id: int | None
-    username: str
-
-    def as_token_data(self) -> TokenData:
-        return TokenData(
-            username=self.username,
-            user_role=self.role,
-            store_id=self.store_id,
-            customer_id=self.customer_id,
-            access_token=self.token,  # Pass the original Keycloak token for downstream propagation
+    if not username or not role:
+        logger.warning("JWT missing required claims (preferred_username=%s, role=%s)", username, role)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token missing required claims",
         )
 
-
-SESSIONS: dict[str, SessionData] = {}
-
-
-def get_session_data(token: str) -> SessionData | None:
-    # TODO: Inspect expiry
-    return SESSIONS.get(token, None)
+    return TokenData(
+        username=username,
+        user_role=role,
+        store_id=int(store_id_raw) if store_id_raw is not None else None,
+        customer_id=int(customer_id_raw) if customer_id_raw is not None else None,
+        access_token=access_token,
+    )
 
 
 class AuthService:
-    # TODO: Make this async
     @staticmethod
     def authenticate_user(username: str, password: str) -> tuple[str, TokenData]:
         """
         Authenticate the user using Keycloak and return an access token.
-        """
-        user = USERS.get(username, None)
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid username or password",
-            )
 
+        Role, store_id, and customer_id are read from JWT claims
+        (populated by Keycloak user attributes via the zava:profile scope).
+        """
         try:
             token = keycloak_openid.token(username, password)
             if not token:
@@ -113,61 +73,38 @@ class AuthService:
                     detail="Invalid username or password",
                 )
 
-            # Fetch user info to get roles or other details
-            session_data = SessionData(
-                token=token["access_token"],
-                refresh_token=token["refresh_token"],
-                expires_at=token["expires_in"] + token["not-before-policy"],
-                customer_id=user.customer_id,
-                role=user.role,
-                store_id=user.store_id,
-                username=username,
-            )
-            SESSIONS[token["access_token"]] = session_data
-            return token["access_token"], session_data.as_token_data()
+            access_token = token["access_token"]
+            # Decode the token we just minted to read the claims.
+            # validate=False skips signature check (we trust our own Keycloak).
+            decoded = keycloak_openid.decode_token(access_token, validate=False)
+            token_data = _token_data_from_claims(decoded, access_token)
+            return access_token, token_data
+        except HTTPException:
+            raise
         except KeycloakAuthenticationError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid username or password",
             )
-        except KeycloakConnectionError:
-            expected = USER_PASSWORDS.get(username)
-            if expected is None or expected != password:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid username or password",
-                )
 
-            access_token = token_urlsafe(32)
-            session_data = SessionData(
-                token=access_token,
-                refresh_token="",
-                expires_at=0,
-                customer_id=user.customer_id,
-                role=user.role,
-                store_id=user.store_id,
-                username=username,
-            )
-            SESSIONS[access_token] = session_data
-            return access_token, session_data.as_token_data()
-
-    # TODO: Make this async
     @staticmethod
     def verify_token(token: str) -> TokenData:
         """
-        Verify the given token and return user information.
+        Verify the given token by decoding the Keycloak JWT directly.
+        Fully stateless — role, store_id, customer_id come from JWT claims.
         """
         try:
-            user_info = get_session_data(token)
-            if not user_info:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-                )
-            return user_info.as_token_data()
-        except KeycloakAuthenticationError:
+            # validate=True (default) fetches the Keycloak public key and
+            # verifies the JWT signature + expiration automatically.
+            decoded = keycloak_openid.decode_token(token)
+            return _token_data_from_claims(decoded, token)
+        except HTTPException:
+            raise
+        except Exception as jwt_err:
+            logger.debug("JWT decode failed: %s", jwt_err)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials",
+                detail="Invalid or expired token",
             )
 
 
@@ -219,5 +156,6 @@ async def ws_get_current_user_from_token(
 
 
 async def logout_user(token: str) -> bool:
-    # TODO: call open id connect logout endpoint
-    return SESSIONS.pop(token, None) is not None
+    """Logout is client-side only — JWT tokens expire naturally.
+    The frontend clears sessionStorage; no server-side state to invalidate."""
+    return True

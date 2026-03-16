@@ -8,13 +8,18 @@ finance agents with order policies, contracts, sales analysis, and inventory.
 The server uses pre-written SQL queries (not dynamically generated SQL) with SQLite ORM.
 """
 
-from opentelemetry.instrumentation.auto_instrumentation import initialize
+import os
+
+if os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+    from azure.monitor.opentelemetry import configure_azure_monitor
+    configure_azure_monitor()
+else:
+    # Local dev: use generic OTLP exporter (Aspire collector on localhost:4317)
+    from opentelemetry.instrumentation.auto_instrumentation import initialize
+    initialize()
 
 from zava_shop_mcp.keycloak_provider import KeycloakAuthProvider
-
-initialize()
 import logging
-import os
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from typing import AsyncIterator, Optional
@@ -73,7 +78,13 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator:
 
 
 KEYCLOAK_REALM_URL = os.environ["KEYCLOAK_REALM_URL"]
-keycloak_base_url = os.environ["KEYCLOAK_MCP_SERVER_BASE_URL"]
+
+# MCP server's own public URL for OAuth metadata (RFC 9728) and DCR proxy.
+# Auto-detect from Azure Container Apps hostname, with optional explicit override.
+_aca_hostname = os.environ.get("CONTAINER_APP_HOSTNAME")
+keycloak_base_url = os.environ.get("KEYCLOAK_MCP_SERVER_BASE_URL") or (
+    f"https://{_aca_hostname}" if _aca_hostname else f"http://localhost:{os.environ.get('PORT', '8002')}"
+)
 keycloak_audience = os.getenv("KEYCLOAK_MCP_SERVER_AUDIENCE") or "mcp-server"
 
 auth = KeycloakAuthProvider(

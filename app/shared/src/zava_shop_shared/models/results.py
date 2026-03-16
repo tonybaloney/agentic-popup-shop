@@ -137,3 +137,37 @@ class StorePerformanceResult(BaseModel):
     avg_order_value: Decimal
     revenue_per_customer: Decimal
     efficiency_rank: int
+
+
+# Customer MCP server result models
+
+class CustomerOrderItemResult(BaseModel):
+    """An item within a customer order."""
+    product_name: str
+    sku: str
+    quantity: int
+    unit_price: Decimal
+    discount_percent: int = 0
+    discount_amount: Decimal = Decimal(0)
+    total_amount: Decimal
+    image_url: str | None = None
+
+
+class CustomerOrderResult(BaseModel):
+    """A customer order with its items."""
+    order_id: int
+    order_date: str
+    store_name: str
+    items: list[CustomerOrderItemResult]
+    order_total: Decimal
+
+
+class ProductSearchResult(BaseModel):
+    """A product from the catalog."""
+    product_id: int
+    sku: str
+    product_name: str
+    category_name: str
+    base_price: Decimal
+    product_description: str
+    image_url: str | None = None

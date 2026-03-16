@@ -20,8 +20,26 @@
     "financeMcpAppExists": {
       "value": "${SERVICE_FINANCE_MCP_RESOURCE_EXISTS=false}"
     },
+    "keycloakAppExists": {
+      "value": "${SERVICE_KEYCLOAK_RESOURCE_EXISTS=false}"
+    },
+    "keycloakAdminPassword": {
+      "value": "${KEYCLOAK_ADMIN_PASSWORD}"
+    },
+    "keycloakClientSecret": {
+      "value": "${KEYCLOAK_CLIENT_SECRET}"
+    },
     "chatkitDomainKey": {
       "value": "${CHATKIT_DOMAIN_KEY}"
+    },
+    "copilotStudioUrl": {
+      "value": "${COPILOT_STUDIO_URL=}"
+    },
+    "aiModelName": {
+      "value": "${AZURE_AI_MODEL_NAME=gpt-5-mini}"
+    },
+    "aiModelVersion": {
+      "value": "${AZURE_AI_MODEL_VERSION=2025-08-07}"
     }
   }
 }

@@ -1,6 +1,6 @@
-﻿#:sdk Aspire.AppHost.Sdk@13.1.0
-#:package Aspire.Hosting.JavaScript@13.1.0
-#:package Aspire.Hosting.Python@13.1.0
+﻿#:sdk Aspire.AppHost.Sdk@13.3.0-preview.1.26156.8
+#:package Aspire.Hosting.JavaScript@13.3.0-preview.1.26156.8
+#:package Aspire.Hosting.Python@13.3.0-preview.1.26156.8
 #:package dotenv.net@4.0.0
 
 using dotenv.net;
@@ -32,7 +32,6 @@ var financeMcp = builder.AddPythonModule("finance-mcp", "./app/mcp/", "zava_shop
     .WithHttpHealthCheck("/health")
     .WithEnvironment("OTEL_PYTHON_EXCLUDED_URLS", "/health")
     .WithEnvironment("KEYCLOAK_REALM_URL", $"{authServer.GetEndpoint("http")}/realms/zava")
-    .WithEnvironment("KEYCLOAK_MCP_SERVER_BASE_URL", authServer.GetEndpoint("http"))
     .WithTracing(appInsightsConnectionString)
     .WithExternalHttpEndpoints();
 
@@ -46,7 +45,19 @@ var supplierMcp = builder.AddPythonModule("supplier-mcp", "./app/mcp/", "zava_sh
     .WithHttpHealthCheck("/health")
     .WithEnvironment("OTEL_PYTHON_EXCLUDED_URLS", "/health")
     .WithEnvironment("KEYCLOAK_REALM_URL", $"{authServer.GetEndpoint("http")}/realms/zava")
-    .WithEnvironment("KEYCLOAK_MCP_SERVER_BASE_URL", authServer.GetEndpoint("http"))
+    .WithTracing(appInsightsConnectionString)
+    .WithExternalHttpEndpoints();
+
+var customerMcp = builder.AddPythonModule("customer-mcp", "./app/mcp/", "zava_shop_mcp.customer_server")
+    .WithUv()
+    .WithHttpEndpoint(env: "PORT")
+    .WithEndpoint("http", e =>
+    {
+        e.Port = 28003;
+    })
+    .WithHttpHealthCheck("/health")
+    .WithEnvironment("OTEL_PYTHON_EXCLUDED_URLS", "/health")
+    .WithEnvironment("KEYCLOAK_REALM_URL", $"{authServer.GetEndpoint("http")}/realms/zava")
     .WithTracing(appInsightsConnectionString)
     .WithExternalHttpEndpoints();
 
